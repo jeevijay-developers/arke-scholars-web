@@ -1,0 +1,1 @@
+ALTER TABLE public.courses ADD COLUMN IF NOT EXISTS what_youll_learn TEXT[] NOT NULL DEFAULT '{}', ADD COLUMN IF NOT EXISTS requirements TEXT[] NOT NULL DEFAULT '{}';

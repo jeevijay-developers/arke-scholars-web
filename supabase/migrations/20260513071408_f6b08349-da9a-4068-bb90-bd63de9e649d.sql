@@ -1,0 +1,1 @@
+ALTER TABLE public.live_classes ALTER COLUMN slug SET DEFAULT '';

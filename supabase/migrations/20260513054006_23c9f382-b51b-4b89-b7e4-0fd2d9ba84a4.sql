@@ -1,0 +1,1 @@
+UPDATE auth.users SET raw_app_meta_data = raw_app_meta_data - 'must_change_password' WHERE raw_app_meta_data ? 'must_change_password' AND updated_at > created_at + INTERVAL '60 seconds';

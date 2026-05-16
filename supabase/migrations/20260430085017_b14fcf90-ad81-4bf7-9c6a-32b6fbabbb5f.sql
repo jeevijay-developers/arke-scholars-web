@@ -1,0 +1,1 @@
+UPDATE public.doubts SET image_url = NULL WHERE image_url IS NOT NULL;

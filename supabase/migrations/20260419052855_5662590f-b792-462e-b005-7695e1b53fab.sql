@@ -1,0 +1,1 @@
+ALTER TABLE public.educator_applications ADD COLUMN IF NOT EXISTS class_level TEXT;
