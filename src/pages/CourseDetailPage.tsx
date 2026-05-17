@@ -62,7 +62,7 @@ const CourseDetailPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { course, chapters, pdfs, loading } = useCourseDetail(slug);
+  const { course, chapters, pdfs, tests, loading } = useCourseDetail(slug);
   const [activeTab, setActiveTab] = useState(0);
   const [expandedChapter, setExpandedChapter] = useState(0);
   const [enrollment, setEnrollment] = useState<EnrollmentInfo | null>(null);
@@ -111,7 +111,7 @@ const CourseDetailPage = () => {
   const totalHours = course?.duration_hours || Math.max(1, Math.floor(totalMinutes / 60));
   const completedHours = (completedSeconds / 3600).toFixed(1);
   const remainingHours = ((totalSeconds - completedSeconds) / 3600).toFixed(1);
-  const progressPercent = enrollment?.progress_percent ?? 0;
+  const progressPercent = enrollment ? (totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0) : 0;
 
   if (loading) {
     return (
@@ -140,16 +140,16 @@ const CourseDetailPage = () => {
 
   const stats = enrolled
     ? [
-        { value: String(totalLessons || 32), label: "Lectures" },
-        { value: "12", label: "Tests" },
-        { value: String(pdfs.length || 18), label: "PDFs" },
+        { value: String(totalLessons), label: "Lectures" },
+        { value: String(tests.length), label: "Tests" },
+        { value: String(pdfs.length), label: "PDFs" },
         { value: `${totalHours}h`, label: "Total Time" },
         { value: `${progressPercent}%`, label: "Progress" },
       ]
     : [
-        { value: String(totalLessons || 32), label: "Lectures" },
-        { value: "12", label: "Tests" },
-        { value: String(pdfs.length || 18), label: "PDFs" },
+        { value: String(totalLessons), label: "Lectures" },
+        { value: String(tests.length), label: "Tests" },
+        { value: String(pdfs.length), label: "PDFs" },
         { value: `${totalHours}h`, label: "Total Time" },
         { value: `${Number(course.rating || 4.8).toFixed(1)}★`, label: "Rating" },
       ];
@@ -177,11 +177,10 @@ const CourseDetailPage = () => {
       ];
 
   const includes = [
-    `${totalLessons || 32} video lectures`,
-    "12 practice tests",
-    `${pdfs.length || 18} PDF notes`,
+    `${totalLessons} video lecture${totalLessons === 1 ? "" : "s"}`,
+    `${tests.length} practice test${tests.length === 1 ? "" : "s"}`,
+    `${pdfs.length} PDF note${pdfs.length === 1 ? "" : "s"}`,
     "Lifetime access",
-    "Certificate of completion",
   ];
 
   const handleEnrollClick = () => {
@@ -448,7 +447,45 @@ const CourseDetailPage = () => {
 
           {/* Tests */}
           {activeTab === 2 && (
-            <EmptyTab icon={ClipboardCheck} title="Practice Tests" description="Topic-wise and full-length mock tests will appear here once published." />
+            <div className="mt-6">
+              {tests.length === 0 ? (
+                <EmptyTab icon={ClipboardCheck} title="Practice Tests" description="Topic-wise and full-length mock tests will appear here once published." />
+              ) : (
+                <div className="space-y-2">
+                  {tests.map((test) => {
+                    const canTake = enrolled;
+                    return (
+                      <div
+                        key={test.id}
+                        className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4"
+                      >
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                          <ClipboardCheck className="h-5 w-5 text-primary" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-bold text-foreground truncate">{test.title}</p>
+                          <p className="text-[11px] text-muted-foreground uppercase mt-0.5">
+                            {test.test_type} · {test.duration_minutes} min · {test.total_questions} questions
+                          </p>
+                        </div>
+                        {canTake ? (
+                          <Link
+                            to={`/tests/${test.slug}/take`}
+                            className="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground hover:bg-primary-dark transition-colors shrink-0"
+                          >
+                            Take Test <ArrowRight className="h-3.5 w-3.5" />
+                          </Link>
+                        ) : (
+                          <span className="flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-semibold text-muted-foreground shrink-0">
+                            <Lock className="h-3.5 w-3.5" /> Enroll to start
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           )}
 
           {/* PDF Notes */}
@@ -628,10 +665,7 @@ const CourseDetailPage = () => {
               ))}
             </div>
 
-            <div className="flex items-center gap-2 pt-2 text-[11px] text-muted-foreground">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              7-day money-back guarantee
-            </div>
+            {/* Guarantee removed */}
           </div>
         </aside>
       </div>

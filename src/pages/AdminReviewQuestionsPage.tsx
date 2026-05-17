@@ -10,16 +10,27 @@ import {
   Save,
   ArrowLeft,
   ImageIcon,
+  FlaskConical,
+  Sigma,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import LatexRenderer from "@/components/LatexRenderer";
+import MoleculeViewer from "@/components/MoleculeViewer";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type QuestionType = "scq" | "mcq" | "integer" | "match_column" | "assertion_reasoning";
+type ImageType = "equation" | "chemistry" | "diagram";
 
 interface MatchEntry { key: string; value: string }
+
+interface RichImage {
+  url: string;
+  type: ImageType;
+  mol?: string;
+  smiles?: string;
+}
 
 interface ParsedQuestion {
   question_number: number;
@@ -36,6 +47,7 @@ interface ParsedQuestion {
   assertion_text: string | null;
   reason_text: string | null;
   images: string[];
+  rich_images: RichImage[];
   has_latex: boolean;
   omml_detected: boolean;
   needs_review: boolean;
@@ -43,14 +55,112 @@ interface ParsedQuestion {
 
 type ApprovalStatus = "pending" | "approved" | "skipped";
 
-// ─── Type badge ───────────────────────────────────────────────────────────────
+// ─── Type badge meta ──────────────────────────────────────────────────────────
 
 const TYPE_META: Record<QuestionType, { label: string; color: string }> = {
-  scq:                 { label: "SCQ",             color: "bg-blue-100 text-blue-700" },
-  mcq:                 { label: "MCQ",             color: "bg-purple-100 text-purple-700" },
-  integer:             { label: "Integer",         color: "bg-orange-100 text-orange-700" },
-  match_column:        { label: "Match Column",    color: "bg-teal-100 text-teal-700" },
-  assertion_reasoning: { label: "Assert–Reason",   color: "bg-pink-100 text-pink-700" },
+  scq:                 { label: "SCQ",           color: "bg-blue-100 text-blue-700" },
+  mcq:                 { label: "MCQ",           color: "bg-purple-100 text-purple-700" },
+  integer:             { label: "Integer",       color: "bg-orange-100 text-orange-700" },
+  match_column:        { label: "Match Column",  color: "bg-teal-100 text-teal-700" },
+  assertion_reasoning: { label: "Assert–Reason", color: "bg-pink-100 text-pink-700" },
+};
+
+// ─── Rich image viewer ────────────────────────────────────────────────────────
+// Shows diagram images, chemistry structures (ChemDoodle), and a note for
+// equations (which are already inlined as $$LaTeX$$ in stem_html).
+
+const RichImageGallery = ({ images }: { images: RichImage[] }) => {
+  const [chemExpanded, setChemExpanded] = useState<Record<number, boolean>>({});
+
+  if (!images.length) return null;
+
+  return (
+    <div className="space-y-3">
+      {images.map((img, i) => {
+        if (img.type === "equation") {
+          // Equation images are already rendered inline as KaTeX in the stem preview.
+          // Show a subtle indicator here so the admin knows an image was processed.
+          return (
+            <div
+              key={i}
+              className="flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-700"
+            >
+              <Sigma className="h-3.5 w-3.5 shrink-0" />
+              <span>Equation image → converted to LaTeX (see preview above)</span>
+            </div>
+          );
+        }
+
+        if (img.type === "chemistry") {
+          const expanded = chemExpanded[i] ?? false;
+          return (
+            <div
+              key={i}
+              className="rounded-xl border border-teal-200 bg-teal-50 overflow-hidden"
+            >
+              {/* Header row */}
+              <div className="flex items-center justify-between gap-2 px-3 py-2">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-teal-700">
+                  <FlaskConical className="h-3.5 w-3.5" />
+                  Chemical structure
+                  {img.smiles && (
+                    <span className="font-mono font-normal text-teal-600 ml-1">
+                      {img.smiles.length > 40 ? img.smiles.slice(0, 40) + "…" : img.smiles}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {img.smiles && (
+                    <button
+                      onClick={() => setChemExpanded((p) => ({ ...p, [i]: !p[i] }))}
+                      className="text-[11px] font-semibold text-teal-700 hover:text-teal-900 underline"
+                    >
+                      {expanded ? "Hide structure" : "Show 2D structure"}
+                    </button>
+                  )}
+                  <a
+                    href={img.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[11px] font-semibold text-teal-700 hover:text-teal-900 underline"
+                  >
+                    Original image ↗
+                  </a>
+                </div>
+              </div>
+
+              {/* Source image (always visible) */}
+              <div className="border-t border-teal-200 bg-white p-2">
+                <img
+                  src={img.url}
+                  alt="Chemistry structure"
+                  className="max-h-40 w-auto rounded object-contain mx-auto"
+                />
+              </div>
+
+              {/* ChemDoodle interactive viewer (toggle) */}
+              {expanded && img.smiles && (
+                <div className="border-t border-teal-200 bg-white p-3 flex justify-center">
+                  <MoleculeViewer smiles={img.smiles} width={320} height={220} />
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        // diagram / plain image
+        return (
+          <a key={i} href={img.url} target="_blank" rel="noreferrer" className="block">
+            <img
+              src={img.url}
+              alt={`Diagram ${i + 1}`}
+              className="max-h-48 w-auto rounded-xl border border-border object-contain"
+            />
+          </a>
+        );
+      })}
+    </div>
+  );
 };
 
 // ─── Single question card ─────────────────────────────────────────────────────
@@ -109,6 +219,10 @@ const QuestionCard = ({ q: initial, index, total, approval, onApprove, onSkip }:
     [4, q.option_4],
   ];
 
+  const chemCount = (q.rich_images ?? []).filter((r) => r.type === "chemistry").length;
+  const eqCount   = (q.rich_images ?? []).filter((r) => r.type === "equation").length;
+  const imgCount  = (q.rich_images ?? []).filter((r) => r.type === "diagram").length;
+
   return (
     <div
       className={`rounded-2xl border bg-card transition-all ${
@@ -121,9 +235,7 @@ const QuestionCard = ({ q: initial, index, total, approval, onApprove, onSkip }:
     >
       {/* Card header */}
       <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
-        <span className="text-xs font-bold text-muted-foreground">
-          Q{q.question_number}
-        </span>
+        <span className="text-xs font-bold text-muted-foreground">Q{q.question_number}</span>
         <span
           className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${meta.color}`}
         >
@@ -134,20 +246,28 @@ const QuestionCard = ({ q: initial, index, total, approval, onApprove, onSkip }:
             LaTeX
           </span>
         )}
-        {q.images.length > 0 && (
+        {eqCount > 0 && (
+          <span className="flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-700">
+            <Sigma className="h-2.5 w-2.5" />
+            {eqCount} eq
+          </span>
+        )}
+        {chemCount > 0 && (
+          <span className="flex items-center gap-1 rounded-full bg-teal-50 px-2 py-0.5 text-[10px] font-bold text-teal-700">
+            <FlaskConical className="h-2.5 w-2.5" />
+            {chemCount} chem
+          </span>
+        )}
+        {imgCount > 0 && (
           <span className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
             <ImageIcon className="h-2.5 w-2.5" />
-            {q.images.length}
+            {imgCount}
           </span>
         )}
         <div className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground">
           {index + 1} / {total}
-          {approval === "approved" && (
-            <CheckCircle2 className="h-4 w-4 text-secondary" />
-          )}
-          {approval === "skipped" && (
-            <SkipForward className="h-4 w-4 text-muted-foreground" />
-          )}
+          {approval === "approved" && <CheckCircle2 className="h-4 w-4 text-secondary" />}
+          {approval === "skipped" && <SkipForward className="h-4 w-4 text-muted-foreground" />}
         </div>
       </div>
 
@@ -156,8 +276,8 @@ const QuestionCard = ({ q: initial, index, total, approval, onApprove, onSkip }:
         <div className="flex items-start gap-2 border-b border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-800">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
           <span>
-            <strong>Word equation detected</strong> — this question has an OMML formula that couldn't be
-            converted automatically. Please enter the LaTeX equivalent manually in the stem below.
+            <strong>Word OMML equation detected</strong> — couldn't auto-convert.
+            Please enter the LaTeX equivalent manually in the stem below.
           </span>
         </div>
       )}
@@ -185,7 +305,7 @@ const QuestionCard = ({ q: initial, index, total, approval, onApprove, onSkip }:
         {/* Stem editor */}
         <div>
           <label className="mb-1 block text-xs font-semibold text-foreground">
-            Question stem (HTML)
+            Question stem (HTML + LaTeX)
           </label>
           <textarea
             value={q.stem_html}
@@ -195,7 +315,7 @@ const QuestionCard = ({ q: initial, index, total, approval, onApprove, onSkip }:
           />
         </div>
 
-        {/* KaTeX preview toggle */}
+        {/* Rendered preview */}
         <div>
           <button
             onClick={() => setShowPreview((v) => !v)}
@@ -212,22 +332,12 @@ const QuestionCard = ({ q: initial, index, total, approval, onApprove, onSkip }:
           )}
         </div>
 
-        {/* Embedded images */}
-        {q.images.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {q.images.map((src, i) => (
-              <a key={i} href={src} target="_blank" rel="noreferrer" className="block">
-                <img
-                  src={src}
-                  alt={`Image ${i + 1}`}
-                  className="h-24 w-auto rounded-lg border border-border object-contain"
-                />
-              </a>
-            ))}
-          </div>
+        {/* Rich images: equations / chemistry / diagrams */}
+        {(q.rich_images?.length ?? 0) > 0 && (
+          <RichImageGallery images={q.rich_images ?? []} />
         )}
 
-        {/* ── SCQ / MCQ options ────────────────────────────────────────────── */}
+        {/* ── SCQ / MCQ options ─────────────────────────────────────────────── */}
         {(q.type === "scq" || q.type === "mcq") && (
           <div className="space-y-2">
             <p className="text-xs font-semibold text-foreground">
@@ -265,7 +375,7 @@ const QuestionCard = ({ q: initial, index, total, approval, onApprove, onSkip }:
           </div>
         )}
 
-        {/* ── Integer type ─────────────────────────────────────────────────── */}
+        {/* ── Integer type ──────────────────────────────────────────────────── */}
         {q.type === "integer" && (
           <div>
             <label className="mb-1 block text-xs font-semibold text-foreground">
@@ -331,7 +441,7 @@ const QuestionCard = ({ q: initial, index, total, approval, onApprove, onSkip }:
           </div>
         )}
 
-        {/* ── Assertion-Reasoning ──────────────────────────────────────────── */}
+        {/* ── Assertion-Reasoning ───────────────────────────────────────────── */}
         {q.type === "assertion_reasoning" && (
           <div className="space-y-3">
             <div>
@@ -433,26 +543,27 @@ const AdminReviewQuestionsPage = () => {
 
   const total = questions.length;
   const approvedCount = Object.values(approvals).filter((s) => s === "approved").length;
-  const skippedCount = Object.values(approvals).filter((s) => s === "skipped").length;
-  const pendingCount = total - approvedCount - skippedCount;
+  const skippedCount  = Object.values(approvals).filter((s) => s === "skipped").length;
+  const pendingCount  = total - approvedCount - skippedCount;
   const progress = total > 0 ? Math.round((approvedCount / total) * 100) : 0;
 
   const saveQuestion = async (q: ParsedQuestion): Promise<void> => {
     const payload: Record<string, unknown> = {
-      paper_id: paperId,
+      paper_id:        paperId,
       question_number: q.question_number,
-      type: q.type,
-      stem_html: q.stem_html,
-      images: q.images,
-      has_latex: q.has_latex,
-      needs_review: false,
+      type:            q.type,
+      stem_html:       q.stem_html,
+      images:          q.images,
+      rich_images:     q.rich_images ?? [],
+      has_latex:       q.has_latex,
+      needs_review:    false,
     };
 
     if (q.type === "scq" || q.type === "mcq") {
-      payload.option_1 = q.option_1;
-      payload.option_2 = q.option_2;
-      payload.option_3 = q.option_3;
-      payload.option_4 = q.option_4;
+      payload.option_1        = q.option_1;
+      payload.option_2        = q.option_2;
+      payload.option_3        = q.option_3;
+      payload.option_4        = q.option_4;
       payload.correct_options = q.correct_options;
     }
     if (q.type === "integer") {
@@ -463,8 +574,8 @@ const AdminReviewQuestionsPage = () => {
       payload.match_col2 = q.match_col2;
     }
     if (q.type === "assertion_reasoning") {
-      payload.assertion_text = q.assertion_text;
-      payload.reason_text = q.reason_text;
+      payload.assertion_text  = q.assertion_text;
+      payload.reason_text     = q.reason_text;
       payload.correct_options = q.correct_options;
     }
 
@@ -484,14 +595,11 @@ const AdminReviewQuestionsPage = () => {
   };
 
   const handleSaveAll = async () => {
-    const pending = questions.filter(
-      (q) => approvals[q.question_number] === "pending",
-    );
+    const pending = questions.filter((q) => approvals[q.question_number] === "pending");
     if (!pending.length) { toast.info("Nothing left to save"); return; }
 
     setSavingAll(true);
-    let saved = 0;
-    let failed = 0;
+    let saved = 0, failed = 0;
     for (const q of pending) {
       try {
         await saveQuestion(q);
@@ -502,22 +610,18 @@ const AdminReviewQuestionsPage = () => {
       }
     }
     setSavingAll(false);
-    if (saved) toast.success(`Saved ${saved} question${saved === 1 ? "" : "s"}`);
+    if (saved)  toast.success(`Saved ${saved} question${saved === 1 ? "" : "s"}`);
     if (failed) toast.error(`${failed} question${failed === 1 ? "" : "s"} failed to save`);
   };
 
   if (!paperId) {
-    return (
-      <div className="p-6 text-muted-foreground text-sm">Invalid paper ID.</div>
-    );
+    return <div className="p-6 text-muted-foreground text-sm">Invalid paper ID.</div>;
   }
 
   if (questions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 p-12 text-center">
-        <p className="text-sm text-muted-foreground">
-          No parsed questions found for this paper.
-        </p>
+        <p className="text-sm text-muted-foreground">No parsed questions found for this paper.</p>
         <Link
           to="/admin/upload-questions"
           className="flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:opacity-90"
@@ -534,10 +638,7 @@ const AdminReviewQuestionsPage = () => {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <Link
-              to="/admin/upload-questions"
-              className="text-muted-foreground hover:text-foreground"
-            >
+            <Link to="/admin/upload-questions" className="text-muted-foreground hover:text-foreground">
               <ArrowLeft className="h-4 w-4" />
             </Link>
             <h1 className="text-xl font-black font-display text-foreground">
@@ -548,20 +649,12 @@ const AdminReviewQuestionsPage = () => {
             {approvedCount} approved · {skippedCount} skipped · {pendingCount} pending
           </p>
         </div>
-
         <button
           onClick={handleSaveAll}
           disabled={savingAll || pendingCount === 0}
           className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-40"
         >
-          {savingAll ? (
-            "Saving…"
-          ) : (
-            <>
-              <Save className="h-4 w-4" />
-              Save All Pending ({pendingCount})
-            </>
-          )}
+          {savingAll ? "Saving…" : <><Save className="h-4 w-4" /> Save All Pending ({pendingCount})</>}
         </button>
       </div>
 
@@ -581,22 +674,32 @@ const AdminReviewQuestionsPage = () => {
 
       {/* Summary chips */}
       <div className="flex flex-wrap gap-2">
-        {(["scq", "mcq", "integer", "match_column", "assertion_reasoning"] as QuestionType[]).map(
-          (t) => {
-            const count = questions.filter((q) => q.type === t).length;
-            if (!count) return null;
-            const meta = TYPE_META[t];
-            return (
-              <span key={t} className={`rounded-full px-2.5 py-1 text-xs font-semibold ${meta.color}`}>
-                {count} {meta.label}
-              </span>
-            );
-          },
-        )}
+        {(["scq", "mcq", "integer", "match_column", "assertion_reasoning"] as QuestionType[]).map((t) => {
+          const count = questions.filter((q) => q.type === t).length;
+          if (!count) return null;
+          const meta = TYPE_META[t];
+          return (
+            <span key={t} className={`rounded-full px-2.5 py-1 text-xs font-semibold ${meta.color}`}>
+              {count} {meta.label}
+            </span>
+          );
+        })}
         {questions.some((q) => q.omml_detected) && (
           <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
             <AlertTriangle className="h-3 w-3" />
             {questions.filter((q) => q.omml_detected).length} Word equations need LaTeX
+          </span>
+        )}
+        {questions.some((q) => (q.rich_images ?? []).some((r) => r.type === "chemistry")) && (
+          <span className="flex items-center gap-1 rounded-full bg-teal-100 px-2.5 py-1 text-xs font-semibold text-teal-700">
+            <FlaskConical className="h-3 w-3" />
+            Chemistry structures detected
+          </span>
+        )}
+        {questions.some((q) => (q.rich_images ?? []).some((r) => r.type === "equation")) && (
+          <span className="flex items-center gap-1 rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-semibold text-indigo-700">
+            <Sigma className="h-3 w-3" />
+            Equation images → LaTeX
           </span>
         )}
       </div>
@@ -616,7 +719,7 @@ const AdminReviewQuestionsPage = () => {
         ))}
       </div>
 
-      {/* Bottom save all */}
+      {/* Sticky save all */}
       {pendingCount > 0 && (
         <div className="sticky bottom-4 flex justify-end">
           <button
@@ -624,9 +727,7 @@ const AdminReviewQuestionsPage = () => {
             disabled={savingAll}
             className="flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground shadow-lg hover:opacity-90 disabled:opacity-40"
           >
-            {savingAll ? (
-              "Saving…"
-            ) : (
+            {savingAll ? "Saving…" : (
               <>
                 <Save className="h-4 w-4" />
                 <ChevronRight className="h-4 w-4 -ml-1" />

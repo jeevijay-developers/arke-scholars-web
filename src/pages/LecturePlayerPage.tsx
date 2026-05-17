@@ -25,6 +25,8 @@ const LecturePlayerPage = () => {
 
   const [presignedUrl, setPresignedUrl] = useState<string | null>(null);
   const [videoLoading, setVideoLoading] = useState(false);
+  const [watermarkPos, setWatermarkPos] = useState({ x: 10, y: 10 });
+  const [hidden, setHidden] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const lastSavedRef = useRef<number>(0);
@@ -94,6 +96,7 @@ const LecturePlayerPage = () => {
         body: { lessonId },
       });
       if (error) throw error;
+      console.log("Video URL:", data.videoUrl);
       setPresignedUrl(data.videoUrl);
     } catch (err) {
       console.error("Failed to get video URL", err);
@@ -109,9 +112,41 @@ const LecturePlayerPage = () => {
     }
   }, [activeLesson?.id, accessChecked, fetchPresignedUrl]);
 
-  const handleVideoError = () => {
-    console.error("Video failed to load");
+  const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const v = e.currentTarget;
+    console.error("Video failed to load", {
+      src: v.src,
+      errorCode: v.error?.code,
+      errorMessage: v.error?.message,
+    });
   };
+
+  // Move watermark to a new random position every 6 seconds
+  useEffect(() => {
+    const move = () => setWatermarkPos({
+      x: 5 + Math.random() * 65,
+      y: 5 + Math.random() * 75,
+    });
+    move();
+    const id = setInterval(move, 6000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Blur video when tab/window loses focus (deters screen-capture rigs)
+  useEffect(() => {
+    const onHide = () => setHidden(true);
+    const onShow = () => setHidden(false);
+    document.addEventListener("visibilitychange", () =>
+      document.hidden ? onHide() : onShow()
+    );
+    window.addEventListener("blur", onHide);
+    window.addEventListener("focus", onShow);
+    return () => {
+      document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("blur", onHide);
+      window.removeEventListener("focus", onShow);
+    };
+  }, []);
 
   const saveProgress = useCallback(
     async (currentSec: number, completed: boolean, lessonOverride?: typeof activeLesson) => {
@@ -134,15 +169,15 @@ const LecturePlayerPage = () => {
 
       const nextMap = { ...progressMap, [lesson.slug]: { watched_seconds: Math.floor(currentSec), is_completed: completed } };
       setProgressMap(nextMap);
-      const completedCount = Object.values(nextMap).filter((p) => p.is_completed).length;
+      const activeCompletedCount = flatLessons.filter((l) => nextMap[l.slug]?.is_completed).length;
 
-      const percent = Math.round((completedCount / Math.max(flatLessons.length, 1)) * 100);
+      const percent = Math.min(100, Math.round((activeCompletedCount / Math.max(flatLessons.length, 1)) * 100));
       if (enrolledId) {
         await supabase
           .from("enrollments")
           .update({
             progress_percent: percent,
-            completed_lessons: completedCount,
+            completed_lessons: activeCompletedCount,
             last_lesson_title: lesson.title,
             last_accessed_at: new Date().toISOString(),
           })
@@ -212,7 +247,7 @@ const LecturePlayerPage = () => {
     );
   }
 
-  const completedCount = Object.values(progressMap).filter((p) => p.is_completed).length;
+  const completedCount = flatLessons.filter((l) => progressMap[l.slug]?.is_completed).length;
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "hsl(222, 47%, 8%)" }}>
@@ -231,30 +266,56 @@ const LecturePlayerPage = () => {
       <div className="flex flex-1 flex-col lg:flex-row">
         <div className="flex-1 flex flex-col">
           <div className="w-full bg-black flex justify-center">
-            <div className="relative aspect-video w-full max-w-[min(100%,calc((100vh-180px)*16/9))] bg-black">
+            <div className="relative aspect-video w-full bg-black">
               {videoLoading ? (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <Loader2 className="h-8 w-8 animate-spin text-white" />
                 </div>
               ) : presignedUrl ? (
-                <video
-                  ref={videoRef}
-                  key={activeLesson.id}
-                  src={presignedUrl}
-                  controls
-                  onPlay={() => setPlaying(true)}
-                  onPause={() => setPlaying(false)}
-                  onTimeUpdate={onTimeUpdate}
-                  onError={handleVideoError}
-                  onLoadedMetadata={() => {
-                    const v = videoRef.current;
-                    const saved = progressMap[activeLesson.slug]?.watched_seconds;
-                    if (v && saved && saved < (activeLesson.duration_seconds || 0) - 10) {
-                      v.currentTime = saved;
-                    }
-                  }}
-                  className="absolute inset-0 h-full w-full"
-                />
+                <>
+                  <video
+                    ref={videoRef}
+                    key={activeLesson.id}
+                    src={presignedUrl}
+                    controls
+                    controlsList="nodownload noremoteplayback"
+                    disablePictureInPicture
+                    onContextMenu={(e) => e.preventDefault()}
+                    onPlay={() => setPlaying(true)}
+                    onPause={() => setPlaying(false)}
+                    onTimeUpdate={onTimeUpdate}
+                    onError={handleVideoError}
+                    onLoadedMetadata={() => {
+                      const v = videoRef.current;
+                      const saved = progressMap[activeLesson.slug]?.watched_seconds;
+                      if (v && saved && saved < (activeLesson.duration_seconds || 0) - 10) {
+                        v.currentTime = saved;
+                      }
+                    }}
+                    className="absolute inset-0 h-full w-full"
+                    style={{ filter: hidden ? "blur(24px) brightness(0.3)" : "none", transition: "filter 0.3s" }}
+                  />
+
+                  {/* Blur overlay when window loses focus */}
+                  {hidden && (
+                    <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+                      <p className="text-white/60 text-sm font-medium select-none">Return to tab to continue watching</p>
+                    </div>
+                  )}
+
+                  {/* Moving email watermark — burns user identity into any screen recording */}
+                  <div
+                    className="absolute z-20 pointer-events-none select-none transition-all duration-[3000ms] ease-in-out"
+                    style={{ left: `${watermarkPos.x}%`, top: `${watermarkPos.y}%` }}
+                  >
+                    <span
+                      className="text-white font-mono text-sm whitespace-nowrap"
+                      style={{ opacity: 0.5, textShadow: "0 0 6px rgba(0,0,0,0.9)" }}
+                    >
+                      {user?.email}
+                    </span>
+                  </div>
+                </>
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center text-white/40 text-sm text-center px-4">
                   Purchase this course to watch videos.

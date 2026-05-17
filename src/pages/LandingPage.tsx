@@ -587,7 +587,7 @@ const LandingPage = () => {
                   { label: "Privacy Policy", path: "/privacy" },
                   { label: "Terms of Service", path: "/terms" },
                 ].map(l => (
-                  <Link key={l.path} to={l.path} className="block text-sm text-white/60 hover:text-white/90 transition-colors">{l.label}</Link>
+                  <Link key={l.label} to={l.path} className="block text-sm text-white/60 hover:text-white/90 transition-colors">{l.label}</Link>
                 ))}
               </div>
             </div>

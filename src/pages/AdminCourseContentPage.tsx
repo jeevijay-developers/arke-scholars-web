@@ -274,7 +274,7 @@ const AdminCourseContentPage = () => {
 
   const uploadVideoToS3 = async (lessonId: string, file: File): Promise<string> => {
     const { data, error } = await supabase.functions.invoke("get-upload-url", {
-      body: { lessonId, contentType: file.type || "video/mp4" },
+      body: { lessonId, contentType: file.type || "video/mp4", contentLength: file.size },
     });
     if (error || !data?.uploadUrl) throw new Error(error?.message ?? "Failed to get upload URL");
 
@@ -287,12 +287,15 @@ const AdminCourseContentPage = () => {
         if (xhr.status >= 200 && xhr.status < 300) {
           resolve(data.key as string);
         } else {
-          reject(new Error(`Upload failed: HTTP ${xhr.status}`));
+          reject(new Error(`Upload failed: HTTP ${xhr.status} — ${xhr.responseText}`));
         }
       };
       xhr.onerror = () => reject(new Error("Upload failed"));
       xhr.open("PUT", data.uploadUrl);
-      xhr.setRequestHeader("Content-Type", file.type || "video/mp4");
+      // Set all signed headers returned by the edge function
+      Object.entries(data.headers as Record<string, string>).forEach(([k, v]) => {
+        xhr.setRequestHeader(k, v);
+      });
       xhr.send(file);
     });
   };

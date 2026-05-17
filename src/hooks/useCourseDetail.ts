@@ -36,6 +36,7 @@ export const useCourseDetail = (slug: string | undefined) => {
   const [course, setCourse] = useState<CourseRow | null>(null);
   const [chapters, setChapters] = useState<ChapterRow[]>([]);
   const [pdfs, setPdfs] = useState<CoursePdfRow[]>([]);
+  const [tests, setTests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -53,6 +54,7 @@ export const useCourseDetail = (slug: string | undefined) => {
         setCourse(null);
         setChapters([]);
         setPdfs([]);
+        setTests([]);
         setLoading(false);
         return;
       }
@@ -86,10 +88,17 @@ export const useCourseDetail = (slug: string | undefined) => {
         .order("position");
       setPdfs((pdfData ?? []) as CoursePdfRow[]);
 
+      const { data: testData } = await supabase
+        .from("tests")
+        .select("id, slug, title, test_type, duration_minutes, total_questions, total_marks, is_published")
+        .eq("course_id", courseData.id)
+        .eq("is_published", true);
+      setTests(testData ?? []);
+
       setLoading(false);
     };
     load();
   }, [slug]);
 
-  return { course, chapters, pdfs, loading };
+  return { course, chapters, pdfs, tests, loading };
 };

@@ -5,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Base URL for all stored objects — path-style, publicly readable
+// Base URL for reading stored objects — bucket IS in the read path
 const S3_BASE = 'https://s3.ap-tokyo.megas4.com/biijszzsfufvateaffbvtjapmculhceod7agr'
 
 Deno.serve(async (req) => {
