@@ -2,6 +2,7 @@ import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { Home, BookOpen, Video, ClipboardCheck, MessageCircle, Swords, BarChart3, Trophy, User, Settings, Search, Flame, Users } from "lucide-react";
 import LogoutButton from "@/components/LogoutButton";
 import { memo, useCallback, useMemo } from "react";
+import arkeLogo from "@/assets/arke-logo.png";
 import GoalSelector from "@/components/GoalSelector";
 import LiveBadge from "@/components/LiveBadge";
 import NotificationBell from "@/components/NotificationBell";
@@ -77,12 +78,9 @@ const StudentSidebar = memo(({ fullName, avatarUrl, initials, currentGoal, setCu
 
   return (
     <aside className="hidden lg:flex w-[220px] flex-col border-r border-border bg-card sticky top-0 h-screen overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      <div className="p-4">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <Flame className="h-4 w-4 text-primary-foreground" />
-          </div>
-          <span className="text-sm font-black font-display text-foreground">ARKE</span>
+      <div className="p-4 flex justify-center">
+        <Link to="/" className="flex items-center justify-center w-full bg-white rounded-xl py-2 px-4 hover:opacity-95 transition-opacity">
+          <img src={arkeLogo} alt="ARKE Logo" className="h-10 w-auto object-contain" />
         </Link>
         <div className="mt-4">
           <GoalSelector value={currentGoal} onChange={setCurrentGoal} />
@@ -152,9 +150,9 @@ StudentMobileNav.displayName = "StudentMobileNav";
 const StudentHeader = memo(({ fullName, avatarUrl }: { fullName: string; avatarUrl?: string }) => (
   <header className="sticky top-0 z-40 flex items-center justify-between border-b border-border bg-card px-4 py-3 lg:px-6">
     <div className="flex items-center gap-3">
-      <div className="lg:hidden flex items-center gap-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-          <Flame className="h-4 w-4 text-primary-foreground" />
+      <div className="lg:hidden flex items-center">
+        <div className="bg-white rounded-lg p-1 flex items-center justify-center">
+          <img src={arkeLogo} alt="ARKE Logo" className="h-6 w-auto object-contain" />
         </div>
       </div>
       <div className="relative hidden sm:block">

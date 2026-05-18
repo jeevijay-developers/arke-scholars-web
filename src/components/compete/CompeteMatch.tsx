@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Crown, Timer } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { CompeteMatch, CompeteQuestion, CompeteAnswer } from "@/hooks/useCompeteMatch";
 import { toast } from "sonner";
-import MathRenderer from "@/components/MathRenderer";
+import LatexRenderer from "@/components/LatexRenderer";
 
 const QUESTION_TIME_MS = 30_000;
 
@@ -115,14 +115,17 @@ const CompeteMatchView = ({ match, questions, answers }: Props) => {
         </div>
       </div>
 
-      {/* Question */}
+      {/* Question stem — LatexRenderer handles HTML, <img>, and $LaTeX$ correctly */}
       <div className="max-w-xl mx-auto rounded-2xl bg-white/5 border border-white/10 p-5">
-        <div className="text-base font-bold text-white leading-relaxed [&_p]:m-0"><MathRenderer content={question.question_text} /></div>
+        <LatexRenderer
+          html={question.question_text}
+          className="text-base font-semibold text-white leading-relaxed [&_img]:max-w-full [&_img]:max-h-64 [&_img]:rounded-lg [&_img]:mt-2 [&_img]:block"
+        />
       </div>
 
       {/* Options */}
       <div className="max-w-xl mx-auto grid gap-2">
-        {question.options.map((opt, i) => {
+        {(question.options as string[]).map((opt, i) => {
           const isSelected = selected === i;
           const locked = myAnswered || submitting;
           return (
@@ -136,8 +139,16 @@ const CompeteMatchView = ({ match, questions, answers }: Props) => {
                   : "border-white/10 bg-white/5 text-white hover:border-white/30 hover:bg-white/10"
               } ${locked ? "cursor-not-allowed" : "cursor-pointer"}`}
             >
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-xs font-black mr-2 align-middle">{String.fromCharCode(65 + i)}</span>
-              <span className="inline [&_p]:inline [&_p]:m-0"><MathRenderer inline content={opt} /></span>
+              <div className="flex items-start gap-3">
+                <span className="shrink-0 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-xs font-black">
+                  {String.fromCharCode(65 + i)}
+                </span>
+                {/* LatexRenderer handles plain text, $LaTeX$, and <img> tags */}
+                <LatexRenderer
+                  html={opt}
+                  className="flex-1 text-white [&_img]:max-h-32 [&_img]:max-w-full [&_img]:rounded [&_img]:mt-1"
+                />
+              </div>
             </button>
           );
         })}

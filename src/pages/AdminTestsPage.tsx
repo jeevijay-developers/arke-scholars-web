@@ -40,6 +40,7 @@ async function archiveTestQuestionsToBank(testId: string, createdBy: string | nu
     subject: q.subject || "Physics",
     topic: q.topic ?? null,
     difficulty: q.difficulty ?? "medium",
+    question_type: q.question_type || "scq",
     question_text: q.question_text,
     question_image_url: q.question_image_url ?? null,
     options: q.options ?? [],
@@ -47,8 +48,7 @@ async function archiveTestQuestionsToBank(testId: string, createdBy: string | nu
     explanation: q.explanation ?? null,
     marks_correct: q.marks_correct ?? 4,
     marks_wrong: q.marks_wrong ?? -1,
-    // Preserve the original question type so it can be edited/used correctly later.
-    tags: [`type:${q.question_type}`],
+    tags: [],
     is_public: true,
   }));
 
@@ -133,8 +133,8 @@ const AdminTestsPage = () => {
           <h1 className="text-2xl font-black font-display">Tests Management</h1>
           <p className="text-white/90 text-sm mt-1">Create, edit and publish test papers</p>
         </div>
-        <Link to="/admin/tests/new" className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-xs font-bold text-primary hover:bg-white/90">
-          <Plus className="h-4 w-4" /> New test
+        <Link to="/admin/upload-questions" className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-xs font-bold text-primary hover:bg-white/90">
+          <Plus className="h-4 w-4" /> Upload Test
         </Link>
       </div>
 

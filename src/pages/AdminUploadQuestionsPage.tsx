@@ -372,7 +372,7 @@ const AdminUploadQuestionsPage = () => {
   return (
     <div className="p-4 lg:p-6 max-w-2xl">
       <div className="mb-6">
-        <h1 className="text-xl font-black font-display text-foreground">Upload Question Paper</h1>
+        <h1 className="text-xl font-black font-display text-foreground">Upload Test</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Upload a .docx file — questions, options, answers and solutions are detected automatically.
         </p>

@@ -20,7 +20,7 @@ test.describe("Bulk question upload — parse-docx → preview", () => {
 
     // 2. Navigate to upload page
     await page.goto("/admin/upload-questions");
-    await expect(page.getByRole("heading", { name: "Upload Question Paper" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Upload Test", level: 1 })).toBeVisible();
 
     // 3. Fill the form
     const paperName = `Playwright Test ${Date.now()}`;

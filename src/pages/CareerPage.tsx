@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import EducatorApplicationDialog from "@/components/EducatorApplicationDialog";
 import { useAuth } from "@/context/AuthContext";
-import arkeLogo from "@/assets/arke-logo.jpeg";
+import arkeLogo from "@/assets/arke-logo.png";
 
 const openings = [
   { subject: "Physics", classes: "CLASS 8 – 10" },
