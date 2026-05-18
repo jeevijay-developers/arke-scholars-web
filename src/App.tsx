@@ -115,8 +115,6 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/career" element={<CareerPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/verify-email" element={<VerifyEmailPage />} />
@@ -133,6 +131,8 @@ const App = () => (
 
             {/* Public marketing pages (PublicLayout: own navbar + footer) */}
             <Route element={<PublicLayout />}>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/career" element={<CareerPage />} />
               <Route path="/courses" element={<CoursesPage />} />
               <Route path="/courses/:slug" element={<CourseDetailPage />} />
               <Route path="/tests" element={<TestsLandingPage />} />
