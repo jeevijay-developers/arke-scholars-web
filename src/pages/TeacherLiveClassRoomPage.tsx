@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useAppStore } from "@/store/useAppStore";
 import { toast } from "sonner";
 import LiveBadge from "@/components/LiveBadge";
-import arkeLogo from "@/assets/arke-logo.jpeg";
+import AgoraVideoRoom from "@/components/AgoraVideoRoom";
 
 type ClassRow = {
   id: string;
@@ -51,7 +51,7 @@ const TeacherLiveClassRoomPage = () => {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [recordingUrl, setRecordingUrl] = useState("");
+  const [showDetails, setShowDetails] = useState(false);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   const teacherDisplay = useMemo(
@@ -59,7 +59,6 @@ const TeacherLiveClassRoomPage = () => {
     [storeUser?.full_name, user?.user_metadata, user?.email],
   );
 
-  // Load class + chat + attendees, and subscribe to realtime
   useEffect(() => {
     if (!slug || !user) return;
     let cancelled = false;
@@ -72,31 +71,40 @@ const TeacherLiveClassRoomPage = () => {
         navigate("/teacher/live-classes");
         return;
       }
-      // Auth gate — only the owner teacher can host
-      if (data.created_by && data.created_by !== user.id) {
-        toast.error("You're not the host of this class");
+      if (data.created_by !== null && data.created_by !== undefined && data.created_by !== user.id) {
+        toast.error("You are not the host of this class");
         navigate("/teacher/live-classes");
         return;
       }
       if (cancelled) return;
       setCls(data as ClassRow);
-      setRecordingUrl(data.recording_url ?? "");
       const id = data.id;
 
       const refreshAttendees = async () => {
-        const { data: rows } = await supabase
+        const { data: rows, error: attErr } = await supabase
           .from("live_class_attendance")
           .select("user_id, status, joined_at")
           .eq("class_id", id);
+        if (attErr) console.error("[Attendees] fetch failed:", attErr.message);
+
         const ids = (rows ?? []).map((r) => r.user_id);
         let names: Record<string, string> = {};
         if (ids.length) {
-          const { data: profs } = await supabase.from("profiles").select("user_id, full_name").in("user_id", ids);
-          names = Object.fromEntries((profs ?? []).map((p) => [p.user_id, p.full_name || "Student"]));
+          const { data: profs } = await supabase
+            .from("profiles")
+            .select("user_id, full_name")
+            .in("user_id", ids);
+          // Fall back to "Student" if profile row missing or full_name is blank
+          names = Object.fromEntries(
+            (profs ?? []).map((p) => [p.user_id, p.full_name?.trim() || "Student"]),
+          );
         }
         if (!cancelled) {
           setAttendees(
-            (rows ?? []).map((r) => ({ ...r, display_name: names[r.user_id] || "Student" })) as Attendee[],
+            (rows ?? []).map((r) => ({
+              ...r,
+              display_name: names[r.user_id] || "Student",
+            })) as Attendee[],
           );
         }
       };
@@ -116,17 +124,26 @@ const TeacherLiveClassRoomPage = () => {
         .on(
           "postgres_changes",
           { event: "INSERT", schema: "public", table: "live_class_messages", filter: `class_id=eq.${id}` },
-          (payload) => setMessages((prev) => [...prev, payload.new as Message]),
+          (payload) => {
+            const incoming = payload.new as Message;
+            // Deduplicate: skip if a real row with this id already exists (optimistic already replaced it)
+            setMessages((prev) =>
+              prev.some((m) => m.id === incoming.id) ? prev : [...prev, incoming],
+            );
+          },
         )
         .on(
           "postgres_changes",
+          // Listen to all events (INSERT, UPDATE, DELETE) on attendance
           { event: "*", schema: "public", table: "live_class_attendance", filter: `class_id=eq.${id}` },
           () => refreshAttendees(),
         )
         .on(
           "postgres_changes",
           { event: "UPDATE", schema: "public", table: "live_classes", filter: `id=eq.${id}` },
-          (payload) => setCls((prev) => (prev ? { ...prev, ...(payload.new as ClassRow) } : prev)),
+          (payload) => {
+            setCls((prev) => (prev ? { ...prev, ...(payload.new as ClassRow) } : prev));
+          },
         )
         .subscribe();
     })();
@@ -143,18 +160,40 @@ const TeacherLiveClassRoomPage = () => {
 
   const sendMessage = async () => {
     if (!user || !cls || !text.trim()) return;
-    const { error } = await supabase.from("live_class_messages").insert({
+    const trimmed = text.trim();
+    setText("");
+
+    // Optimistic insert — show immediately, deduplicated when realtime event arrives
+    const optimisticId = `optimistic-${Date.now()}`;
+    const optimistic: Message = {
+      id: optimisticId,
+      user_id: user.id,
+      display_name: teacherDisplay,
+      is_teacher: true,
+      message: trimmed,
+      created_at: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, optimistic]);
+
+    const { data, error } = await supabase.from("live_class_messages").insert({
       class_id: cls.id,
       user_id: user.id,
       display_name: teacherDisplay,
       is_teacher: true,
-      message: text.trim(),
-    });
+      message: trimmed,
+    }).select().single();
+
     if (error) {
       toast.error(error.message);
+      // Roll back the optimistic message
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
+      setText(trimmed);
       return;
     }
-    setText("");
+    // Replace optimistic with real row (has the DB-generated id)
+    if (data) {
+      setMessages((prev) => prev.map((m) => m.id === optimisticId ? (data as Message) : m));
+    }
   };
 
   const startClass = async () => {
@@ -171,15 +210,12 @@ const TeacherLiveClassRoomPage = () => {
     setBusy(true);
     const { error } = await supabase
       .from("live_classes")
-      .update({
-        status: "completed",
-        ends_at: new Date().toISOString(),
-        recording_url: recordingUrl.trim() || null,
-      })
+      .update({ status: "completed", ends_at: new Date().toISOString() })
       .eq("id", cls.id);
     setBusy(false);
     if (error) return toast.error(error.message);
     toast.success("Class ended");
+    navigate("/teacher/dashboard");
   };
 
   if (loading) {
@@ -193,28 +229,11 @@ const TeacherLiveClassRoomPage = () => {
 
   const isLive = cls.status === "live";
   const isCompleted = cls.status === "completed";
-  const rawSrc = cls.meeting_url || cls.recording_url;
-  const videoSrc = rawSrc
-    ? (() => {
-        const isJitsi = /jit\.si|jitsi/i.test(rawSrc);
-        if (!isJitsi) return rawSrc;
-        const flags = [
-          "config.disableDeepLinking=true",
-          "interfaceConfig.SHOW_JITSI_WATERMARK=false",
-          "interfaceConfig.SHOW_WATERMARK_FOR_GUESTS=false",
-          "interfaceConfig.SHOW_BRAND_WATERMARK=false",
-          "interfaceConfig.SHOW_POWERED_BY=false",
-          "interfaceConfig.HIDE_DEEP_LINKING_LOGO=true",
-        ].join("&");
-        const sep = rawSrc.includes("#") ? "&" : "#";
-        return `${rawSrc}${sep}${flags}`;
-      })()
-    : null;
 
   return (
-    <div className="flex flex-col">
-      {/* Header bar */}
-      <div className="bg-gradient-to-r from-[hsl(var(--navy))] to-[hsl(var(--navy2))] px-4 py-3 flex items-center justify-between flex-wrap gap-2">
+    <div className="flex h-[100dvh] flex-col overflow-hidden">
+      {/* Header */}
+      <div className="shrink-0 bg-gradient-to-r from-[hsl(var(--navy))] to-[hsl(var(--navy2))] px-4 py-3 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3 min-w-0">
           <Link to="/teacher/live-classes" className="text-primary-foreground">
             <ArrowLeft className="h-5 w-5" />
@@ -226,9 +245,12 @@ const TeacherLiveClassRoomPage = () => {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {isLive && <LiveBadge />}
-          <span className="flex items-center gap-1 text-xs text-primary-foreground/80">
+          <button
+            onClick={() => setShowDetails((v) => !v)}
+            className="flex items-center gap-1 text-xs text-primary-foreground/80 hover:text-primary-foreground"
+          >
             <Users className="h-3 w-3" /> {attendees.length}
-          </span>
+          </button>
           {!isLive && !isCompleted && (
             <button
               onClick={startClass}
@@ -253,100 +275,64 @@ const TeacherLiveClassRoomPage = () => {
         </div>
       </div>
 
-      {/* Body — split pane on md+ */}
-      <div className="flex flex-col md:flex-row min-h-[calc(100vh-57px-52px)]">
-        <div className="flex-1 min-w-0">
-          <div className="relative aspect-video bg-[hsl(var(--navy))] flex items-center justify-center">
-            {videoSrc ? (
-              <>
-                <iframe
-                  src={videoSrc}
-                  title={cls.title}
-                  allow="camera; microphone; fullscreen; display-capture; autoplay"
-                  className="absolute inset-0 h-full w-full"
-                />
-                <div className="pointer-events-none absolute top-2 left-2 md:top-3 md:left-3 z-10 flex items-center gap-2 rounded-lg bg-black/70 px-2.5 py-1 backdrop-blur-sm">
-                  <img src={arkeLogo} alt="Arke Scholars" className="h-5 md:h-6 w-auto rounded" />
-                  <span className="text-[10px] md:text-xs font-bold text-white tracking-wide">Arke Scholars</span>
-                </div>
-              </>
+      {/* Attendees / details drawer (shown when toggled) */}
+      {showDetails && (
+        <div className="shrink-0 border-b border-border bg-card px-4 py-3 space-y-3">
+          <div>
+            <p className="text-xs font-bold text-foreground mb-1 flex items-center gap-1.5">
+              <Users className="h-3.5 w-3.5 text-primary" /> Attendees ({attendees.length})
+            </p>
+            {attendees.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No students have joined yet.</p>
             ) : (
-              <div className="text-center text-primary-foreground/70 px-4">
-                <Video className="h-10 w-10 mx-auto mb-2 opacity-60" />
-                <p className="text-sm">No meeting URL set for this class.</p>
-                <p className="text-xs mt-1">Edit the class to add a Jitsi/Meet/Zoom link.</p>
-              </div>
-            )}
-          </div>
-
-          <div className="p-4 lg:p-6 space-y-4">
-
-            <div className="rounded-2xl border border-border bg-card p-4">
-              <p className="text-sm font-bold text-foreground mb-2">Class details</p>
-              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-6 text-xs">
-                <div><dt className="text-muted-foreground">Subject</dt><dd className="font-semibold text-foreground">{cls.subject}</dd></div>
-                <div><dt className="text-muted-foreground">Scheduled</dt><dd className="font-semibold text-foreground">{new Date(cls.starts_at).toLocaleString()}</dd></div>
-                <div className="sm:col-span-2"><dt className="text-muted-foreground">Description</dt><dd className="font-medium text-foreground">{cls.description || "—"}</dd></div>
-              </dl>
-            </div>
-
-            {(isLive || isCompleted) && (
-              <div className="rounded-2xl border border-border bg-card p-4">
-                <p className="text-sm font-bold text-foreground mb-2">Recording URL (optional)</p>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <input
-                    value={recordingUrl}
-                    onChange={(e) => setRecordingUrl(e.target.value)}
-                    placeholder="https://..."
-                    className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-                  />
-                  <button
-                    onClick={async () => {
-                      if (!cls) return;
-                      const { error } = await supabase
-                        .from("live_classes")
-                        .update({ recording_url: recordingUrl.trim() || null })
-                        .eq("id", cls.id);
-                      if (error) toast.error(error.message);
-                      else toast.success("Recording link saved");
-                    }}
-                    className="rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground"
-                  >
-                    Save
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <div className="rounded-2xl border border-border bg-card p-4">
-              <p className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
-                <Users className="h-4 w-4 text-primary" /> Attendees ({attendees.length})
-              </p>
-              {attendees.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No students have joined yet.</p>
-              ) : (
-                <ul className="space-y-2 max-h-64 overflow-y-auto">
-                  {attendees.map((a) => (
-                    <li key={a.user_id} className="flex items-center justify-between text-xs">
-                      <span className="font-medium text-foreground truncate">{a.display_name}</span>
+              <ul className="flex flex-wrap gap-2">
+                {attendees.map((a) => (
+                  <li key={a.user_id} className="flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs">
+                    <span className="font-medium text-foreground">{a.display_name}</span>
+                    {a.joined_at && (
                       <span className="text-muted-foreground">
-                        {a.joined_at ? new Date(a.joined_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : a.status}
+                        · {new Date(a.joined_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                       </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
+      )}
 
-        {/* Chat sidebar — splits at md */}
-        <aside className="md:w-[300px] lg:w-[340px] border-t md:border-t-0 md:border-l border-border bg-card flex flex-col h-[60vh] md:h-auto md:sticky md:top-[57px] md:self-start md:max-h-[calc(100vh-57px)]">
-          <div className="px-4 py-3 border-b border-border">
+      {/* Main body — same split-pane layout as student page */}
+      <div className="flex flex-1 min-h-0 flex-col md:flex-row">
+        {/* Video area — fills remaining height like student page */}
+        <div className="relative flex-1 min-h-0 bg-[#0a0a0a]">
+          {isLive ? (
+            <div className="absolute inset-0">
+              <AgoraVideoRoom channelName={cls.id} role="host" />
+            </div>
+          ) : isCompleted && cls.recording_url ? (
+            <iframe
+              src={cls.recording_url}
+              title={cls.title}
+              allow="fullscreen"
+              className="absolute inset-0 h-full w-full border-0"
+            />
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-white/60 px-4 text-center">
+              <Video className="h-10 w-10 mb-2 opacity-60" />
+              <p className="text-sm">Click "Start class" to begin your live stream.</p>
+              <p className="text-xs mt-1 opacity-60">Students will connect automatically when you go live.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Chat sidebar */}
+        <aside className="flex flex-col min-h-0 h-[45vh] md:h-auto md:w-[300px] lg:w-[340px] border-t md:border-t-0 md:border-l border-border bg-card">
+          <div className="shrink-0 px-4 py-3 border-b border-border">
             <p className="text-sm font-bold text-foreground">Live chat</p>
             <p className="text-[10px] text-muted-foreground">{messages.length} messages — you appear as TEACHER</p>
           </div>
-          <div className="flex-1 overflow-y-auto p-3 space-y-2">
+          <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
             {messages.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-6">No messages yet.</p>
             ) : (
@@ -368,11 +354,8 @@ const TeacherLiveClassRoomPage = () => {
             <div ref={chatEndRef} />
           </div>
           <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              sendMessage();
-            }}
-            className="p-3 border-t border-border flex gap-2"
+            onSubmit={(e) => { e.preventDefault(); sendMessage(); }}
+            className="shrink-0 p-3 border-t border-border flex gap-2 bg-card"
           >
             <input
               value={text}

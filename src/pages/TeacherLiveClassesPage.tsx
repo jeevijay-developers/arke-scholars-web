@@ -71,35 +71,14 @@ const TeacherLiveClassesPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  const buildMeetingUrl = (seed: string) => {
-    const slug = seed
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 40) || "class";
-    const suffix = Math.random().toString(36).slice(2, 8);
-    return `https://meet.jit.si/arke-${slug}-${suffix}`;
-  };
-
-  const isAutoUrl = (url: string) => url.startsWith("https://meet.jit.si/arke-");
-
   const handleCourseChange = (id: string) => {
     setCourseId(id);
     const c = courses.find((x) => x.id === id);
     if (c?.subject) setSubject(c.subject);
-    if (c) {
-      if (!meetingUrl || isAutoUrl(meetingUrl)) {
-        setMeetingUrl(buildMeetingUrl(title || c.name));
-      }
-    }
   };
 
   const handleTitleChange = (value: string) => {
     setTitle(value);
-    if (!meetingUrl || isAutoUrl(meetingUrl)) {
-      const seed = value || courses.find((x) => x.id === courseId)?.name || "class";
-      if (value.trim()) setMeetingUrl(buildMeetingUrl(seed));
-    }
   };
 
   const submit = async () => {
@@ -220,15 +199,15 @@ const TeacherLiveClassesPage = () => {
                 </div>
                 <div className="flex gap-2 flex-wrap">
                   {c.status === "live" ? (
-                    <Link to={`/teacher/live-classes/${c.id}`} className="inline-flex items-center gap-1.5 rounded-lg bg-destructive px-3 py-1.5 text-xs font-bold text-destructive-foreground hover:opacity-90">
+                    <Link to={`/teacher/live-classes/${c.slug}`} className="inline-flex items-center gap-1.5 rounded-lg bg-destructive px-3 py-1.5 text-xs font-bold text-destructive-foreground hover:opacity-90">
                       <Radio className="h-3.5 w-3.5 animate-pulse" /> Resume
                     </Link>
                   ) : c.status !== "completed" ? (
-                    <Link to={`/teacher/live-classes/${c.id}`} className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground hover:opacity-90">
+                    <Link to={`/teacher/live-classes/${c.slug}`} className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground hover:opacity-90">
                       <Play className="h-3.5 w-3.5" /> Go Live
                     </Link>
                   ) : (
-                    <Link to={`/teacher/live-classes/${c.id}`} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/50">
+                    <Link to={`/teacher/live-classes/${c.slug}`} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/50">
                       Open
                     </Link>
                   )}
@@ -310,8 +289,8 @@ const TeacherLiveClassesPage = () => {
             </div>
             <div>
               <label className="text-xs font-semibold text-foreground">Meeting URL</label>
-              <input value={meetingUrl} onChange={(e) => setMeetingUrl(e.target.value)} placeholder="https://meet.jit.si/..." className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none" />
-              <p className="text-[10px] text-muted-foreground mt-1">Use Jitsi, Meet, Zoom or any meeting link.</p>
+              <input value={meetingUrl} onChange={(e) => setMeetingUrl(e.target.value)} placeholder="Optional external link (e.g. Zoom, Google Meet)" className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none" />
+              <p className="text-[10px] text-muted-foreground mt-1">Leave blank — Agora live stream starts automatically when you click "Go Live".</p>
             </div>
             <div>
               <label className="text-xs font-semibold text-foreground">Description (optional)</label>

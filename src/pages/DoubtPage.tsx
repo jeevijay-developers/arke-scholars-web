@@ -86,7 +86,11 @@ const DoubtPage = () => {
       const res = await supabase.functions.invoke("ai-doubt-solver", {
         body: { doubtId: doubt.id, subject, question: question.trim() },
       });
-      if (res.error) toast.error("AI answer failed — a teacher will respond soon.");
+      if (res.data?.busy) {
+        toast.warning("AI is currently busy. Please wait a moment and try again.", { duration: 7000 });
+      } else if (res.error) {
+        toast.error("Could not get an AI answer. A teacher will respond soon.", { duration: 7000 });
+      }
     } catch (e) {
       console.error(e);
     }
