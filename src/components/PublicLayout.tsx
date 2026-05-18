@@ -132,14 +132,23 @@ const PublicLayout = () => {
 
       {/* Navbar */}
       <nav className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md">
-        <div className="container mx-auto flex items-center justify-between px-4 py-3">
-          <Link to="/" className="flex items-center gap-2">
+        <div className="container mx-auto flex items-center justify-between px-4 py-3 relative">
+          <button
+            className="md:hidden p-1 text-foreground"
+            onClick={() => setDrawerOpen(!drawerOpen)}
+            aria-label="Open menu"
+          >
+            {drawerOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
+          <Link
+            to="/"
+            className="flex items-center gap-2 absolute left-1/2 -translate-x-1/2 md:static md:translate-x-0"
+          >
             <img
               src={arkeLogo}
               alt="ARKE"
               className="h-9 w-auto object-contain"
             />
-            
           </Link>
           <div className="hidden items-center gap-8 md:flex">
             {navItems.map((item) => {
@@ -186,13 +195,6 @@ const PublicLayout = () => {
                 </Link>
               </>
             )}
-            <button
-              className="md:hidden p-1 text-foreground"
-              onClick={() => setDrawerOpen(!drawerOpen)}
-              aria-label="Open menu"
-            >
-              {drawerOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </button>
           </div>
         </div>
       </nav>
