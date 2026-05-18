@@ -148,10 +148,6 @@ const MentorDashboard = () => {
             Guide your assigned students, chat with them, and review their progress.
           </p>
         </div>
-        <div className="hidden sm:flex items-center gap-2 rounded-full bg-secondary/10 px-3 py-1.5 text-xs font-semibold text-secondary">
-          <Sparkles className="h-3.5 w-3.5" />
-          Mentor Portal
-        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

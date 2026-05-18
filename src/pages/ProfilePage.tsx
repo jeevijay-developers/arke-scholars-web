@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Camera, Flame, Target, ClipboardCheck, Trophy, Loader2, School } from "lucide-react";
+import { Camera, Flame, Target, ClipboardCheck, Trophy, Loader2, School, Search, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAppStore } from "@/store/useAppStore";
 import { useAuth } from "@/context/AuthContext";
@@ -8,7 +8,8 @@ import { toast } from "sonner";
 const tabItems = ["Personal Info", "Subscription"];
 
 const EXAMS = ["IIT JEE", "NEET", "Boards", "JEE + NEET", "Other"];
-const GOALS = ["IIT JEE", "NEET", "Boards", "JEE + NEET"];
+
+type SchoolOption = { id: string; name: string; city: string | null };
 
 const ProfilePage = () => {
   const { user } = useAppStore();
@@ -22,11 +23,18 @@ const ProfilePage = () => {
     city: "",
     country: "",
     target_exam: "",
-    goal: "",
     avatar_url: "",
   });
   const [stats, setStats] = useState({ streak: 0, tests: 0, accuracy: 0, percentile: 0 });
+
+  // School selection state
+  const [schoolId, setSchoolId] = useState<string | null>(null);
   const [schoolName, setSchoolName] = useState<string | null>(null);
+  const [schoolSearch, setSchoolSearch] = useState("");
+  const [schoolOptions, setSchoolOptions] = useState<SchoolOption[]>([]);
+  const [showSchoolDropdown, setShowSchoolDropdown] = useState(false);
+  const [schoolSearching, setSchoolSearching] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -50,10 +58,10 @@ const ProfilePage = () => {
           city: p.city || "",
           country: p.country || "",
           target_exam: p.target_exam || "",
-          goal: p.goal || "",
           avatar_url: p.avatar_url || "",
         });
         if (p.school_id) {
+          setSchoolId(p.school_id);
           const { data: sch } = await (supabase as any).from("schools").select("name").eq("id", p.school_id).maybeSingle();
           if (active) setSchoolName(sch?.name ?? null);
         }
@@ -74,6 +82,40 @@ const ProfilePage = () => {
     return () => { active = false; };
   }, [authUser]);
 
+  const handleSchoolSearch = async (q: string) => {
+    setSchoolSearch(q);
+    if (q.trim().length < 1) {
+      setSchoolOptions([]);
+      setShowSchoolDropdown(false);
+      return;
+    }
+    setSchoolSearching(true);
+    setShowSchoolDropdown(true);
+    const { data } = await (supabase as any)
+      .from("schools")
+      .select("id, name, city")
+      .eq("is_active", true)
+      .ilike("name", `%${q.trim()}%`)
+      .limit(8);
+    setSchoolOptions((data ?? []) as SchoolOption[]);
+    setSchoolSearching(false);
+  };
+
+  const selectSchool = (s: SchoolOption) => {
+    setSchoolId(s.id);
+    setSchoolName(s.name);
+    setSchoolSearch("");
+    setSchoolOptions([]);
+    setShowSchoolDropdown(false);
+  };
+
+  const clearSchool = () => {
+    setSchoolId(null);
+    setSchoolName(null);
+    setSchoolSearch("");
+    setSchoolOptions([]);
+  };
+
   const handleSave = async () => {
     if (!authUser) return;
     setSaving(true);
@@ -85,8 +127,8 @@ const ProfilePage = () => {
         city: form.city,
         country: form.country,
         target_exam: form.target_exam,
-        goal: form.goal,
-      })
+        school_id: schoolId,
+      } as any)
       .eq("user_id", authUser.id);
     setSaving(false);
     if (error) {
@@ -162,9 +204,8 @@ const ProfilePage = () => {
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
           </div>
           <h2 className="text-xl font-black font-display mt-3 text-white drop-shadow-sm">{form.full_name || "Student"}</h2>
-          <div className="flex items-center justify-center gap-2 mt-2">
+          <div className="flex items-center justify-center gap-2 mt-2 flex-wrap">
             {form.target_exam && <span className="rounded-full bg-white/25 backdrop-blur px-2.5 py-0.5 text-[10px] font-bold text-white">{form.target_exam}</span>}
-            {form.goal && <span className="rounded-full bg-white/25 backdrop-blur px-2.5 py-0.5 text-[10px] font-bold text-white">{form.goal}</span>}
             {schoolName && <span className="inline-flex items-center gap-1 rounded-full bg-white/25 backdrop-blur px-2.5 py-0.5 text-[10px] font-bold text-white"><School className="h-3 w-3" />{schoolName}</span>}
           </div>
           <p className="text-xs text-white/90 mt-2 font-medium">{[form.city, form.country].filter(Boolean).join(", ") || user?.email}</p>
@@ -207,7 +248,58 @@ const ProfilePage = () => {
               <Field label="City" value={form.city} onChange={(v) => setForm({ ...form, city: v })} />
               <Field label="Country" value={form.country} onChange={(v) => setForm({ ...form, country: v })} />
               <SelectField label="Target Exam" value={form.target_exam} options={EXAMS} onChange={(v) => setForm({ ...form, target_exam: v })} />
-              <SelectField label="Goal" value={form.goal} options={GOALS} onChange={(v) => setForm({ ...form, goal: v })} />
+              {/* School search — same width as Country */}
+              <div>
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">School</label>
+                {schoolName ? (
+                  <div className="mt-1 flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2">
+                    <School className="h-4 w-4 text-primary shrink-0" />
+                    <span className="flex-1 text-sm font-semibold text-foreground">{schoolName}</span>
+                    <button
+                      type="button"
+                      onClick={clearSchool}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                      title="Change school"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative mt-1">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    {schoolSearching && <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />}
+                    <input
+                      type="text"
+                      value={schoolSearch}
+                      onChange={(e) => handleSchoolSearch(e.target.value)}
+                      onBlur={() => setTimeout(() => setShowSchoolDropdown(false), 200)}
+                      onFocus={() => schoolSearch.length > 0 && setShowSchoolDropdown(true)}
+                      placeholder="Search your school..."
+                      className="w-full rounded-lg border border-border bg-background py-2 pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                    />
+                    {showSchoolDropdown && (
+                      <div className="absolute z-20 w-full mt-1 rounded-lg border border-border bg-card shadow-lg overflow-hidden">
+                        {schoolOptions.length === 0 && !schoolSearching ? (
+                          <p className="px-3 py-2.5 text-xs text-muted-foreground">No registered schools found</p>
+                        ) : (
+                          schoolOptions.map((s) => (
+                            <button
+                              key={s.id}
+                              type="button"
+                              onMouseDown={(e) => { e.preventDefault(); selectSchool(s); }}
+                              className="w-full text-left px-3 py-2.5 hover:bg-muted transition-colors"
+                            >
+                              <p className="text-sm font-semibold text-foreground">{s.name}</p>
+                              {s.city && <p className="text-[11px] text-muted-foreground">{s.city}</p>}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <p className="mt-1 text-[10px] text-muted-foreground">Linking your school lets you appear on your school's leaderboard</p>
+              </div>
             </div>
             <button
               onClick={handleSave}

@@ -9,6 +9,7 @@ import { useAppStore } from "@/store/useAppStore";
 import { useAuth } from "@/context/AuthContext";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useDoubts } from "@/hooks/useDoubts";
+import { useLiveClasses } from "@/hooks/useLiveClasses";
 import { toast } from "sonner";
 
 type StudentNavItem = {
@@ -19,10 +20,10 @@ type StudentNavItem = {
   badge?: number;
 };
 
-const buildNavItems = (doubtCount: number, liveCount: number): StudentNavItem[] => [
+const buildNavItems = (doubtCount: number, liveCount: number, hasLive: boolean): StudentNavItem[] => [
   { label: "Home", icon: Home, path: "/dashboard" },
   { label: "My Learning", icon: BookOpen, path: "/my-courses" },
-  { label: "Live Classes", icon: Video, path: "/my-live-classes", live: true, badge: liveCount || undefined },
+  { label: "Live Classes", icon: Video, path: "/my-live-classes", live: hasLive, badge: liveCount || undefined },
   { label: "Tests", icon: ClipboardCheck, path: "/my-tests" },
   { label: "Doubts", icon: MessageCircle, path: "/doubts", badge: doubtCount || undefined },
   { label: "Mentor Chat", icon: Users, path: "/mentor-chat" },
@@ -46,11 +47,12 @@ type SidebarProps = {
   onLogout: () => void;
   doubtCount: number;
   liveCount: number;
+  hasLive: boolean;
 };
 
 // Isolated, memoized sidebar — re-renders only when its props or pathname change.
-const StudentSidebar = memo(({ fullName, avatarUrl, initials, onLogout, doubtCount, liveCount }: SidebarProps) => {
-  const navItems = buildNavItems(doubtCount, liveCount);
+const StudentSidebar = memo(({ fullName, avatarUrl, initials, onLogout, doubtCount, liveCount, hasLive }: SidebarProps) => {
+  const navItems = buildNavItems(doubtCount, liveCount, hasLive);
   const { pathname } = useLocation();
 
   const renderItem = (item: StudentNavItem) => {
@@ -178,6 +180,8 @@ const StudentLayout = () => {
   const { signOut } = useAuth();
   useNotifications();
   const { doubts } = useDoubts("mine");
+  const { classes: liveClasses } = useLiveClasses("live");
+  const hasLive = liveClasses.length > 0;
   const pendingDoubtCount = doubts.filter((d) => d.status !== "answered").length;
   const liveUnreadCount = useMemo(
     () => notifications.filter((n) => !n.read_at && (n.type || "").toLowerCase().includes("live_class")).length,
@@ -204,6 +208,7 @@ const StudentLayout = () => {
         onLogout={handleLogout}
         doubtCount={pendingDoubtCount}
         liveCount={liveUnreadCount}
+        hasLive={hasLive}
       />
 
       <div className="flex-1 flex flex-col min-w-0">

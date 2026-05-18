@@ -5,7 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 
 export const useNotifications = () => {
   const { user } = useAuth();
-  const { setNotifications, addNotification } = useAppStore();
+  const { setNotifications, addNotification, archiveNotification } = useAppStore();
 
   useEffect(() => {
     if (!user) {
@@ -16,6 +16,10 @@ export const useNotifications = () => {
     let active = true;
 
     (async () => {
+      // Purge read notifications older than 48 hours (catches rows that aged
+      // out while the user was offline; the DB trigger handles the online case).
+      await supabase.rpc("cleanup_old_read_notifications");
+
       const { data, error } = await supabase
         .from("notifications")
         .select("id, title, body, type, link, read_at, created_at, archived_at")
@@ -39,6 +43,20 @@ export const useNotifications = () => {
         },
         (payload) => {
           addNotification(payload.new as AppNotification);
+        }
+      )
+      // Remove from UI immediately when the DB trigger auto-deletes a row
+      // (fires when a read notification crosses the 48h threshold)
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          archiveNotification((payload.old as AppNotification).id);
         }
       )
       .subscribe();

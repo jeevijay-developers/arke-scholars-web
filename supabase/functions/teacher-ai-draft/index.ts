@@ -71,16 +71,16 @@ serve(async (req) => {
               "**Concept**",
               "1–2 line plain-language definition.",
               "",
-              "**Step-by-step solution**",
+              "**Step-by-step solution (if any)**",
               "Numbered steps. Use inline math like v = u + at (no LaTeX).",
               "",
-              "**Final answer**",
+              "**Final answer (if any)**",
               "Result with units.",
               "",
-              "**Key formulas / facts used**",
+              "**Key formulas / facts used (if any)**",
               "- Bullets.",
               "",
-              "**Common mistakes to avoid**",
+              "**Common mistakes to avoid (if any)**",
               "- Bullets.",
               "",
               "Rules: precise, concise (max ~350 words). No meta commentary. No code-fence wrapping the whole reply.",
@@ -92,7 +92,7 @@ serve(async (req) => {
     });
 
     if (aiResp.status === 429) {
-      return new Response(JSON.stringify({ error: "AI is busy. Try again in a moment." }), {
+      return new Response(JSON.stringify({ error: "AI is busy. Try again in a moment or teacher may response soon" }), {
         status: 429,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
