@@ -2,7 +2,7 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { Flame, Heart, Globe, Menu, X } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { useEffect, useState } from "react";
-import arkeLogo from "@/assets/arke-logo.jpeg";
+import arkeLogo from "@/assets/arke-logo.png";
 
 const PublicLayout = () => {
   const location = useLocation();
