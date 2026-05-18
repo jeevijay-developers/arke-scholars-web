@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useAppStore } from "@/store/useAppStore";
 import { toast } from "sonner";
 import LiveBadge from "@/components/LiveBadge";
-import arkeLogo from "@/assets/arke-logo.jpeg";
+import AgoraVideoRoom from "@/components/AgoraVideoRoom";
 
 type ClassRow = {
   id: string;
@@ -59,17 +59,18 @@ const LiveClassRoomPage = () => {
         .order("created_at", { ascending: true });
       setMessages((msgs ?? []) as Message[]);
 
-      // Auto-attendance: upsert
+      // Auto-attendance: upsert — constraint is UNIQUE(user_id, class_id)
       if (user) {
-        await supabase.from("live_class_attendance").upsert(
+        const { error: attErr } = await supabase.from("live_class_attendance").upsert(
           {
             class_id: id,
             user_id: user.id,
             joined_at: new Date().toISOString(),
             status: "joined",
           },
-          { onConflict: "class_id,user_id" } as never,
+          { onConflict: "user_id,class_id" },
         );
+        if (attErr) console.error("[Attendance] upsert failed:", attErr.message);
       }
 
       const { count } = await supabase
@@ -85,7 +86,12 @@ const LiveClassRoomPage = () => {
         .on(
           "postgres_changes",
           { event: "INSERT", schema: "public", table: "live_class_messages", filter: `class_id=eq.${id}` },
-          (payload) => setMessages((prev) => [...prev, payload.new as Message]),
+          (payload) => {
+            const incoming = payload.new as Message;
+            setMessages((prev) =>
+              prev.some((m) => m.id === incoming.id) ? prev : [...prev, incoming],
+            );
+          },
         )
         .on(
           "postgres_changes",
@@ -96,6 +102,22 @@ const LiveClassRoomPage = () => {
               .select("*", { count: "exact", head: true })
               .eq("class_id", id);
             setParticipants(count ?? 0);
+          },
+        )
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "live_classes", filter: `id=eq.${id}` },
+          (payload) => {
+            const updated = payload.new as ClassRow;
+            setCls((prev) => {
+              if (prev && prev.status !== "completed" && updated.status === "completed") {
+                toast("Class has ended", {
+                  description: "The teacher has ended this live class.",
+                  duration: 6000,
+                });
+              }
+              return prev ? { ...prev, ...updated } : prev;
+            });
           },
         )
         .subscribe();
@@ -117,18 +139,38 @@ const LiveClassRoomPage = () => {
   const sendMessage = async () => {
     if (!user || !cls || !text.trim()) return;
     const display = storeUser?.full_name || user.email?.split("@")[0] || "Student";
-    const { error } = await supabase.from("live_class_messages").insert({
+    const trimmed = text.trim();
+    setText("");
+
+    // Optimistic insert — message appears instantly, deduplicated on realtime event
+    const optimisticId = `optimistic-${Date.now()}`;
+    const optimistic: Message = {
+      id: optimisticId,
+      user_id: user.id,
+      display_name: display,
+      is_teacher: false,
+      message: trimmed,
+      created_at: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, optimistic]);
+
+    const { data, error } = await supabase.from("live_class_messages").insert({
       class_id: cls.id,
       user_id: user.id,
       display_name: display,
       is_teacher: false,
-      message: text.trim(),
-    });
+      message: trimmed,
+    }).select().single();
+
     if (error) {
       toast.error(error.message);
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
+      setText(trimmed);
       return;
     }
-    setText("");
+    if (data) {
+      setMessages((prev) => prev.map((m) => m.id === optimisticId ? (data as Message) : m));
+    }
   };
 
   if (loading) {
@@ -150,26 +192,6 @@ const LiveClassRoomPage = () => {
   }
 
   const isLive = cls.status === "live";
-  const rawSrc = cls.recording_url || cls.meeting_url;
-  const videoSrc = rawSrc
-    ? (() => {
-        // For Jitsi meetings, hide the Jitsi watermark/logo via interface config hash params.
-        const isJitsi = /jit\.si|jitsi/i.test(rawSrc);
-        if (!isJitsi) return rawSrc;
-        const flags = [
-          "config.disableDeepLinking=true",
-          "interfaceConfig.SHOW_JITSI_WATERMARK=false",
-          "interfaceConfig.SHOW_WATERMARK_FOR_GUESTS=false",
-          "interfaceConfig.SHOW_BRAND_WATERMARK=false",
-          "interfaceConfig.SHOW_POWERED_BY=false",
-          "interfaceConfig.HIDE_DEEP_LINKING_LOGO=true",
-          "interfaceConfig.DEFAULT_LOGO_URL=",
-          "interfaceConfig.DEFAULT_WELCOME_PAGE_LOGO_URL=",
-        ].join("&");
-        const sep = rawSrc.includes("#") ? "&" : "#";
-        return `${rawSrc}${sep}${flags}`;
-      })()
-    : null;
 
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden">
@@ -192,25 +214,25 @@ const LiveClassRoomPage = () => {
       </div>
 
       <div className="flex flex-1 min-h-0 flex-col md:flex-row">
-        <div className="relative flex-1 min-h-0 bg-[#0a0a0a] flex items-center justify-center">
-          {videoSrc ? (
-            <>
-              <iframe
-                src={videoSrc}
-                title={cls.title}
-                allow="camera; microphone; fullscreen; display-capture"
-                className="h-full w-full border-0"
+        <div className="relative flex-1 min-h-0 bg-[#0a0a0a]">
+          {isLive ? (
+            <div className="absolute inset-0">
+              <AgoraVideoRoom
+                channelName={cls.id}
+                role="audience"
               />
-              {/* Arke logo cover over Jitsi watermark (top-left of iframe) */}
-              <div className="pointer-events-none absolute top-2 left-2 md:top-3 md:left-3 z-10 flex items-center gap-2 rounded-lg bg-black/70 px-2.5 py-1 backdrop-blur-sm">
-                <img src={arkeLogo} alt="Arke Scholars" className="h-5 md:h-6 w-auto rounded" />
-                <span className="text-[10px] md:text-xs font-bold text-white tracking-wide">Arke Scholars</span>
-              </div>
-            </>
+            </div>
+          ) : cls.recording_url ? (
+            <iframe
+              src={cls.recording_url}
+              title={cls.title}
+              allow="fullscreen"
+              className="absolute inset-0 h-full w-full border-0"
+            />
           ) : (
-            <div className="text-center text-white/60 p-6">
-              <p className="text-sm">No meeting link available yet.</p>
-              <p className="text-xs mt-1">Check back when the class goes live.</p>
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-white/60 p-6 text-center">
+              <p className="text-sm">Class is not live yet.</p>
+              <p className="text-xs mt-1">You'll automatically see the stream when the teacher goes live.</p>
             </div>
           )}
         </div>

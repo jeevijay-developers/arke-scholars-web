@@ -39,69 +39,80 @@ serve(async (req) => {
       });
     }
 
-    const aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${GOOGLE_AI_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: [
-              "You are an expert tutor for Indian competitive exams (JEE, NEET, CUET, Class 11/12 boards) and Dubai curriculum (CBSE/IB/IGCSE).",
-              "Your answer is shown to BOTH the student and the educator who reviews it. Make it useful for both.",
-              "",
-              "Always reply in clean GitHub-Flavored Markdown using EXACTLY this structure (omit a section only if truly not applicable):",
-              "",
-              "**Concept**",
-              "1–2 line plain-language definition of the core idea.",
-              "",
-              "**Step-by-step solution**",
-              "Numbered steps. Each step states what is being done and why. Use inline math like v = u + at (no LaTeX, no $...$).",
-              "",
-              "**Final answer**",
-              "State the result clearly with units.",
-              "",
-              "**Key formulas / facts used**",
-              "- Bullet list of formulas or facts referenced.",
-              "",
-              "**Common mistakes to avoid**",
-              "- Short bullets a student typically gets wrong here.",
-              "",
-              "**Educator note**",
-              "1–2 lines for the reviewing teacher: marking-scheme hint, alternate method, or what to probe if the student is still confused.",
-              "",
-              "Rules: Be precise and concise (max ~300 words). Never include API keys, credentials, links, or meta commentary. Never wrap the whole reply in a code block.",
-            ].join("\n"),
-          },
-          { role: "user", content: `Subject: ${subject}\n\nStudent's doubt:\n${question}` },
-        ],
-      }),
+    const systemPrompt = [
+      "You are an expert tutor for Indian competitive exams (JEE, NEET, CUET, Class 11/12 boards) and Dubai curriculum (CBSE/IB/IGCSE).",
+      "Your answer is shown to BOTH the student and the educator who reviews it. Make it useful for both.",
+      "",
+      "Always reply in clean GitHub-Flavored Markdown using EXACTLY this structure (omit a section only if truly not applicable):",
+      "",
+      "**Concept**",
+      "1–2 line plain-language definition of the core idea.",
+      "",
+      "**Step-by-step solution**",
+      "Numbered steps. Each step states what is being done and why. Use inline math like v = u + at (no LaTeX, no $...$).",
+      "",
+      "**Final answer**",
+      "State the result clearly with units.",
+      "",
+      "**Key formulas / facts used**",
+      "- Bullet list of formulas or facts referenced.",
+      "",
+      "**Common mistakes to avoid**",
+      "- Short bullets a student typically gets wrong here.",
+      "",
+      "**Educator note**",
+      "1–2 lines for the reviewing teacher: marking-scheme hint, alternate method, or what to probe if the student is still confused.",
+      "",
+      "Rules: Be precise and concise (max ~300 words). Never include API keys, credentials, links, or meta commentary. Never wrap the whole reply in a code block.",
+    ].join("\n");
+
+    const requestBody = JSON.stringify({
+      system_instruction: { parts: [{ text: systemPrompt }] },
+      contents: [
+        { role: "user", parts: [{ text: `Subject: ${subject}\n\nStudent's doubt:\n${question}` }] },
+      ],
+      generationConfig: { maxOutputTokens: 1024, temperature: 0.4 },
     });
 
-    if (aiResp.status === 429) {
-      return new Response(JSON.stringify({ error: "AI is busy. Try again in a moment." }), {
-        status: 429,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // Try models in order — fall back if one is rate-limited
+    const models = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-flash-8b"];
+    let aiJson: any = null;
+
+    for (const model of models) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GOOGLE_AI_API_KEY}`;
+      const aiResp = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: requestBody,
       });
+
+      if (aiResp.status === 429) {
+        console.warn(`[AI] ${model} rate-limited, trying next model...`);
+        // Wait 1s before trying next model
+        await new Promise((r) => setTimeout(r, 1000));
+        continue;
+      }
+
+      if (!aiResp.ok) {
+        const t = await aiResp.text();
+        console.error(`[AI] ${model} error ${aiResp.status}:`, t);
+        continue;
+      }
+
+      aiJson = await aiResp.json();
+      break;
     }
-    if (aiResp.status === 402) {
-      return new Response(JSON.stringify({ error: "AI credits exhausted. Please contact support." }), {
-        status: 402,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    if (!aiResp.ok) {
-      const t = await aiResp.text();
-      console.error("AI gateway error:", aiResp.status, t);
-      return new Response(JSON.stringify({ error: "AI gateway error" }), {
-        status: 500,
+
+    if (!aiJson) {
+      // Return 200 so the JS client puts the body in res.data (not res.error)
+      return new Response(JSON.stringify({ busy: true, error: "AI is currently busy. Please try again in a minute." }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const aiJson = await aiResp.json();
-    const answer: string = aiJson.choices?.[0]?.message?.content ?? "Sorry, I could not generate an answer.";
+    const answer: string =
+      aiJson.candidates?.[0]?.content?.parts?.[0]?.text ?? "Sorry, I could not generate an answer.";
 
     // Update doubt row with the AI answer (service role to bypass RLS for the system update)
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;

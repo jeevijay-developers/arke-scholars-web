@@ -1,7 +1,7 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { Home, BookOpen, Video, ClipboardCheck, MessageCircle, Swords, BarChart3, Trophy, User, Settings, Search, Flame, Users } from "lucide-react";
 import LogoutButton from "@/components/LogoutButton";
-import { memo, useCallback } from "react";
+import { memo, useCallback, useMemo } from "react";
 import GoalSelector from "@/components/GoalSelector";
 import LiveBadge from "@/components/LiveBadge";
 import NotificationBell from "@/components/NotificationBell";
@@ -19,10 +19,10 @@ type StudentNavItem = {
   badge?: number;
 };
 
-const buildNavItems = (doubtCount: number): StudentNavItem[] => [
+const buildNavItems = (doubtCount: number, liveCount: number): StudentNavItem[] => [
   { label: "Home", icon: Home, path: "/dashboard" },
   { label: "My Learning", icon: BookOpen, path: "/my-courses" },
-  { label: "Live Classes", icon: Video, path: "/my-live-classes", live: true },
+  { label: "Live Classes", icon: Video, path: "/my-live-classes", live: true, badge: liveCount || undefined },
   { label: "Tests", icon: ClipboardCheck, path: "/my-tests" },
   { label: "Doubts", icon: MessageCircle, path: "/doubts", badge: doubtCount || undefined },
   { label: "Mentor Chat", icon: Users, path: "/mentor-chat" },
@@ -47,11 +47,12 @@ type SidebarProps = {
   setCurrentGoal: (g: string) => void;
   onLogout: () => void;
   doubtCount: number;
+  liveCount: number;
 };
 
 // Isolated, memoized sidebar — re-renders only when its props or pathname change.
-const StudentSidebar = memo(({ fullName, avatarUrl, initials, currentGoal, setCurrentGoal, onLogout, doubtCount }: SidebarProps) => {
-  const navItems = buildNavItems(doubtCount);
+const StudentSidebar = memo(({ fullName, avatarUrl, initials, currentGoal, setCurrentGoal, onLogout, doubtCount, liveCount }: SidebarProps) => {
+  const navItems = buildNavItems(doubtCount, liveCount);
   const { pathname } = useLocation();
 
   const renderItem = (item: StudentNavItem) => {
@@ -181,11 +182,15 @@ StudentHeader.displayName = "StudentHeader";
 
 const StudentLayout = () => {
   const navigate = useNavigate();
-  const { user, currentGoal, setCurrentGoal } = useAppStore();
+  const { user, currentGoal, setCurrentGoal, notifications } = useAppStore();
   const { signOut } = useAuth();
   useNotifications();
   const { doubts } = useDoubts("mine");
   const pendingDoubtCount = doubts.filter((d) => d.status !== "answered").length;
+  const liveUnreadCount = useMemo(
+    () => notifications.filter((n) => !n.read_at && (n.type || "").toLowerCase().includes("live_class")).length,
+    [notifications],
+  );
 
   const handleLogout = useCallback(async () => {
     await signOut();
@@ -208,6 +213,7 @@ const StudentLayout = () => {
         setCurrentGoal={setCurrentGoal}
         onLogout={handleLogout}
         doubtCount={pendingDoubtCount}
+        liveCount={liveUnreadCount}
       />
 
       <div className="flex-1 flex flex-col min-w-0">
