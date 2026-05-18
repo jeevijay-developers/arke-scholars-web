@@ -85,11 +85,11 @@ const AdminSidebar = memo(({ email, initials, avatarUrl, isSuperAdmin, onLogout 
         <Link to="/" className="flex items-center justify-center w-full bg-white rounded-xl py-2 px-4 hover:opacity-95 transition-opacity">
           <img src={arkeLogo} alt="ARKE Logo" className="h-10 w-auto object-contain" />
         </Link>
-        <div className="mt-3 rounded-md bg-primary/20 px-2 py-1 text-center">
+        {/* <div className="mt-3 rounded-md bg-primary/20 px-2 py-1 text-center">
           <span className="text-[10px] font-bold uppercase tracking-wider text-primary">
             {panelLabel}
           </span>
-        </div>
+        </div> */}
       </div>
 
       <nav className="flex-1 px-3 space-y-1">
