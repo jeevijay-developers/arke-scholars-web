@@ -11,6 +11,7 @@ import SignupPage from "./pages/SignupPage";
 import VerifyEmailPage from "./pages/VerifyEmailPage";
 import AuthCallbackPage from "./pages/AuthCallbackPage";
 import ForceChangePasswordPage from "./pages/ForceChangePasswordPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import UnsubscribePage from "./pages/UnsubscribePage";
 import StudentLayout from "./components/StudentLayout";
 import TeacherLayout from "./components/TeacherLayout";
@@ -120,6 +121,7 @@ const App = () => (
             <Route path="/verify-email" element={<VerifyEmailPage />} />
             <Route path="/auth/callback" element={<AuthCallbackPage />} />
             <Route path="/auth/change-password" element={<ForceChangePasswordPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/access-denied" element={<AccessDeniedPage />} />
             <Route path="/unsubscribe" element={<UnsubscribePage />} />
 

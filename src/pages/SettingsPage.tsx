@@ -1,16 +1,27 @@
-import { Settings, Moon, Globe, Lock, Trash2 } from "lucide-react";
-import { useState } from "react";
-import NotificationPreferences from "@/components/NotificationPreferences";
+import { Settings, Lock, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const SettingsPage = () => {
-  const [darkMode, setDarkMode] = useState(false);
-  const [language, setLanguage] = useState("en");
+  const navigate = useNavigate();
 
-  const Toggle = ({ on, toggle }: { on: boolean; toggle: () => void }) => (
-    <button onClick={toggle} className={`relative h-6 w-11 rounded-full transition-colors ${on ? "bg-primary" : "bg-muted"}`}>
-      <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${on ? "translate-x-5" : ""}`} />
-    </button>
-  );
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      "Are you sure? This will permanently delete your account and all associated data. This action cannot be undone."
+    );
+    if (!confirmed) return;
+
+    const { error } = await supabase.auth.admin.deleteUser(
+      (await supabase.auth.getUser()).data.user?.id || ""
+    );
+    if (error) {
+      toast.error("Failed to delete account. Please try again.");
+      return;
+    }
+    await supabase.auth.signOut();
+    navigate("/login");
+  };
 
   return (
     <div className="p-4 lg:p-6 space-y-6 max-w-2xl">
@@ -23,34 +34,25 @@ const SettingsPage = () => {
       </div>
 
       <div className="space-y-4">
-        <NotificationPreferences />
-
-        <div className="rounded-xl border border-border bg-card p-5">
-          <h3 className="text-sm font-bold text-foreground flex items-center gap-2 mb-4"><Moon className="h-4 w-4 text-primary" /> Appearance</h3>
-          <div className="flex items-center justify-between">
-            <div><p className="text-sm text-foreground">Dark Mode</p><p className="text-xs text-muted-foreground">Switch to dark theme</p></div>
-            <Toggle on={darkMode} toggle={() => setDarkMode(!darkMode)} />
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-border bg-card p-5">
-          <h3 className="text-sm font-bold text-foreground flex items-center gap-2 mb-4"><Globe className="h-4 w-4 text-primary" /> Language & Region</h3>
-          <select value={language} onChange={e => setLanguage(e.target.value)} className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground">
-            <option value="en">English</option>
-            <option value="hi">Hindi</option>
-            <option value="ar">Arabic</option>
-          </select>
-        </div>
-
         <div className="rounded-xl border border-border bg-card p-5">
           <h3 className="text-sm font-bold text-foreground flex items-center gap-2 mb-4"><Lock className="h-4 w-4 text-primary" /> Security</h3>
-          <button className="rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity">Change Password</button>
+          <button
+            onClick={() => navigate("/auth/change-password")}
+            className="rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity"
+          >
+            Change Password
+          </button>
         </div>
 
         <div className="rounded-xl border border-destructive/30 bg-card p-5">
           <h3 className="text-sm font-bold text-destructive flex items-center gap-2 mb-2"><Trash2 className="h-4 w-4" /> Danger Zone</h3>
           <p className="text-xs text-muted-foreground mb-3">Once you delete your account, there is no going back.</p>
-          <button className="rounded-lg border border-destructive px-4 py-2 text-xs font-bold text-destructive hover:bg-destructive/10 transition-colors">Delete Account</button>
+          <button
+            onClick={handleDeleteAccount}
+            className="rounded-lg border border-destructive px-4 py-2 text-xs font-bold text-destructive hover:bg-destructive/10 transition-colors"
+          >
+            Delete Account
+          </button>
         </div>
       </div>
     </div>

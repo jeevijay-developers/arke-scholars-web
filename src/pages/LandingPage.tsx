@@ -514,9 +514,9 @@ const LandingPage = () => {
               { name: "JEE Pro", price: country === 'india' ? "₹999" : "AED 149", desc: "/month", features: ["Unlimited live classes", "Full test series", "AI doubt solver", "Analytics"], cta: "Get Pro", popular: true },
               { name: "Elite", price: country === 'india' ? "₹3,999" : "AED 599", desc: "/month", features: ["Everything in Pro", "1-on-1 mentoring", "Personal study plan", "Priority support"], cta: "Go Elite", popular: false },
             ].map((p) => (
-              <div key={p.name} className={`relative rounded-2xl border p-8 hover-lift ${p.popular ? 'border-primary bg-background shadow-blue' : 'border-border bg-background shadow-sm'}`}>
+              <div key={p.name} className={`relative rounded-2xl border p-8 hover-lift overflow-visible ${p.popular ? 'border-primary bg-background shadow-blue' : 'border-border bg-background shadow-sm'}`}>
                 {p.popular && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-pill bg-gradient-to-r from-primary to-accent px-4 py-1 text-xs font-bold text-primary-foreground">
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-pill bg-gradient-to-r from-primary to-accent px-4 py-1 text-xs font-bold text-primary-foreground z-10">
                     Most Popular
                   </span>
                 )}
@@ -527,7 +527,7 @@ const LandingPage = () => {
                 </div>
                 <ul className="mt-6 space-y-3">
                   {p.features.map((f) => (
-                    <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground z-10">
                       <Check className="h-4 w-4 text-secondary" /> {f}
                     </li>
                   ))}
@@ -550,9 +550,9 @@ const LandingPage = () => {
                 { name: "JEE Pro", price: country === 'india' ? "₹999" : "AED 149", desc: "/month", features: ["Unlimited live classes", "Full test series", "AI doubt solver", "Analytics"], cta: "Get Pro", popular: true },
                 { name: "Elite", price: country === 'india' ? "₹3,999" : "AED 599", desc: "/month", features: ["Everything in Pro", "1-on-1 mentoring", "Personal study plan", "Priority support"], cta: "Go Elite", popular: false },
               ].map((p) => (
-                <div key={p.name} className={`relative rounded-2xl border p-5 h-full ${p.popular ? 'border-primary bg-background shadow-blue' : 'border-border bg-background shadow-sm'}`}>
+                <div key={p.name} className={`relative rounded-2xl border p-5 h-full overflow-visible ${p.popular ? 'border-primary bg-background shadow-blue' : 'border-border bg-background shadow-sm'}`}>
                   {p.popular && (
-                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-pill bg-gradient-to-r from-primary to-accent px-3 py-0.5 text-[10px] font-bold text-primary-foreground whitespace-nowrap">
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-pill bg-gradient-to-r from-primary to-accent px-3 py-0.5 text-[10px] font-bold text-primary-foreground whitespace-nowrap z-10">
                       Most Popular
                     </span>
                   )}

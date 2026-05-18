@@ -132,9 +132,9 @@ const PublicLayout = () => {
 
       {/* Navbar */}
       <nav className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md">
-        <div className="container mx-auto flex items-center justify-between px-4 py-3 relative">
+        <div className="container mx-auto flex items-center justify-between gap-2 md:gap-4 px-4 py-3">
           <button
-            className="md:hidden p-1 text-foreground"
+            className="md:hidden p-1 text-foreground shrink-0"
             onClick={() => setDrawerOpen(!drawerOpen)}
             aria-label="Open menu"
           >
@@ -142,15 +142,15 @@ const PublicLayout = () => {
           </button>
           <Link
             to="/"
-            className="flex items-center gap-2 absolute left-1/2 -translate-x-1/2 md:static md:translate-x-0"
+            className="flex items-center gap-2 shrink-0"
           >
             <img
               src={arkeLogo}
               alt="ARKE"
-              className="h-9 w-auto object-contain"
+              className="h-8 md:h-9 w-auto object-contain"
             />
           </Link>
-          <div className="hidden items-center gap-8 md:flex">
+          <div className="hidden items-center justify-center gap-8 md:flex flex-1">
             {navItems.map((item) => {
               const active = location.pathname === item.path || location.pathname.startsWith(item.path + "/");
               return (
@@ -164,14 +164,14 @@ const PublicLayout = () => {
               );
             })}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 md:gap-3 shrink-0">
             {user ? (
               <Link
                 to="/dashboard"
                 className="flex items-center gap-2 rounded-pill border border-border bg-card px-2 py-1 pr-4 hover:border-primary/50 transition-colors"
                 aria-label="Go to dashboard"
               >
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-xs font-black text-primary-foreground overflow-hidden">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-xs font-black text-primary-foreground overflow-hidden shrink-0">
                   {user.avatar_url ? (
                     <img src={user.avatar_url} alt={user.full_name} className="h-full w-full object-cover" />
                   ) : (
@@ -184,12 +184,12 @@ const PublicLayout = () => {
               </Link>
             ) : (
               <>
-                <Link to="/login" className="text-sm font-semibold text-foreground hover:text-primary transition-colors">
+                <Link to="/login" className="hidden xs:text-sm xs:font-semibold xs:text-foreground xs:hover:text-primary xs:transition-colors sm:block">
                   Login
                 </Link>
                 <Link
                   to="/signup"
-                  className="rounded-pill bg-gradient-to-r from-primary to-accent px-5 py-2 text-sm font-bold text-primary-foreground shadow-blue hover:opacity-90 transition-opacity"
+                  className="rounded-pill bg-gradient-to-r from-primary to-accent px-3 md:px-5 py-2 text-xs md:text-sm font-bold text-primary-foreground shadow-blue hover:opacity-90 transition-opacity whitespace-nowrap"
                 >
                   Start Free
                 </Link>

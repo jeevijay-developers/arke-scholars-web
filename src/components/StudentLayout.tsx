@@ -3,7 +3,6 @@ import { Home, BookOpen, Video, ClipboardCheck, MessageCircle, Swords, BarChart3
 import LogoutButton from "@/components/LogoutButton";
 import { memo, useCallback, useMemo } from "react";
 import arkeLogo from "@/assets/arke-logo.png";
-import GoalSelector from "@/components/GoalSelector";
 import LiveBadge from "@/components/LiveBadge";
 import NotificationBell from "@/components/NotificationBell";
 import { useAppStore } from "@/store/useAppStore";
@@ -44,15 +43,13 @@ type SidebarProps = {
   fullName: string;
   avatarUrl?: string;
   initials: string;
-  currentGoal: string;
-  setCurrentGoal: (g: string) => void;
   onLogout: () => void;
   doubtCount: number;
   liveCount: number;
 };
 
 // Isolated, memoized sidebar — re-renders only when its props or pathname change.
-const StudentSidebar = memo(({ fullName, avatarUrl, initials, currentGoal, setCurrentGoal, onLogout, doubtCount, liveCount }: SidebarProps) => {
+const StudentSidebar = memo(({ fullName, avatarUrl, initials, onLogout, doubtCount, liveCount }: SidebarProps) => {
   const navItems = buildNavItems(doubtCount, liveCount);
   const { pathname } = useLocation();
 
@@ -82,9 +79,6 @@ const StudentSidebar = memo(({ fullName, avatarUrl, initials, currentGoal, setCu
         <Link to="/" className="flex items-center justify-center w-full bg-white rounded-xl py-2 px-4 hover:opacity-95 transition-opacity">
           <img src={arkeLogo} alt="ARKE Logo" className="h-10 w-auto object-contain" />
         </Link>
-        <div className="mt-4">
-          <GoalSelector value={currentGoal} onChange={setCurrentGoal} />
-        </div>
       </div>
 
       <nav className="flex-1 px-3 space-y-1">
@@ -207,8 +201,6 @@ const StudentLayout = () => {
         fullName={fullName}
         avatarUrl={user?.avatar_url}
         initials={initials}
-        currentGoal={currentGoal}
-        setCurrentGoal={setCurrentGoal}
         onLogout={handleLogout}
         doubtCount={pendingDoubtCount}
         liveCount={liveUnreadCount}
