@@ -343,14 +343,21 @@ const CreateCoursePage = () => {
 
       <div className="rounded-xl border border-border bg-card p-5 space-y-4">
         <h2 className="text-sm font-bold text-foreground">Thumbnail</h2>
-        {existingThumbnail && !thumbnailFile && (
-          <img src={existingThumbnail} alt="Current thumbnail" className="h-32 w-auto rounded-lg border border-border object-cover" />
+        {(existingThumbnail || thumbnailFile) && (
+          <div className="aspect-video w-full overflow-hidden rounded-lg border border-border bg-muted">
+            <img
+              src={thumbnailFile ? URL.createObjectURL(thumbnailFile) : existingThumbnail!}
+              alt="Thumbnail preview"
+              className="h-full w-full object-cover"
+            />
+          </div>
         )}
         <label className="block">
           <input type="file" accept="image/*" className="hidden" onChange={(e) => setThumbnailFile(e.target.files?.[0] ?? null)} />
           <div className="rounded-lg border-2 border-dashed border-border bg-background p-6 flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors">
             <Upload className="h-8 w-8 text-muted-foreground mb-2" />
             <p className="text-xs text-muted-foreground">{thumbnailFile ? thumbnailFile.name : existingThumbnail ? "Click to replace thumbnail" : "Click to upload thumbnail"}</p>
+            <p className="text-[10px] text-muted-foreground mt-1">Recommended: 16:9 ratio · 1280×720px or larger</p>
           </div>
         </label>
       </div>

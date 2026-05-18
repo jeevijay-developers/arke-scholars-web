@@ -8,6 +8,55 @@ import { useConfirm } from "@/components/ConfirmDialog";
 import { usePagination } from "@/hooks/usePagination";
 import TablePagination from "@/components/TablePagination";
 
+type TestQuestionRow = {
+  subject: string;
+  topic: string | null;
+  question_text: string;
+  question_image_url: string | null;
+  question_type: string;
+  options: unknown;
+  correct_answer: unknown;
+  explanation: string | null;
+  difficulty: string | null;
+  marks_correct: number | null;
+  marks_wrong: number | null;
+};
+
+// Copy a test's questions into the question_bank so they survive the test deletion.
+// Returns the number of questions archived (0 if the test had none).
+async function archiveTestQuestionsToBank(testId: string, createdBy: string | null): Promise<number> {
+  const { data: qs, error: fetchErr } = await supabase
+    .from("test_questions")
+    .select(
+      "subject, topic, question_text, question_image_url, question_type, options, correct_answer, explanation, difficulty, marks_correct, marks_wrong",
+    )
+    .eq("test_id", testId);
+
+  if (fetchErr) throw new Error(`Could not load questions: ${fetchErr.message}`);
+  if (!qs || qs.length === 0) return 0;
+
+  const bankRows = (qs as TestQuestionRow[]).map((q) => ({
+    created_by: createdBy,
+    subject: q.subject || "Physics",
+    topic: q.topic ?? null,
+    difficulty: q.difficulty ?? "medium",
+    question_text: q.question_text,
+    question_image_url: q.question_image_url ?? null,
+    options: q.options ?? [],
+    correct_answer: q.correct_answer,
+    explanation: q.explanation ?? null,
+    marks_correct: q.marks_correct ?? 4,
+    marks_wrong: q.marks_wrong ?? -1,
+    // Preserve the original question type so it can be edited/used correctly later.
+    tags: [`type:${q.question_type}`],
+    is_public: true,
+  }));
+
+  const { error: insertErr } = await (supabase as any).from("question_bank").insert(bankRows);
+  if (insertErr) throw new Error(`Could not archive questions: ${insertErr.message}`);
+  return bankRows.length;
+}
+
 type AdminTest = {
   id: string;
   title: string;
@@ -21,7 +70,7 @@ type AdminTest = {
 };
 
 const AdminTestsPage = () => {
-  const { isSuperAdmin } = useAuth();
+  const { user } = useAuth();
   const { confirm, ConfirmDialog } = useConfirm();
   const [tests, setTests] = useState<AdminTest[]>([]);
   const [search, setSearch] = useState("");
@@ -50,16 +99,27 @@ const AdminTestsPage = () => {
 
   const deleteTest = async (t: AdminTest) => {
     const ok = await confirm({
-      title: `Delete "${t.title}" permanently?`,
+      title: `Delete "${t.title}"?`,
       description:
-        "This will permanently remove the test and all its questions and student attempts. This cannot be undone.",
+        "The test and all student attempts will be permanently removed. Its questions will be copied to the Question Bank first, so they remain reusable.",
       confirmLabel: "Delete test",
     });
     if (!ok) return;
-    const { error } = await supabase.from("tests").delete().eq("id", t.id);
-    if (error) return toast.error(error.message);
-    toast.success("Test deleted");
-    load();
+
+    try {
+      const archived = await archiveTestQuestionsToBank(t.id, user?.id ?? null);
+      const { error } = await supabase.from("tests").delete().eq("id", t.id);
+      if (error) return toast.error(error.message);
+      toast.success(
+        archived > 0
+          ? `Test deleted · ${archived} question${archived === 1 ? "" : "s"} moved to the Question Bank`
+          : "Test deleted",
+      );
+      load();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      toast.error(`Delete failed: ${msg}`);
+    }
   };
 
   const filtered = tests.filter((t) => t.title.toLowerCase().includes(search.toLowerCase()));
@@ -141,15 +201,13 @@ const AdminTestsPage = () => {
                             <X className="h-3.5 w-3.5" />
                           </button>
                         )}
-                        {isSuperAdmin && (
-                          <button
-                            onClick={() => deleteTest(t)}
-                            className="rounded-md p-1.5 text-destructive hover:bg-destructive/10"
-                            title="Delete test (super admin)"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        )}
+                        <button
+                          onClick={() => deleteTest(t)}
+                          className="rounded-md p-1.5 text-destructive hover:bg-destructive/10"
+                          title="Delete test (questions are kept in the Question Bank)"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
                       </div>
                     </td>
                   </tr>

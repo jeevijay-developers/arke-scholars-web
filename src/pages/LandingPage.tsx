@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Play, BookOpen, ClipboardCheck, Bot, BarChart3, Swords, Smartphone, Check, Flame, Rocket, GraduationCap, FileText, Trophy, Users, Monitor, Award, Heart, Sparkles, Globe, Video, User, Quote, Clock, ChevronRight, ChevronDown, HelpCircle, Briefcase, IndianRupee, ChevronLeft, Menu, X } from "lucide-react";
+import { ArrowRight, Play, BookOpen, ClipboardCheck, Bot, BarChart3, Swords, Smartphone, Check, Flame, Rocket, GraduationCap, FileText, Trophy, Users, Monitor, Award, Heart, Sparkles, Globe, Video, User, Quote, Clock, ChevronRight, ChevronDown, HelpCircle, Briefcase, IndianRupee, Menu, X, ChevronLeft, Menu, X } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { useState, useRef } from "react";
 import EducatorApplicationDialog from "@/components/EducatorApplicationDialog";
@@ -216,61 +216,20 @@ const LandingPage = () => {
       {/* Navbar */}
       <nav className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md">
         <div className="container mx-auto px-4 py-3">
-
-          {/* Mobile layout: hamburger | centered logo | auth */}
-          <div className="flex items-center justify-between md:hidden">
-            <button
-              onClick={() => setDrawerOpen(true)}
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-              aria-label="Open menu"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-
-            <Link to="/" className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent">
-                <Flame className="h-4 w-4 text-primary-foreground" />
-              </div>
-              <span className="text-lg font-black font-display gradient-text">ARKE</span>
-            </Link>
-
-            <div className="flex items-center gap-2">
-              {user ? (
-                <Link
-                  to="/dashboard"
-                  className="flex items-center gap-2 rounded-pill border border-border bg-card px-2 py-1 hover:border-primary/50 transition-colors"
-                  aria-label="Go to dashboard"
-                >
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-xs font-black text-primary-foreground overflow-hidden">
-                    {user.avatar_url ? (
-                      <img src={user.avatar_url} alt={user.full_name} className="h-full w-full object-cover" />
-                    ) : initials}
-                  </div>
-                </Link>
-              ) : (
-                <Link to="/signup" className="rounded-pill bg-gradient-to-r from-primary to-accent px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-blue hover:opacity-90 transition-opacity">
-                  Start Free
-                </Link>
-              )}
-            </div>
-          </div>
-
-          {/* Desktop layout */}
-          <div className="hidden md:flex items-center justify-between">
+          <div className="flex items-center justify-between">
             <Link to="/" className="flex items-center gap-2">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent">
                 <Flame className="h-5 w-5 text-primary-foreground" />
               </div>
               <span className="text-xl font-black font-display gradient-text">ARKE</span>
             </Link>
-            <div className="flex items-center gap-8">
-              {navLinks.map((link) => (
-                <Link key={link.path} to={link.path} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-                  {link.label}
-                </Link>
-              ))}
+            <div className="hidden items-center gap-8 md:flex">
+              <Link to="/courses" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Courses</Link>
+              <Link to="/mentorship" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Mentorship</Link>
+              <Link to="/admissions" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Admission/Scholarship</Link>
+              <Link to="/association" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Association</Link>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               {user ? (
                 <Link
                   to="/dashboard"
@@ -280,23 +239,40 @@ const LandingPage = () => {
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-xs font-black text-primary-foreground overflow-hidden">
                     {user.avatar_url ? (
                       <img src={user.avatar_url} alt={user.full_name} className="h-full w-full object-cover" />
-                    ) : initials}
+                    ) : (
+                      initials
+                    )}
                   </div>
-                  <span className="text-sm font-semibold text-foreground truncate max-w-[120px]">
+                  <span className="text-sm font-semibold text-foreground hidden sm:inline truncate max-w-[120px]">
                     {user.full_name?.split(' ')[0] || 'Account'}
                   </span>
                 </Link>
               ) : (
                 <>
-                  <Link to="/login" className="text-sm font-semibold text-foreground hover:text-primary transition-colors">Login</Link>
-                  <Link to="/signup" className="rounded-pill bg-gradient-to-r from-primary to-accent px-5 py-2 text-sm font-bold text-primary-foreground shadow-blue hover:opacity-90 transition-opacity">
+                  <Link to="/login" className="hidden sm:inline-block text-sm font-semibold text-foreground hover:text-primary transition-colors">Login</Link>
+                  <Link to="/signup" className="rounded-pill bg-gradient-to-r from-primary to-accent px-4 py-1.5 sm:px-5 sm:py-2 text-xs sm:text-sm font-bold text-primary-foreground shadow-blue hover:opacity-90 transition-opacity">
                     Start Free
                   </Link>
                 </>
               )}
+              {/* Hamburger Button */}
+              <button className="md:hidden p-1 text-foreground ml-1" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+                {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              </button>
             </div>
           </div>
-
+          {/* Mobile Menu Overlay */}
+          {isMobileMenuOpen && (
+            <div className="md:hidden pt-4 pb-2 flex flex-col gap-4 border-t border-border mt-3 animate-fade-in-up">
+              <Link to="/courses" className="text-sm font-medium text-foreground hover:text-primary transition-colors" onClick={() => setIsMobileMenuOpen(false)}>Courses</Link>
+              <Link to="/mentorship" className="text-sm font-medium text-foreground hover:text-primary transition-colors" onClick={() => setIsMobileMenuOpen(false)}>Mentorship</Link>
+              <Link to="/admissions" className="text-sm font-medium text-foreground hover:text-primary transition-colors" onClick={() => setIsMobileMenuOpen(false)}>Admission/Scholarship</Link>
+              <Link to="/association" className="text-sm font-medium text-foreground hover:text-primary transition-colors" onClick={() => setIsMobileMenuOpen(false)}>Association</Link>
+              {!user && (
+                <Link to="/login" className="text-sm font-medium text-foreground hover:text-primary transition-colors" onClick={() => setIsMobileMenuOpen(false)}>Login</Link>
+              )}
+            </div>
+          )}
         </div>
       </nav>
 
