@@ -1,10 +1,13 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
-import { Flame, Heart, Globe } from "lucide-react";
+import { Flame, Heart, Globe, Menu, X } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
+import { useEffect, useState } from "react";
+import arkeLogo from "@/assets/arke-logo.jpeg";
 
 const PublicLayout = () => {
   const location = useLocation();
   const { country, setCountry, user } = useAppStore();
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const initials = user?.full_name
     ? user.full_name.split(" ").filter(Boolean).slice(0, 2).map((n) => n[0]?.toUpperCase()).join("")
     : "U";
@@ -15,6 +18,10 @@ const PublicLayout = () => {
     { label: "Admission/Scholarship", path: "/admissions" },
     { label: "Association", path: "/association" },
   ];
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+  }, [location.pathname]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -40,14 +47,99 @@ const PublicLayout = () => {
         </div>
       </div>
 
+      {/* Mobile drawer overlay */}
+      {drawerOpen && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/50 md:hidden"
+          onClick={() => setDrawerOpen(false)}
+        />
+      )}
+
+      {/* Mobile drawer */}
+      <aside
+        className={`fixed top-0 left-0 z-[70] h-full w-72 bg-card border-r border-border shadow-2xl transition-transform duration-300 ease-in-out md:hidden flex flex-col ${drawerOpen ? "translate-x-0" : "-translate-x-full"}`}
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <Link to="/" onClick={() => setDrawerOpen(false)} className="flex items-center gap-2">
+            <img
+              src={arkeLogo}
+              alt="ARKE"
+              className="h-8 w-auto object-contain"
+            />
+            
+          </Link>
+          <button
+            onClick={() => setDrawerOpen(false)}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            aria-label="Close menu"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-1">
+          {navItems.map((link) => (
+            <Link
+              key={link.path}
+              to={link.path}
+              onClick={() => setDrawerOpen(false)}
+              className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              {link.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="border-t border-border px-4 py-5 space-y-3">
+          {user ? (
+            <Link
+              to="/dashboard"
+              onClick={() => setDrawerOpen(false)}
+              className="flex items-center gap-3 rounded-xl px-4 py-3 bg-muted hover:bg-muted/70 transition-colors"
+            >
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-xs font-black text-primary-foreground overflow-hidden shrink-0">
+                {user.avatar_url ? (
+                  <img src={user.avatar_url} alt={user.full_name} className="h-full w-full object-cover" />
+                ) : (
+                  initials
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-foreground truncate">{user.full_name?.split(" ")[0] || "Account"}</p>
+                <p className="text-xs text-muted-foreground">Go to Dashboard</p>
+              </div>
+            </Link>
+          ) : (
+            <>
+              <Link
+                to="/login"
+                onClick={() => setDrawerOpen(false)}
+                className="block w-full rounded-pill border border-border py-2.5 text-center text-sm font-semibold text-foreground hover:bg-muted transition-colors"
+              >
+                Login
+              </Link>
+              <Link
+                to="/signup"
+                onClick={() => setDrawerOpen(false)}
+                className="block w-full rounded-pill bg-gradient-to-r from-primary to-accent py-2.5 text-center text-sm font-bold text-primary-foreground shadow-blue hover:opacity-90 transition-opacity"
+              >
+                Start Free
+              </Link>
+            </>
+          )}
+        </div>
+      </aside>
+
       {/* Navbar */}
       <nav className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md">
         <div className="container mx-auto flex items-center justify-between px-4 py-3">
           <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent">
-              <Flame className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-black font-display gradient-text">ARKE</span>
+            <img
+              src={arkeLogo}
+              alt="ARKE"
+              className="h-9 w-auto object-contain"
+            />
+            
           </Link>
           <div className="hidden items-center gap-8 md:flex">
             {navItems.map((item) => {
@@ -94,6 +186,13 @@ const PublicLayout = () => {
                 </Link>
               </>
             )}
+            <button
+              className="md:hidden p-1 text-foreground"
+              onClick={() => setDrawerOpen(!drawerOpen)}
+              aria-label="Open menu"
+            >
+              {drawerOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
           </div>
         </div>
       </nav>
@@ -130,8 +229,6 @@ const PublicLayout = () => {
               <div className="space-y-2">
                 <Link to="/about" className="block text-sm text-white/60 hover:text-white/90 transition-colors">About Us</Link>
                 <Link to="/career" className="block text-sm text-white/60 hover:text-white/90 transition-colors">Careers</Link>
-                <Link to="/career" className="block text-sm text-white/60 hover:text-white/90 transition-colors">Join as mentor</Link>
-                <Link to="/career" className="block text-sm text-white/60 hover:text-white/90 transition-colors">Join as teacher</Link>
                 <Link to="/contact" className="block text-sm text-white/60 hover:text-white/90 transition-colors">Contact</Link>
                 <Link to="/privacy" className="block text-sm text-white/60 hover:text-white/90 transition-colors">Privacy Policy</Link>
                 <Link to="/terms" className="block text-sm text-white/60 hover:text-white/90 transition-colors">Terms of Service</Link>
