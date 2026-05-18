@@ -1,11 +1,17 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Trash2, Edit3, Loader2, Swords, Search, CheckSquare, Square, Filter, EyeOff, Eye, X, Upload } from "lucide-react";
-import BulkQuestionUploadDialog from "@/components/BulkQuestionUploadDialog";
-import MathRenderer from "@/components/MathRenderer";
+import {
+  Plus, Trash2, Edit3, Loader2, Swords, Search, CheckSquare, Square,
+  Filter, EyeOff, Eye, X,
+} from "lucide-react";
+import HtmlField from "@/components/HtmlField";
+import LatexRenderer from "@/components/LatexRenderer";
 import { useExams } from "@/hooks/useExams";
 import TablePagination from "@/components/TablePagination";
+import { SUBJECTS_COMPETE } from "@/lib/constants";
+
+// ─── types ───────────────────────────────────────────────────────────────────
 
 type Q = {
   id: string;
@@ -15,41 +21,208 @@ type Q = {
   target_exam?: string | null;
   class_level?: string | null;
   question_text: string;
+  question_type: string;
   options: string[];
   correct_index: number;
   explanation: string | null;
   is_active: boolean;
 };
 
-import { SUBJECTS_COMPETE } from "@/lib/constants";
+type EditingQ = Omit<Q, "id"> & {
+  id?: string;
+  _options: string[];      // 4 HTML strings
+  _correctIdx: number;     // 0-indexed correct option
+  _solution: string;
+};
+
+// ─── constants ───────────────────────────────────────────────────────────────
+
 const SUBJECTS: string[] = [...SUBJECTS_COMPETE];
 const DIFFICULTIES = ["easy", "medium", "hard"];
-// EXAMS now sourced from useExams() (DB-managed). Fallback handled by the hook.
 const CLASS_LEVELS = ["9", "10", "11", "12", "Dropper"];
+const PAGE_SIZE = 20;
 
-const empty: Omit<Q, "id"> = {
+const BLANK_EDITING: EditingQ = {
   subject: "Physics",
   topic: "Kinematics",
   difficulty: "medium",
   target_exam: "JEE Main",
   class_level: "11",
   question_text: "",
-  options: ["", "", "", ""],
+  question_type: "scq",
+  options: [],
   correct_index: 0,
   explanation: "",
   is_active: true,
+  _options: ["", "", "", ""],
+  _correctIdx: 0,
+  _solution: "",
 };
 
-const PAGE_SIZE = 20;
+function editingFromRow(q: Q): EditingQ {
+  const opts = Array.isArray(q.options) ? q.options : [];
+  return {
+    ...q,
+    question_type: "scq",
+    _options: opts.concat(["", "", "", ""]).slice(0, 4),
+    _correctIdx: Math.max(0, q.correct_index ?? 0),
+    _solution: q.explanation || "",
+  };
+}
+
+// ─── editor dialog ────────────────────────────────────────────────────────────
+
+type EditorProps = {
+  editing: EditingQ;
+  onChange: (next: EditingQ) => void;
+  onClose: () => void;
+  onSave: () => void;
+  saving: boolean;
+  exams: string[];
+};
+
+const CompeteEditorDialog = ({ editing, onChange, onClose, onSave, saving, exams }: EditorProps) => {
+  const set = (patch: Partial<EditingQ>) => onChange({ ...editing, ...patch });
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className="bg-card rounded-2xl shadow-xl border border-border w-full max-w-3xl max-h-[92vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-5 py-3">
+          <h2 className="text-base font-bold">{editing.id ? "Edit Question" : "New Question"}</h2>
+          <button onClick={onClose} className="rounded-lg p-1 text-muted-foreground hover:bg-muted">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-5">
+          {/* Meta fields */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-foreground">Subject</label>
+              <select value={editing.subject} onChange={(e) => set({ subject: e.target.value })} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none">
+                {SUBJECTS.map((s) => <option key={s}>{s}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-foreground">Topic</label>
+              <input value={editing.topic} onChange={(e) => set({ topic: e.target.value })} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none" placeholder="e.g. Kinematics" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-foreground">Difficulty</label>
+              <select value={editing.difficulty} onChange={(e) => set({ difficulty: e.target.value })} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none">
+                {DIFFICULTIES.map((d) => <option key={d} value={d} className="capitalize">{d[0].toUpperCase() + d.slice(1)}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-foreground">Target Exam</label>
+              <select value={editing.target_exam ?? ""} onChange={(e) => set({ target_exam: e.target.value || null })} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none">
+                <option value="">—</option>
+                {exams.map((x) => <option key={x}>{x}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-foreground">Class Level</label>
+              <select value={editing.class_level ?? ""} onChange={(e) => set({ class_level: e.target.value || null })} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none">
+                <option value="">—</option>
+                {CLASS_LEVELS.map((c) => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div className="flex items-end pb-1">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" checked={editing.is_active} onChange={(e) => set({ is_active: e.target.checked })} />
+                Active (visible to students)
+              </label>
+            </div>
+          </div>
+
+          {/* Question stem */}
+          <div>
+            <label className="text-xs font-semibold text-foreground">Question</label>
+            <p className="text-[11px] text-muted-foreground mb-1.5">Supports $LaTeX$, $\ce{"{H2O}"}$ chemistry, and inline images via the Image button.</p>
+            <HtmlField
+              value={editing.question_text}
+              onChange={(v) => set({ question_text: v })}
+              rows={4}
+              placeholder="Question text — can include diagrams, equations, and HTML"
+            />
+          </div>
+
+          {/* Options */}
+          <div className="space-y-3">
+            <p className="text-xs font-semibold text-foreground">Options <span className="font-normal text-muted-foreground">(click the letter to mark correct)</span></p>
+            {editing._options.map((opt, i) => {
+              const isCorrect = editing._correctIdx === i;
+              return (
+                <div key={i} className="flex items-start gap-2">
+                  <button
+                    type="button"
+                    onClick={() => set({ _correctIdx: i })}
+                    className={`mt-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-bold transition-colors ${
+                      isCorrect
+                        ? "border-secondary bg-secondary text-secondary-foreground"
+                        : "border-border bg-background text-muted-foreground hover:border-secondary/60"
+                    }`}
+                    title={isCorrect ? "Correct answer" : "Mark as correct"}
+                  >
+                    {String.fromCharCode(65 + i)}
+                  </button>
+                  <div className="flex-1">
+                    <HtmlField
+                      value={opt}
+                      rows={2}
+                      placeholder={`Option ${String.fromCharCode(65 + i)} — text, $LaTeX$, or image`}
+                      onChange={(next) => {
+                        const arr = [...editing._options];
+                        arr[i] = next;
+                        set({ _options: arr });
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Solution */}
+          <div>
+            <label className="text-xs font-semibold text-foreground">Solution / Explanation (optional)</label>
+            <div className="mt-1.5">
+              <HtmlField
+                value={editing._solution}
+                onChange={(v) => set({ _solution: v })}
+                rows={3}
+                placeholder="Step-by-step solution. Supports $LaTeX$ and images."
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="sticky bottom-0 flex justify-end gap-2 border-t border-border bg-card px-5 py-3">
+          <button onClick={onClose} className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground">Cancel</button>
+          <button disabled={saving} onClick={onSave} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50 inline-flex items-center gap-2">
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />} Save
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── main page ────────────────────────────────────────────────────────────────
 
 const AdminCompeteQuestionsPage = () => {
   const { examNames: EXAMS } = useExams();
   const [list, setList] = useState<Q[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState<(Omit<Q, "id"> & { id?: string }) | null>(null);
+  const [editing, setEditing] = useState<EditingQ | null>(null);
   const [saving, setSaving] = useState(false);
+  const inFlight = useRef(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [bulkOpen, setBulkOpen] = useState(false);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -60,21 +233,16 @@ const AdminCompeteQuestionsPage = () => {
   const [fClass, setFClass] = useState<string>("");
   const [fActive, setFActive] = useState<string>("");
 
-  // Server-side pagination
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  // Debounce search
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
     return () => clearTimeout(t);
   }, [search]);
 
-  // Reset page when filters change
-  useEffect(() => {
-    setPage(1);
-  }, [debouncedSearch, fSubject, fDifficulty, fExam, fClass, fActive]);
+  useEffect(() => { setPage(1); }, [debouncedSearch, fSubject, fDifficulty, fExam, fClass, fActive]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -95,13 +263,8 @@ const AdminCompeteQuestionsPage = () => {
     }
 
     const from = (page - 1) * PAGE_SIZE;
-    const to = from + PAGE_SIZE - 1;
-    const { data, count, error } = await q.range(from, to);
-    if (error) {
-      toast.error(error.message);
-      setLoading(false);
-      return;
-    }
+    const { data, count, error } = await q.range(from, from + PAGE_SIZE - 1);
+    if (error) { toast.error(error.message); setLoading(false); return; }
     setList((data ?? []) as unknown as Q[]);
     setTotal(count ?? 0);
     setLoading(false);
@@ -110,17 +273,12 @@ const AdminCompeteQuestionsPage = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  const allFilteredSelected = list.length > 0 && list.every((q) => selected.has(q.id));
+  const allSelected = list.length > 0 && list.every((q) => selected.has(q.id));
   const toggleAll = () => {
-    if (allFilteredSelected) {
-      const next = new Set(selected);
-      list.forEach((q) => next.delete(q.id));
-      setSelected(next);
-    } else {
-      const next = new Set(selected);
-      list.forEach((q) => next.add(q.id));
-      setSelected(next);
-    }
+    const next = new Set(selected);
+    if (allSelected) list.forEach((q) => next.delete(q.id));
+    else list.forEach((q) => next.add(q.id));
+    setSelected(next);
   };
   const toggleOne = (id: string) => {
     const next = new Set(selected);
@@ -129,49 +287,44 @@ const AdminCompeteQuestionsPage = () => {
   };
 
   const save = async () => {
-    if (!editing) return;
-    if (!editing.question_text.trim()) return toast.error("Question required");
-    if (editing.options.some((o) => !o.trim())) return toast.error("All 4 options required");
-    setSaving(true);
-    const payload: any = {
+    if (!editing || inFlight.current || saving) return;
+    if (!editing.question_text.trim()) return toast.error("Question text required");
+    const filledOpts = editing._options.filter((o) => o.trim());
+    if (filledOpts.length < 2) return toast.error("At least 2 options required");
+
+    const payload: Record<string, unknown> = {
       subject: editing.subject,
       topic: editing.topic,
       difficulty: editing.difficulty,
       question_text: editing.question_text,
-      options: editing.options,
-      correct_index: editing.correct_index,
-      explanation: editing.explanation || null,
+      question_type: "scq",
+      options: editing._options,
+      correct_index: editing._correctIdx,
+      explanation: editing._solution.trim() || null,
       is_active: editing.is_active,
+      target_exam: editing.target_exam || null,
+      class_level: editing.class_level || null,
     };
-    // Only include if columns exist (graceful no-op if not)
-    if (editing.target_exam !== undefined) payload.target_exam = editing.target_exam || null;
-    if (editing.class_level !== undefined) payload.class_level = editing.class_level || null;
 
-    const { error } = editing.id
-      ? await supabase.from("compete_questions").update(payload).eq("id", editing.id)
-      : await supabase.from("compete_questions").insert(payload);
-    setSaving(false);
-    if (error) {
-      // Retry without optional columns if schema lacks them
-      if (/column.*(target_exam|class_level)/i.test(error.message)) {
-        delete payload.target_exam;
-        delete payload.class_level;
-        const { error: e2 } = editing.id
-          ? await supabase.from("compete_questions").update(payload).eq("id", editing.id)
-          : await supabase.from("compete_questions").insert(payload);
-        if (e2) return toast.error(e2.message);
-      } else {
-        return toast.error(error.message);
-      }
+    inFlight.current = true;
+    setSaving(true);
+    try {
+      const { error } = editing.id
+        ? await supabase.from("compete_questions" as any).update(payload).eq("id", editing.id)
+        : await supabase.from("compete_questions" as any).insert(payload);
+      if (error) { toast.error(error.message); return; }
+      toast.success(editing.id ? "Question updated" : "Question added");
+      setEditing(null);
+      load();
+    } finally {
+      inFlight.current = false;
+      setSaving(false);
     }
-    toast.success("Saved");
-    setEditing(null);
-    load();
   };
 
   const remove = async (id: string) => {
     if (!confirm("Delete this question?")) return;
-    const { error } = await supabase.from("compete_questions").delete().eq("id", id);
+    const { error } = await supabase.from("compete_questions" as any).delete().eq("id", id);
     if (error) return toast.error(error.message);
     load();
   };
@@ -179,7 +332,7 @@ const AdminCompeteQuestionsPage = () => {
   const bulkSetActive = async (active: boolean) => {
     const ids = Array.from(selected);
     if (!ids.length) return;
-    const { error } = await supabase.from("compete_questions").update({ is_active: active }).in("id", ids);
+    const { error } = await supabase.from("compete_questions" as any).update({ is_active: active }).in("id", ids);
     if (error) return toast.error(error.message);
     toast.success(`${ids.length} updated`);
     load();
@@ -189,32 +342,32 @@ const AdminCompeteQuestionsPage = () => {
     const ids = Array.from(selected);
     if (!ids.length) return;
     if (!confirm(`Delete ${ids.length} questions? This cannot be undone.`)) return;
-    const { error } = await supabase.from("compete_questions").delete().in("id", ids);
+    const { error } = await supabase.from("compete_questions" as any).delete().in("id", ids);
     if (error) return toast.error(error.message);
     toast.success(`${ids.length} deleted`);
     load();
   };
 
-  const clearFilters = () => {
-    setSearch(""); setFSubject(""); setFDifficulty(""); setFExam(""); setFClass(""); setFActive("");
-  };
+  const clearFilters = () => { setSearch(""); setFSubject(""); setFDifficulty(""); setFExam(""); setFClass(""); setFActive(""); };
   const anyFilter = !!(search || fSubject || fDifficulty || fExam || fClass || fActive);
 
   return (
     <div className="p-4 lg:p-6 space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h1 className="text-xl font-bold text-foreground flex items-center gap-2"><Swords className="h-5 w-5 text-primary" /> Compete Questions</h1>
-          <p className="text-sm text-muted-foreground">{total} questions {selected.size > 0 && `· ${selected.size} selected`}</p>
+          <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
+            <Swords className="h-5 w-5 text-primary" /> Compete Questions
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {total} questions{selected.size > 0 && ` · ${selected.size} selected`}
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setBulkOpen(true)} className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-bold text-foreground hover:bg-muted inline-flex items-center gap-1">
-            <Upload className="h-4 w-4" /> Bulk upload
-          </button>
-          <button onClick={() => setEditing({ ...empty })} className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:opacity-90 inline-flex items-center gap-1">
-            <Plus className="h-4 w-4" /> New Question
-          </button>
-        </div>
+        <button
+          onClick={() => setEditing({ ...BLANK_EDITING })}
+          className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:opacity-90 inline-flex items-center gap-1"
+        >
+          <Plus className="h-4 w-4" /> New Question
+        </button>
       </div>
 
       {/* Filters */}
@@ -222,7 +375,12 @@ const AdminCompeteQuestionsPage = () => {
         <div className="flex items-center gap-2 flex-wrap">
           <div className="relative flex-1 min-w-[180px]">
             <Search className="h-4 w-4 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search question or topic..." className="w-full pl-8 pr-2 py-1.5 text-sm rounded-md border border-border bg-background outline-none focus:border-primary" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search question or topic..."
+              className="w-full pl-8 pr-2 py-1.5 text-sm rounded-md border border-border bg-background outline-none focus:border-primary"
+            />
           </div>
           <FilterSelect value={fSubject} onChange={setFSubject} label="Subject" options={SUBJECTS} />
           <FilterSelect value={fDifficulty} onChange={setFDifficulty} label="Difficulty" options={DIFFICULTIES} />
@@ -238,7 +396,7 @@ const AdminCompeteQuestionsPage = () => {
 
         {selected.size > 0 && (
           <div className="flex items-center gap-2 pt-2 border-t border-border">
-            <span className="text-xs font-bold text-foreground">{selected.size} selected:</span>
+            <span className="text-xs font-bold">{selected.size} selected:</span>
             <button onClick={() => bulkSetActive(true)} className="inline-flex items-center gap-1 rounded-md bg-secondary/15 hover:bg-secondary/25 text-secondary px-2 py-1 text-xs font-bold">
               <Eye className="h-3 w-3" /> Activate
             </button>
@@ -248,11 +406,12 @@ const AdminCompeteQuestionsPage = () => {
             <button onClick={bulkDelete} className="inline-flex items-center gap-1 rounded-md bg-destructive/15 hover:bg-destructive/25 text-destructive px-2 py-1 text-xs font-bold">
               <Trash2 className="h-3 w-3" /> Delete
             </button>
-            <button onClick={() => setSelected(new Set())} className="ml-auto text-xs text-muted-foreground hover:text-foreground">Clear selection</button>
+            <button onClick={() => setSelected(new Set())} className="ml-auto text-xs text-muted-foreground hover:text-foreground">Clear</button>
           </div>
         )}
       </div>
 
+      {/* Table */}
       {loading ? (
         <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
       ) : (
@@ -262,17 +421,16 @@ const AdminCompeteQuestionsPage = () => {
               <tr className="text-left">
                 <th className="px-3 py-2 w-8">
                   <button onClick={toggleAll} className="text-muted-foreground hover:text-foreground">
-                    {allFilteredSelected ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
+                    {allSelected ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
                   </button>
                 </th>
                 <th className="px-3 py-2 font-semibold">Subject</th>
                 <th className="px-3 py-2 font-semibold">Topic</th>
                 <th className="px-3 py-2 font-semibold">Diff</th>
                 <th className="px-3 py-2 font-semibold">Exam</th>
-                <th className="px-3 py-2 font-semibold">Class</th>
                 <th className="px-3 py-2 font-semibold">Question</th>
                 <th className="px-3 py-2 font-semibold w-16">Active</th>
-                <th className="px-3 py-2 w-24" />
+                <th className="px-3 py-2 w-20" />
               </tr>
             </thead>
             <tbody>
@@ -287,116 +445,67 @@ const AdminCompeteQuestionsPage = () => {
                   <td className="px-3 py-2">{q.topic}</td>
                   <td className="px-3 py-2 capitalize">{q.difficulty}</td>
                   <td className="px-3 py-2 text-muted-foreground">{q.target_exam || "—"}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{q.class_level || "—"}</td>
-                  <td className="px-3 py-2 max-w-md truncate"><MathRenderer inline content={q.question_text} /></td>
-                  <td className="px-3 py-2">{q.is_active ? <span className="text-secondary font-bold">Yes</span> : <span className="text-muted-foreground">No</span>}</td>
+                  <td className="px-3 py-2 max-w-xs">
+                    <div className="truncate"><LatexRenderer html={q.question_text} /></div>
+                  </td>
+                  <td className="px-3 py-2">
+                    {q.is_active
+                      ? <span className="text-secondary font-bold">Yes</span>
+                      : <span className="text-muted-foreground">No</span>}
+                  </td>
                   <td className="px-3 py-2 text-right">
-                    <button onClick={() => setEditing({ ...q })} className="p-1 hover:bg-muted rounded"><Edit3 className="h-4 w-4" /></button>
-                    <button onClick={() => remove(q.id)} className="p-1 hover:bg-destructive/10 text-destructive rounded ml-1"><Trash2 className="h-4 w-4" /></button>
+                    <button onClick={() => setEditing(editingFromRow(q))} className="p-1 hover:bg-muted rounded">
+                      <Edit3 className="h-4 w-4" />
+                    </button>
+                    <button onClick={() => remove(q.id)} className="p-1 hover:bg-destructive/10 text-destructive rounded ml-1">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </td>
                 </tr>
               ))}
               {list.length === 0 && (
-                <tr><td colSpan={9} className="px-3 py-10 text-center text-muted-foreground">{anyFilter ? "No matches for current filters" : "No questions yet"}</td></tr>
+                <tr>
+                  <td colSpan={8} className="px-3 py-10 text-center text-muted-foreground">
+                    {anyFilter ? "No matches for current filters" : "No questions yet"}
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
-          <TablePagination
-            page={page}
-            totalPages={totalPages}
-            total={total}
-            pageSize={PAGE_SIZE}
-            onPageChange={setPage}
-          />
+          <TablePagination page={page} totalPages={totalPages} total={total} pageSize={PAGE_SIZE} onPageChange={setPage} />
         </div>
       )}
 
       {editing && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setEditing(null)}>
-          <div className="bg-card rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-5 space-y-3" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-lg font-bold">{editing.id ? "Edit Question" : "New Question"}</h2>
-            <div className="grid grid-cols-3 gap-2">
-              <Field label="Subject">
-                <select value={editing.subject} onChange={(e) => setEditing({ ...editing, subject: e.target.value })} className="input">
-                  {SUBJECTS.map((s) => <option key={s}>{s}</option>)}
-                </select>
-              </Field>
-              <Field label="Topic"><input value={editing.topic} onChange={(e) => setEditing({ ...editing, topic: e.target.value })} className="input" /></Field>
-              <Field label="Difficulty">
-                <select value={editing.difficulty} onChange={(e) => setEditing({ ...editing, difficulty: e.target.value })} className="input">
-                  {DIFFICULTIES.map((d) => <option key={d} value={d}>{d[0].toUpperCase() + d.slice(1)}</option>)}
-                </select>
-              </Field>
-              <Field label="Target Exam">
-                <select value={editing.target_exam ?? ""} onChange={(e) => setEditing({ ...editing, target_exam: e.target.value })} className="input">
-                  <option value="">—</option>
-                  {EXAMS.map((x) => <option key={x}>{x}</option>)}
-                </select>
-              </Field>
-              <Field label="Class Level">
-                <select value={editing.class_level ?? ""} onChange={(e) => setEditing({ ...editing, class_level: e.target.value })} className="input">
-                  <option value="">—</option>
-                  {CLASS_LEVELS.map((c) => <option key={c}>{c}</option>)}
-                </select>
-              </Field>
-              <div />
-            </div>
-            <Field label="Question">
-              <textarea value={editing.question_text} onChange={(e) => setEditing({ ...editing, question_text: e.target.value })} rows={3} className="input" />
-            </Field>
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Options (select correct)</p>
-            {editing.options.map((opt, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <input type="radio" checked={editing.correct_index === i} onChange={() => setEditing({ ...editing, correct_index: i })} />
-                <input value={opt} placeholder={`Option ${String.fromCharCode(65 + i)}`} onChange={(e) => {
-                  const opts = [...editing.options]; opts[i] = e.target.value; setEditing({ ...editing, options: opts });
-                }} className="input flex-1" />
-              </div>
-            ))}
-            <Field label="Explanation (optional)">
-              <textarea value={editing.explanation ?? ""} onChange={(e) => setEditing({ ...editing, explanation: e.target.value })} rows={2} className="input" />
-            </Field>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={editing.is_active} onChange={(e) => setEditing({ ...editing, is_active: e.target.checked })} />
-              Active (visible to students)
-            </label>
-            <div className="flex justify-end gap-2 pt-2">
-              <button onClick={() => setEditing(null)} className="rounded-lg px-4 py-2 text-sm font-medium hover:bg-muted">Cancel</button>
-              <button onClick={save} disabled={saving} className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-60">
-                {saving ? "Saving..." : "Save"}
-              </button>
-            </div>
-          </div>
-        </div>
+        <CompeteEditorDialog
+          editing={editing}
+          onChange={setEditing}
+          onClose={() => setEditing(null)}
+          onSave={save}
+          saving={saving}
+          exams={EXAMS}
+        />
       )}
-
-      <BulkQuestionUploadDialog
-        open={bulkOpen}
-        onClose={() => setBulkOpen(false)}
-        onUploaded={load}
-        mode="compete"
-      />
-
-      <style>{`.input { width: 100%; border: 1px solid hsl(var(--border)); background: hsl(var(--background)); border-radius: 0.5rem; padding: 0.5rem 0.75rem; font-size: 0.875rem; outline: none; } .input:focus { border-color: hsl(var(--primary)); }`}</style>
     </div>
   );
 };
 
-const FilterSelect = ({ value, onChange, label, options }: { value: string; onChange: (v: string) => void; label: string; options: string[] }) => (
+// ─── helpers ──────────────────────────────────────────────────────────────────
+
+const FilterSelect = ({
+  value, onChange, label, options,
+}: { value: string; onChange: (v: string) => void; label: string; options: string[] }) => (
   <div className="inline-flex items-center gap-1">
     <Filter className="h-3 w-3 text-muted-foreground" />
-    <select value={value} onChange={(e) => onChange(e.target.value)} className="text-xs rounded-md border border-border bg-background px-2 py-1 outline-none focus:border-primary">
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="text-xs rounded-md border border-border bg-background px-2 py-1 outline-none focus:border-primary"
+    >
       <option value="">{label}</option>
       {options.map((o) => <option key={o} value={o}>{o[0].toUpperCase() + o.slice(1)}</option>)}
     </select>
   </div>
-);
-
-const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <label className="block">
-    <span className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">{label}</span>
-    {children}
-  </label>
 );
 
 export default AdminCompeteQuestionsPage;

@@ -38,15 +38,30 @@ const blankQuestion = (): DraftQuestion => ({
   correct: 0,
 });
 
-const fromBank = (q: BankQuestion): DraftQuestion => ({
-  source: "bank",
-  bank_id: q.id,
-  subject: q.subject,
-  topic: q.topic || "",
-  text: q.question_text,
-  options: q.options.map((o) => o.text),
-  correct: typeof q.correct_answer === "number" ? q.correct_answer : 0,
-});
+const fromBank = (q: BankQuestion): DraftQuestion => {
+  // Drag-into-test only supports SCQ-style questions. Other types fall through with empty options.
+  const opts = Array.isArray(q.options) ? q.options.map((o) => o.text) : ["", "", "", ""];
+  // correct_answer is polymorphic:
+  //   legacy SCQ:        number (0-indexed)
+  //   new SCQ/MCQ/AR:    number[] (1-indexed)
+  //   integer:           number
+  //   match_column:      string
+  const ca = q.correct_answer;
+  const correct = typeof ca === "number"
+    ? ca
+    : Array.isArray(ca) && typeof ca[0] === "number"
+      ? Math.max(0, ca[0] - 1)
+      : 0;
+  return {
+    source: "bank",
+    bank_id: q.id,
+    subject: q.subject,
+    topic: q.topic || "",
+    text: q.question_text,
+    options: opts,
+    correct,
+  };
+};
 
 const DropZone = ({ children, empty }: { children: React.ReactNode; empty: boolean }) => {
   const { setNodeRef, isOver } = useDroppable({ id: "test-drop" });

@@ -1,16 +1,41 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+export type QuestionType =
+  | "scq"
+  | "mcq"
+  | "integer"
+  | "match_column"
+  | "assertion_reasoning";
+
+export type MatchEntry = { key: string; value: string };
+
+// options shape is polymorphic by question_type:
+//   scq | mcq | assertion_reasoning  →  { id: number; text: string }[]
+//   integer                           →  []
+//   match_column                      →  { col1: MatchEntry[]; col2: MatchEntry[] }
+//
+// correct_answer is also polymorphic:
+//   scq | mcq | assertion_reasoning  →  number[]    (1-indexed option numbers)
+//   integer                           →  number
+//   match_column                      →  string     (e.g. "A-P, B-Q, C-R, D-S")
+export type BankOptions =
+  | { id: number; text: string }[]
+  | { col1: MatchEntry[]; col2: MatchEntry[] };
+
+export type BankCorrectAnswer = number | number[] | string;
+
 export type BankQuestion = {
   id: string;
   created_by: string | null;
   subject: string;
   topic: string | null;
   difficulty: string;
+  question_type: QuestionType;
   question_text: string;
   question_image_url: string | null;
-  options: { id: number; text: string }[];
-  correct_answer: number | number[];
+  options: BankOptions;
+  correct_answer: BankCorrectAnswer;
   explanation: string | null;
   marks_correct: number;
   marks_wrong: number;

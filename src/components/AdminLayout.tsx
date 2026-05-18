@@ -1,4 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import arkeLogo from "@/assets/arke-logo.png";
 import {
   LayoutDashboard,
   Flame,
@@ -43,7 +44,7 @@ const baseNav: NavItem[] = [
   { label: "Live Classes", icon: Video, path: "/admin/live-classes" },
   { label: "Tests", icon: ClipboardCheck, path: "/admin/tests" },
   { label: "Question Bank", icon: Library, path: "/admin/question-bank" },
-  { label: "Upload Questions", icon: FileUp, path: "/admin/upload-questions" },
+  { label: "Upload Test", icon: FileUp, path: "/admin/upload-questions" },
   { label: "Compete Questions", icon: Swords, path: "/admin/compete-questions" },
   { label: "Exam Management", icon: GraduationCap, path: "/admin/exams" },
   { label: "Educator Applications", icon: Briefcase, path: "/admin/educator-applications" },
@@ -80,12 +81,9 @@ const AdminSidebar = memo(({ email, initials, avatarUrl, isSuperAdmin, onLogout 
       className="hidden lg:flex w-[240px] flex-col sticky top-0 h-screen overflow-y-auto scrollbar-hide"
       style={{ backgroundColor: "hsl(222, 47%, 11%)" }}
     >
-      <div className="p-4">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <Flame className="h-4 w-4 text-primary-foreground" />
-          </div>
-          <span className="text-sm font-black font-display text-white">ARKE</span>
+      <div className="p-4 flex justify-center">
+        <Link to="/" className="flex items-center justify-center w-full bg-white rounded-xl py-2 px-4 hover:opacity-95 transition-opacity">
+          <img src={arkeLogo} alt="ARKE Logo" className="h-10 w-auto object-contain" />
         </Link>
         <div className="mt-3 rounded-md bg-primary/20 px-2 py-1 text-center">
           <span className="text-[10px] font-bold uppercase tracking-wider text-primary">

@@ -45,6 +45,15 @@ const benefits = [
 const AssociationPage = () => {
   return (
     <div className="bg-background">
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-background to-accent/10 py-20">
         <div className="container mx-auto px-4 text-center">
@@ -91,11 +100,11 @@ const AssociationPage = () => {
               From premier institutes to grassroots schools — we build long-term partnerships that put students first.
             </p>
           </div>
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar gap-6 pb-4 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-2 md:pb-0">
             {partnerTypes.map((p) => (
               <div
                 key={p.title}
-                className="rounded-2xl border border-border bg-card p-6 hover:border-primary/40 hover:shadow-lg transition-all"
+                className="relative w-[280px] shrink-0 snap-start scroll-ml-4 md:scroll-ml-0 rounded-2xl border border-border bg-card p-6 hover:border-primary/40 hover:shadow-lg transition-all md:w-auto"
               >
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent mb-4">
                   <p.icon className="h-6 w-6 text-primary-foreground" />
@@ -104,6 +113,7 @@ const AssociationPage = () => {
                 <p className="text-sm text-muted-foreground leading-relaxed">{p.description}</p>
               </div>
             ))}
+            <div className="w-1 shrink-0 md:hidden" />
           </div>
         </div>
       </section>
@@ -158,16 +168,16 @@ const AssociationPage = () => {
             <p className="text-primary-foreground/80 mb-8 max-w-xl mx-auto">
               Schools, institutes, NGOs and corporates — write to us and we'll set up a partnership conversation within 48 hours.
             </p>
-            <div className="flex flex-wrap justify-center gap-3">
+            <div className="flex flex-row items-center justify-center gap-2 sm:gap-3">
               <Link
                 to="/contact"
-                className="rounded-pill bg-primary-foreground px-6 py-3 text-sm font-bold text-primary hover:opacity-90 transition-opacity"
+                className="inline-flex items-center justify-center rounded-pill bg-primary-foreground px-4 py-2.5 text-xs font-bold text-primary hover:opacity-90 transition-opacity sm:px-6 sm:py-3 sm:text-sm"
               >
                 Contact Partnerships
               </Link>
               <Link
                 to="/about"
-                className="rounded-pill border border-primary-foreground/40 px-6 py-3 text-sm font-bold text-primary-foreground hover:bg-primary-foreground/10 transition-colors"
+                className="inline-flex items-center justify-center rounded-pill border border-primary-foreground/40 px-4 py-2.5 text-xs font-bold text-primary-foreground hover:bg-primary-foreground/10 transition-colors sm:px-6 sm:py-3 sm:text-sm"
               >
                 About Arke
               </Link>

@@ -1,10 +1,9 @@
 import { useState, useMemo, useEffect } from "react";
-import { Search, Plus, Edit2, Trash2, GripVertical, BookMarked, Upload, ArrowUp, ArrowDown, ArrowUpDown, X } from "lucide-react";
+import { Search, Plus, Edit2, Trash2, GripVertical, BookMarked, ArrowUp, ArrowDown, ArrowUpDown, X } from "lucide-react";
 import { useDraggable } from "@dnd-kit/core";
 import { useQuestionBank, type BankQuestion } from "@/hooks/useQuestionBank";
 import QuestionEditorDialog from "./QuestionEditorDialog";
-import BulkQuestionUploadDialog from "./BulkQuestionUploadDialog";
-import MathRenderer from "./MathRenderer";
+import LatexRenderer from "./LatexRenderer";
 import TablePagination from "./TablePagination";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -55,7 +54,7 @@ const QuestionCard = ({ q, draggable, onEdit, onDelete, compact }: CardProps) =>
             <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold capitalize ${difficultyColor(q.difficulty)}`}>{q.difficulty}</span>
           </div>
           <div className={`text-foreground ${compact ? "text-xs line-clamp-2" : "text-sm line-clamp-3"}`}>
-            <MathRenderer content={q.question_text} />
+            <LatexRenderer html={q.question_text} />
           </div>
         </div>
         {(onEdit || onDelete) && (
@@ -101,7 +100,6 @@ const QuestionBankPanel = ({ draggable = false, manage = false, compact = false,
   const [search, setSearch] = useState("");
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<BankQuestion | null>(null);
-  const [bulkOpen, setBulkOpen] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("question_text");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -230,14 +228,9 @@ const QuestionBankPanel = ({ draggable = false, manage = false, compact = false,
           <BookMarked className="h-4 w-4 text-primary" />
           <h3 className="text-sm font-bold text-foreground flex-1">Question Bank</h3>
           {manage && (
-            <>
-              <button onClick={() => setBulkOpen(true)} className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted">
-                <Upload className="h-3 w-3" /> Bulk upload
-              </button>
-              <button onClick={() => { setEditing(null); setEditorOpen(true); }} className="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground">
-                <Plus className="h-3 w-3" /> New
-              </button>
-            </>
+            <button onClick={() => { setEditing(null); setEditorOpen(true); }} className="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground">
+              <Plus className="h-3 w-3" /> New
+            </button>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -320,8 +313,13 @@ const QuestionBankPanel = ({ draggable = false, manage = false, compact = false,
                           </td>
                         )}
                         <td className="px-3 py-2 max-w-xl">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className="rounded bg-muted px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                              {(q.question_type ?? "scq").replace("_", " ")}
+                            </span>
+                          </div>
                           <div className="text-foreground line-clamp-2">
-                            <MathRenderer content={q.question_text} />
+                            <LatexRenderer html={q.question_text} />
                           </div>
                         </td>
                         <td className="px-3 py-2">
@@ -371,7 +369,6 @@ const QuestionBankPanel = ({ draggable = false, manage = false, compact = false,
       </div>
 
       <QuestionEditorDialog open={editorOpen} onClose={() => setEditorOpen(false)} onSaved={reload} initial={editing} />
-      <BulkQuestionUploadDialog open={bulkOpen} onClose={() => setBulkOpen(false)} onUploaded={reload} />
 
       <Dialog open={bulkEditOpen} onOpenChange={setBulkEditOpen}>
         <DialogContent>

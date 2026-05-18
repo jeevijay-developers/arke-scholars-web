@@ -200,6 +200,15 @@ const steps = [
 const MentorshipPage = () => {
   return (
     <div className="bg-background">
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-to-br from-[hsl(var(--navy))] via-[hsl(var(--navy2))] to-[hsl(222,47%,15%)] py-20 md:py-28">
         <div
@@ -282,9 +291,9 @@ const MentorshipPage = () => {
               cleared the toughest exams in India.
             </p>
           </div>
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
+          <div className="mt-12 flex overflow-x-auto snap-x snap-mandatory no-scrollbar gap-6 pb-4 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-3 md:pb-0">
             {builders.map(({ icon: Icon, title, body }) => (
-              <div key={title} className="rounded-2xl border border-border bg-background p-6 shadow-sm transition-shadow hover:shadow-md">
+              <div key={title} className="w-[280px] shrink-0 snap-start scroll-ml-4 md:scroll-ml-0 rounded-2xl border border-border bg-background p-6 shadow-sm transition-shadow hover:shadow-md md:w-auto">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent">
                   <Icon className="h-6 w-6 text-primary-foreground" />
                 </div>
@@ -292,6 +301,7 @@ const MentorshipPage = () => {
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
               </div>
             ))}
+            <div className="w-1 shrink-0 md:hidden" />
           </div>
         </div>
       </section>
@@ -301,31 +311,31 @@ const MentorshipPage = () => {
         <div className="container mx-auto px-4">
           <div className="mx-auto grid max-w-5xl items-center gap-10 md:grid-cols-2">
             <div>
-              <span className="inline-flex items-center gap-2 rounded-pill border border-destructive/40 bg-destructive/15 px-3 py-1 text-xs font-bold uppercase tracking-wide text-destructive-foreground">
-                <AlertTriangle className="h-3.5 w-3.5" /> The biggest problem
+              <span className="inline-flex items-center gap-2 rounded-pill border border-destructive/40 bg-destructive/15 px-3 py-1 text-[10px] sm:text-xs font-bold uppercase tracking-wide text-destructive-foreground">
+                <AlertTriangle className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> The biggest problem
               </span>
-              <h2 className="mt-5 font-display text-3xl font-black md:text-4xl">
+              <h2 className="mt-5 font-display text-xl sm:text-2xl font-black md:text-4xl">
                 Most aspirants don&apos;t fail because of syllabus.
                 <br />
                 They fail because of <span className="gradient-text">illusions.</span>
               </h2>
-              <p className="mt-4 text-base leading-relaxed text-white/75">
+              <p className="mt-4 text-xs sm:text-sm md:text-base leading-relaxed text-white/75">
                 Wrong shortcuts. False confidence. Misleading toppers&apos; advice on the internet. Endless coaching
                 drama. These illusions silently eat away months of preparation.
               </p>
-              <p className="mt-3 text-base leading-relaxed text-white/75">
+              <p className="mt-3 text-xs sm:text-sm md:text-base leading-relaxed text-white/75">
                 Our IITian mentors break these illusions in your very first session — because they walked the same path
                 two or three years ago.
               </p>
             </div>
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur">
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-6 md:p-8 backdrop-blur">
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent">
-                  <Compass className="h-6 w-6 text-primary-foreground" />
+                <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent">
+                  <Compass className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
                 </div>
-                <h3 className="font-display text-xl font-bold">Mentorship dissolves illusions</h3>
+                <h3 className="font-display text-sm sm:text-base md:text-xl font-bold">Mentorship dissolves illusions</h3>
               </div>
-              <ul className="mt-6 space-y-3 text-sm text-white/85">
+              <ul className="mt-6 space-y-3 text-xs sm:text-sm text-white/85">
                 {[
                   "Honest weekly direction instead of internet noise",
                   "Strategy reviews from someone who cleared JEE / NEET recently",
@@ -333,7 +343,7 @@ const MentorshipPage = () => {
                   "Real talk about burnout, motivation and self-doubt",
                 ].map((line) => (
                   <li key={line} className="flex items-start gap-2">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
+                    <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
                     <span>{line}</span>
                   </li>
                 ))}
@@ -398,9 +408,9 @@ const MentorshipPage = () => {
             <h2 className="font-display text-3xl font-black text-foreground md:text-4xl">How mentorship works</h2>
             <p className="mt-3 text-base text-muted-foreground">Four simple steps to your IITian mentor.</p>
           </div>
-          <div className="mt-12 grid gap-6 md:grid-cols-4">
+          <div className="mt-12 flex overflow-x-auto snap-x snap-mandatory no-scrollbar gap-6 pb-4 pt-6 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-4 md:pb-0 md:pt-0">
             {steps.map(({ icon: Icon, title, body }, i) => (
-              <div key={title} className="relative rounded-2xl border border-border bg-background p-6 text-center shadow-sm">
+              <div key={title} className="relative w-[260px] shrink-0 snap-start scroll-ml-4 md:scroll-ml-0 rounded-2xl border border-border bg-background p-6 text-center shadow-sm md:w-auto">
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-primary to-accent px-3 py-0.5 text-[10px] font-black text-primary-foreground">
                   STEP {i + 1}
                 </div>
@@ -411,6 +421,7 @@ const MentorshipPage = () => {
                 <p className="mt-1.5 text-sm text-muted-foreground">{body}</p>
               </div>
             ))}
+            <div className="w-1 shrink-0 md:hidden" />
           </div>
         </div>
       </section>
@@ -424,16 +435,16 @@ const MentorshipPage = () => {
             <p className="mx-auto mt-3 max-w-xl text-base text-primary-foreground/90">
               Stop guessing your way through preparation. Start learning from someone who actually made it.
             </p>
-            <div className="mt-7 flex flex-wrap justify-center gap-3">
+            <div className="mt-7 flex flex-row items-center justify-center gap-2 sm:gap-3">
               <Link
                 to="/signup"
-                className="inline-flex items-center gap-2 rounded-pill bg-white px-7 py-3 text-sm font-bold text-primary transition-transform hover:scale-105"
+                className="inline-flex items-center gap-1.5 rounded-pill bg-white px-4 py-2.5 text-xs font-bold text-primary transition-transform hover:scale-105 sm:px-7 sm:py-3 sm:text-sm sm:gap-2"
               >
-                Book Your Mentor <ArrowRight className="h-4 w-4" />
+                Book Your Mentor <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </Link>
               <Link
                 to="/contact"
-                className="inline-flex items-center gap-2 rounded-pill border border-white/40 px-7 py-3 text-sm font-bold text-white hover:bg-white/10"
+                className="inline-flex items-center gap-1.5 rounded-pill border border-white/40 px-4 py-2.5 text-xs font-bold text-white hover:bg-white/10 sm:px-7 sm:py-3 sm:text-sm sm:gap-2"
               >
                 Talk to us
               </Link>

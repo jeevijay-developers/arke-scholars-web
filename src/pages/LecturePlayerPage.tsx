@@ -305,7 +305,7 @@ const LecturePlayerPage = () => {
 
                   {/* Moving email watermark — burns user identity into any screen recording */}
                   <div
-                    className="absolute z-20 pointer-events-none select-none transition-all duration-[3000ms] ease-in-out"
+                    className="absolute z-20 pointer-events-none select-none transition-all duration-&lsqb;3000ms&rsqb; ease-in-out"
                     style={{ left: `${watermarkPos.x}%`, top: `${watermarkPos.y}%` }}
                   >
                     <span

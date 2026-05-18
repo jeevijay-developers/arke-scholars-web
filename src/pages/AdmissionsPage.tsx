@@ -60,6 +60,15 @@ const documents = [
 const AdmissionsPage = () => {
   return (
     <div className="bg-background">
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-to-br from-[hsl(var(--navy))] via-[hsl(var(--navy2))] to-[hsl(222,47%,15%)] py-20 md:py-28">
         <div
@@ -77,18 +86,18 @@ const AdmissionsPage = () => {
             Find the right program and apply for merit-based scholarships up to 100%. A simple 4-step process to join
             Arke.
           </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <div className="mt-8 flex flex-row items-center justify-center gap-2 sm:gap-3">
             <Link
               to="/signup"
-              className="inline-flex items-center gap-2 rounded-pill bg-gradient-to-r from-primary to-accent px-7 py-3 text-sm font-bold text-primary-foreground shadow-blue hover:opacity-90"
+              className="inline-flex items-center gap-1.5 rounded-pill bg-gradient-to-r from-primary to-accent px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-blue hover:opacity-90 sm:px-7 sm:py-3 sm:text-sm sm:gap-2"
             >
-              Apply Now <ArrowRight className="h-4 w-4" />
+              Apply Now <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </Link>
             <Link
               to="/contact"
-              className="inline-flex items-center gap-2 rounded-pill border border-white/30 px-7 py-3 text-sm font-bold text-white hover:bg-white/10"
+              className="inline-flex items-center gap-1.5 rounded-pill border border-white/30 px-4 py-2.5 text-xs font-bold text-white hover:bg-white/10 sm:px-7 sm:py-3 sm:text-sm sm:gap-2"
             >
-              <Users className="h-4 w-4" /> Talk to a counsellor
+              <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Talk to a counsellor
             </Link>
           </div>
         </div>
@@ -101,11 +110,11 @@ const AdmissionsPage = () => {
             <h2 className="font-display text-3xl font-black text-foreground md:text-4xl">Admission in 4 steps</h2>
             <p className="mt-3 text-base text-muted-foreground">From application to your first class — built to be smooth.</p>
           </div>
-          <div className="mt-12 grid gap-6 md:grid-cols-4">
+          <div className="mt-12 flex overflow-x-auto snap-x snap-mandatory no-scrollbar gap-6 pb-4 pt-6 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-4 md:pb-0 md:pt-0">
             {steps.map(({ icon: Icon, title, body }, i) => (
               <div
                 key={title}
-                className="relative rounded-2xl border border-border bg-card p-6 text-center shadow-sm"
+                className="relative w-[260px] shrink-0 snap-start scroll-ml-4 md:scroll-ml-0 rounded-2xl border border-border bg-card p-6 text-center shadow-sm md:w-auto"
               >
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-primary to-accent px-3 py-0.5 text-[10px] font-black text-primary-foreground">
                   STEP {i + 1}
@@ -117,6 +126,7 @@ const AdmissionsPage = () => {
                 <p className="mt-1.5 text-sm text-muted-foreground">{body}</p>
               </div>
             ))}
+            <div className="w-1 shrink-0 md:hidden" />
           </div>
         </div>
       </section>
@@ -130,11 +140,11 @@ const AdmissionsPage = () => {
               The Arke Scholarship Test (AST) unlocks up to 100% off course fees.
             </p>
           </div>
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
+          <div className="mt-12 flex overflow-x-auto snap-x snap-mandatory no-scrollbar gap-6 pb-4 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-3 md:pb-0">
             {tiers.map(({ icon: Icon, name, pct, color, criteria }) => (
               <div
                 key={name}
-                className="relative overflow-hidden rounded-2xl border border-border bg-background p-6 shadow-sm transition-shadow hover:shadow-md"
+                className="relative w-[280px] shrink-0 snap-start scroll-ml-4 md:scroll-ml-0 overflow-hidden rounded-2xl border border-border bg-background p-6 shadow-sm transition-shadow hover:shadow-md md:w-auto"
               >
                 <div className={`flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br ${color}`}>
                   <Icon className="h-7 w-7 text-white" />
@@ -154,6 +164,7 @@ const AdmissionsPage = () => {
                 </ul>
               </div>
             ))}
+            <div className="w-1 shrink-0 md:hidden" />
           </div>
         </div>
       </section>
@@ -197,16 +208,16 @@ const AdmissionsPage = () => {
             <p className="mx-auto mt-3 max-w-xl text-base text-primary-foreground/90">
               Take the Arke Scholarship Test and join the next batch with the scholarship you deserve.
             </p>
-            <div className="mt-7 flex flex-wrap justify-center gap-3">
+            <div className="mt-7 flex flex-row items-center justify-center gap-2 sm:gap-3">
               <Link
                 to="/signup"
-                className="inline-flex items-center gap-2 rounded-pill bg-white px-7 py-3 text-sm font-bold text-primary transition-transform hover:scale-105"
+                className="inline-flex items-center gap-1.5 rounded-pill bg-white px-4 py-2.5 text-xs font-bold text-primary transition-transform hover:scale-105 sm:px-7 sm:py-3 sm:text-sm sm:gap-2"
               >
-                Apply Now <ArrowRight className="h-4 w-4" />
+                Apply Now <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </Link>
               <Link
                 to="/contact"
-                className="inline-flex items-center gap-2 rounded-pill border border-white/40 px-7 py-3 text-sm font-bold text-white hover:bg-white/10"
+                className="inline-flex items-center gap-1.5 rounded-pill border border-white/40 px-4 py-2.5 text-xs font-bold text-white hover:bg-white/10 sm:px-7 sm:py-3 sm:text-sm sm:gap-2"
               >
                 Talk to counsellor
               </Link>
