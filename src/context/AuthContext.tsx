@@ -31,6 +31,7 @@ interface AuthContextValue {
    * redirects while role data is still loading.
    */
   roleReady: boolean;
+
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
