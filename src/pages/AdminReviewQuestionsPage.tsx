@@ -1,36 +1,35 @@
 import { useState } from "react";
-import { useLocation, useParams, Link } from "react-router-dom";
+import { useLocation, useNavigate, useParams, Link } from "react-router-dom";
 import {
   CheckCircle2,
   ChevronRight,
-  AlertTriangle,
   Eye,
   EyeOff,
   SkipForward,
   Save,
   ArrowLeft,
   ImageIcon,
-  FlaskConical,
-  Sigma,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import LatexRenderer from "@/components/LatexRenderer";
-import MoleculeViewer from "@/components/MoleculeViewer";
+import { useAuth } from "@/context/AuthContext";
+
+const slugify = (s: string) =>
+  s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+const AR_OPTIONS_TEXT = [
+  "Both A and R are true and R is the correct explanation of A",
+  "Both A and R are true but R is NOT the correct explanation of A",
+  "A is true but R is false",
+  "A is false but R is true",
+];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type QuestionType = "scq" | "mcq" | "integer" | "match_column" | "assertion_reasoning";
-type ImageType = "equation" | "chemistry" | "diagram";
 
 interface MatchEntry { key: string; value: string }
-
-interface RichImage {
-  url: string;
-  type: ImageType;
-  mol?: string;
-  smiles?: string;
-}
 
 interface ParsedQuestion {
   question_number: number;
@@ -44,18 +43,16 @@ interface ParsedQuestion {
   correct_integer: number | null;
   match_col1: MatchEntry[] | null;
   match_col2: MatchEntry[] | null;
+  match_answer: string | null;
   assertion_text: string | null;
   reason_text: string | null;
   images: string[];
-  rich_images: RichImage[];
+  solution_html: string;
   has_latex: boolean;
-  omml_detected: boolean;
   needs_review: boolean;
 }
 
 type ApprovalStatus = "pending" | "approved" | "skipped";
-
-// ─── Type badge meta ──────────────────────────────────────────────────────────
 
 const TYPE_META: Record<QuestionType, { label: string; color: string }> = {
   scq:                 { label: "SCQ",           color: "bg-blue-100 text-blue-700" },
@@ -65,100 +62,30 @@ const TYPE_META: Record<QuestionType, { label: string; color: string }> = {
   assertion_reasoning: { label: "Assert–Reason", color: "bg-pink-100 text-pink-700" },
 };
 
-// ─── Rich image viewer ────────────────────────────────────────────────────────
-// Shows diagram images, chemistry structures (ChemDoodle), and a note for
-// equations (which are already inlined as $$LaTeX$$ in stem_html).
+const IMG_H = "160px";
 
-const RichImageGallery = ({ images }: { images: RichImage[] }) => {
-  const [chemExpanded, setChemExpanded] = useState<Record<number, boolean>>({});
-
-  if (!images.length) return null;
-
+const ImageGallery = ({ urls }: { urls: string[] }) => {
+  if (!urls.length) return null;
   return (
-    <div className="space-y-3">
-      {images.map((img, i) => {
-        if (img.type === "equation") {
-          // Equation images are already rendered inline as KaTeX in the stem preview.
-          // Show a subtle indicator here so the admin knows an image was processed.
-          return (
-            <div
-              key={i}
-              className="flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-700"
-            >
-              <Sigma className="h-3.5 w-3.5 shrink-0" />
-              <span>Equation image → converted to LaTeX (see preview above)</span>
-            </div>
-          );
-        }
-
-        if (img.type === "chemistry") {
-          const expanded = chemExpanded[i] ?? false;
-          return (
-            <div
-              key={i}
-              className="rounded-xl border border-teal-200 bg-teal-50 overflow-hidden"
-            >
-              {/* Header row */}
-              <div className="flex items-center justify-between gap-2 px-3 py-2">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-teal-700">
-                  <FlaskConical className="h-3.5 w-3.5" />
-                  Chemical structure
-                  {img.smiles && (
-                    <span className="font-mono font-normal text-teal-600 ml-1">
-                      {img.smiles.length > 40 ? img.smiles.slice(0, 40) + "…" : img.smiles}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  {img.smiles && (
-                    <button
-                      onClick={() => setChemExpanded((p) => ({ ...p, [i]: !p[i] }))}
-                      className="text-[11px] font-semibold text-teal-700 hover:text-teal-900 underline"
-                    >
-                      {expanded ? "Hide structure" : "Show 2D structure"}
-                    </button>
-                  )}
-                  <a
-                    href={img.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[11px] font-semibold text-teal-700 hover:text-teal-900 underline"
-                  >
-                    Original image ↗
-                  </a>
-                </div>
-              </div>
-
-              {/* Source image (always visible) */}
-              <div className="border-t border-teal-200 bg-white p-2">
-                <img
-                  src={img.url}
-                  alt="Chemistry structure"
-                  className="max-h-40 w-auto rounded object-contain mx-auto"
-                />
-              </div>
-
-              {/* ChemDoodle interactive viewer (toggle) */}
-              {expanded && img.smiles && (
-                <div className="border-t border-teal-200 bg-white p-3 flex justify-center">
-                  <MoleculeViewer smiles={img.smiles} width={320} height={220} />
-                </div>
-              )}
-            </div>
-          );
-        }
-
-        // diagram / plain image
-        return (
-          <a key={i} href={img.url} target="_blank" rel="noreferrer" className="block">
-            <img
-              src={img.url}
-              alt={`Diagram ${i + 1}`}
-              className="max-h-48 w-auto rounded-xl border border-border object-contain"
-            />
-          </a>
-        );
-      })}
+    <div className="flex flex-wrap gap-2">
+      {urls.map((url, i) => (
+        <a key={i} href={url} target="_blank" rel="noreferrer" className="inline-block">
+          <img
+            src={url}
+            alt={`Image ${i + 1}`}
+            style={{ maxHeight: IMG_H }}
+            className="w-auto rounded-xl border border-border object-contain bg-muted/20"
+            onError={(e) => {
+              const el = e.target as HTMLImageElement;
+              el.style.display = "none";
+              const p = document.createElement("span");
+              p.textContent = "⚠ Image failed to load";
+              p.className = "text-xs text-muted-foreground";
+              el.parentElement?.appendChild(p);
+            }}
+          />
+        </a>
+      ))}
     </div>
   );
 };
@@ -219,9 +146,7 @@ const QuestionCard = ({ q: initial, index, total, approval, onApprove, onSkip }:
     [4, q.option_4],
   ];
 
-  const chemCount = (q.rich_images ?? []).filter((r) => r.type === "chemistry").length;
-  const eqCount   = (q.rich_images ?? []).filter((r) => r.type === "equation").length;
-  const imgCount  = (q.rich_images ?? []).filter((r) => r.type === "diagram").length;
+  const imgCount = q.images?.length ?? 0;
 
   return (
     <div
@@ -233,7 +158,6 @@ const QuestionCard = ({ q: initial, index, total, approval, onApprove, onSkip }:
           : "border-border"
       }`}
     >
-      {/* Card header */}
       <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
         <span className="text-xs font-bold text-muted-foreground">Q{q.question_number}</span>
         <span
@@ -244,18 +168,6 @@ const QuestionCard = ({ q: initial, index, total, approval, onApprove, onSkip }:
         {q.has_latex && (
           <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-indigo-700">
             LaTeX
-          </span>
-        )}
-        {eqCount > 0 && (
-          <span className="flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-700">
-            <Sigma className="h-2.5 w-2.5" />
-            {eqCount} eq
-          </span>
-        )}
-        {chemCount > 0 && (
-          <span className="flex items-center gap-1 rounded-full bg-teal-50 px-2 py-0.5 text-[10px] font-bold text-teal-700">
-            <FlaskConical className="h-2.5 w-2.5" />
-            {chemCount} chem
           </span>
         )}
         {imgCount > 0 && (
@@ -270,17 +182,6 @@ const QuestionCard = ({ q: initial, index, total, approval, onApprove, onSkip }:
           {approval === "skipped" && <SkipForward className="h-4 w-4 text-muted-foreground" />}
         </div>
       </div>
-
-      {/* OMML warning */}
-      {q.omml_detected && (
-        <div className="flex items-start gap-2 border-b border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-800">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-          <span>
-            <strong>Word OMML equation detected</strong> — couldn't auto-convert.
-            Please enter the LaTeX equivalent manually in the stem below.
-          </span>
-        </div>
-      )}
 
       <div className="p-4 space-y-4">
         {/* Type selector */}
@@ -305,7 +206,7 @@ const QuestionCard = ({ q: initial, index, total, approval, onApprove, onSkip }:
         {/* Stem editor */}
         <div>
           <label className="mb-1 block text-xs font-semibold text-foreground">
-            Question stem (HTML + LaTeX)
+            Question stem (HTML)
           </label>
           <textarea
             value={q.stem_html}
@@ -332,9 +233,12 @@ const QuestionCard = ({ q: initial, index, total, approval, onApprove, onSkip }:
           )}
         </div>
 
-        {/* Rich images: equations / chemistry / diagrams */}
-        {(q.rich_images?.length ?? 0) > 0 && (
-          <RichImageGallery images={q.rich_images ?? []} />
+        {/* Image gallery */}
+        {imgCount > 0 && (
+          <div>
+            <p className="mb-1.5 text-xs font-semibold text-foreground">Images</p>
+            <ImageGallery urls={q.images} />
+          </div>
         )}
 
         {/* ── SCQ / MCQ options ─────────────────────────────────────────────── */}
@@ -349,33 +253,40 @@ const QuestionCard = ({ q: initial, index, total, approval, onApprove, onSkip }:
             {options.map(([num, text]) => {
               const isCorrect = q.correct_options.includes(num);
               return (
-                <div key={num} className="flex items-start gap-2">
-                  <button
-                    onClick={() => toggleCorrect(num)}
-                    className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs font-bold transition-colors ${
-                      isCorrect
-                        ? "border-secondary bg-secondary text-secondary-foreground"
-                        : "border-border bg-background text-muted-foreground hover:border-secondary/60"
-                    }`}
-                  >
-                    {q.type === "scq" ? (isCorrect ? "●" : num) : isCorrect ? "✓" : num}
-                  </button>
-                  <textarea
-                    value={text}
-                    onChange={(e) =>
-                      patch({ [`option_${num}` as "option_1"]: e.target.value })
-                    }
-                    rows={1}
-                    placeholder={`Option (${num})`}
-                    className="flex-1 resize-none rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-                  />
+                <div key={num} className="space-y-1">
+                  <div className="flex items-start gap-2">
+                    <button
+                      onClick={() => toggleCorrect(num)}
+                      className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs font-bold transition-colors ${
+                        isCorrect
+                          ? "border-secondary bg-secondary text-secondary-foreground"
+                          : "border-border bg-background text-muted-foreground hover:border-secondary/60"
+                      }`}
+                    >
+                      {q.type === "scq" ? (isCorrect ? "●" : num) : isCorrect ? "✓" : num}
+                    </button>
+                    <textarea
+                      value={text}
+                      onChange={(e) =>
+                        patch({ [`option_${num}` as "option_1"]: e.target.value })
+                      }
+                      rows={2}
+                      placeholder={`Option (${num})`}
+                      className="flex-1 resize-y rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                    />
+                  </div>
+                  {text && (
+                    <div className={`ml-7 rounded-lg border px-3 py-1.5 text-xs ${isCorrect ? "border-secondary/30 bg-secondary/5" : "border-border bg-muted/20"}`}>
+                      <LatexRenderer html={text} />
+                    </div>
+                  )}
                 </div>
               );
             })}
           </div>
         )}
 
-        {/* ── Integer type ──────────────────────────────────────────────────── */}
+        {/* ── Integer ──────────────────────────────────────────────────────── */}
         {q.type === "integer" && (
           <div>
             <label className="mb-1 block text-xs font-semibold text-foreground">
@@ -394,50 +305,65 @@ const QuestionCard = ({ q: initial, index, total, approval, onApprove, onSkip }:
 
         {/* ── Match the column ─────────────────────────────────────────────── */}
         {q.type === "match_column" && (
-          <div className="grid grid-cols-2 gap-4">
-            {(["match_col1", "match_col2"] as const).map((col, ci) => {
-              const entries: MatchEntry[] = q[col] ?? [];
-              const placeholder = ci === 0 ? ["a", "b", "c", "d"] : ["P", "Q", "R", "S"];
-              return (
-                <div key={col}>
-                  <p className="mb-2 text-xs font-semibold text-foreground">
-                    Column {ci === 0 ? "I" : "II"}
-                  </p>
-                  <div className="space-y-1.5">
-                    {(entries.length ? entries : placeholder.map((k) => ({ key: k, value: "" }))).map(
-                      (entry, ei) => (
-                        <div key={ei} className="flex items-center gap-2">
-                          <input
-                            value={entry.key}
-                            onChange={(e) => {
-                              const next = entries.map((en, i) =>
-                                i === ei ? { ...en, key: e.target.value } : en,
-                              );
-                              patch({ [col]: next });
-                            }}
-                            className="w-10 rounded-lg border border-border bg-background px-2 py-1.5 text-center text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary/40"
-                          />
-                          <input
-                            value={entry.value}
-                            onChange={(e) => {
-                              const base = entries.length
-                                ? entries
-                                : placeholder.map((k) => ({ key: k, value: "" }));
-                              const next = base.map((en, i) =>
-                                i === ei ? { ...en, value: e.target.value } : en,
-                              );
-                              patch({ [col]: next });
-                            }}
-                            placeholder={`Value for ${entry.key}`}
-                            className="flex-1 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-                          />
-                        </div>
-                      ),
-                    )}
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-4">
+              {(["match_col1", "match_col2"] as const).map((col, ci) => {
+                const entries: MatchEntry[] = q[col] ?? [];
+                const placeholder = ci === 0 ? ["a", "b", "c", "d"] : ["P", "Q", "R", "S"];
+                return (
+                  <div key={col}>
+                    <p className="mb-2 text-xs font-semibold text-foreground">
+                      Column {ci === 0 ? "I" : "II"}
+                    </p>
+                    <div className="space-y-1.5">
+                      {(entries.length ? entries : placeholder.map((k) => ({ key: k, value: "" }))).map(
+                        (entry, ei) => (
+                          <div key={ei} className="flex items-center gap-2">
+                            <input
+                              value={entry.key}
+                              onChange={(e) => {
+                                const base = entries.length
+                                  ? entries
+                                  : placeholder.map((k) => ({ key: k, value: "" }));
+                                const next = base.map((en, i) =>
+                                  i === ei ? { ...en, key: e.target.value } : en,
+                                );
+                                patch({ [col]: next });
+                              }}
+                              className="w-10 rounded-lg border border-border bg-background px-2 py-1.5 text-center text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary/40"
+                            />
+                            <input
+                              value={entry.value}
+                              onChange={(e) => {
+                                const base = entries.length
+                                  ? entries
+                                  : placeholder.map((k) => ({ key: k, value: "" }));
+                                const next = base.map((en, i) =>
+                                  i === ei ? { ...en, value: e.target.value } : en,
+                                );
+                                patch({ [col]: next });
+                              }}
+                              placeholder={`Value for ${entry.key}`}
+                              className="flex-1 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                            />
+                          </div>
+                        ),
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-foreground">
+                Match answer (e.g. "A-P, B-Q, C-R, D-S")
+              </label>
+              <input
+                value={q.match_answer ?? ""}
+                onChange={(e) => patch({ match_answer: e.target.value })}
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+            </div>
           </div>
         )}
 
@@ -492,6 +418,24 @@ const QuestionCard = ({ q: initial, index, total, approval, onApprove, onSkip }:
           </div>
         )}
 
+        {/* ── Solution editor ──────────────────────────────────────────────── */}
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-foreground">
+            Solution (HTML)
+          </label>
+          <textarea
+            value={q.solution_html ?? ""}
+            onChange={(e) => patch({ solution_html: e.target.value })}
+            rows={4}
+            className="w-full resize-y rounded-xl border border-border bg-background px-3 py-2 text-xs font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+          {q.solution_html && (
+            <div className="mt-2 rounded-xl border border-border bg-muted/30 p-3">
+              <LatexRenderer html={q.solution_html} />
+            </div>
+          )}
+        </div>
+
         {/* Card actions */}
         {!isDone && (
           <div className="flex justify-end gap-2 pt-2 border-t border-border">
@@ -518,7 +462,7 @@ const QuestionCard = ({ q: initial, index, total, approval, onApprove, onSkip }:
         )}
         {approval === "approved" && (
           <p className="flex items-center gap-1 text-xs font-semibold text-secondary">
-            <CheckCircle2 className="h-3.5 w-3.5" /> Saved to database
+            <CheckCircle2 className="h-3.5 w-3.5" /> Approved
           </p>
         )}
       </div>
@@ -528,90 +472,123 @@ const QuestionCard = ({ q: initial, index, total, approval, onApprove, onSkip }:
 
 // ─── Review page ──────────────────────────────────────────────────────────────
 
+function buildTestQuestionRow(q: ParsedQuestion, position: number, subject: string, testId: string) {
+  let options: unknown = [];
+  let correct_answer: unknown = null;
+
+  if (q.type === "scq" || q.type === "mcq") {
+    options = [q.option_1, q.option_2, q.option_3, q.option_4]
+      .map((text, idx) => ({ id: idx + 1, text }))
+      .filter((o) => (o.text ?? "").trim().length > 0);
+    correct_answer = q.correct_options ?? [];
+  } else if (q.type === "integer") {
+    options = [];
+    correct_answer = q.correct_integer;
+  } else if (q.type === "match_column") {
+    options = { col1: q.match_col1 ?? [], col2: q.match_col2 ?? [] };
+    correct_answer = q.match_answer ?? "";
+  } else if (q.type === "assertion_reasoning") {
+    options = AR_OPTIONS_TEXT.map((text, idx) => ({ id: idx + 1, text }));
+    correct_answer = q.correct_options ?? [];
+  }
+
+  return {
+    test_id: testId,
+    position,
+    subject,
+    topic: null,
+    question_text: q.stem_html,
+    question_image_url: q.images?.[0] ?? null,
+    question_type: q.type,
+    options,
+    correct_answer,
+    explanation: q.solution_html ?? null,
+    marks_correct: 4,
+    marks_wrong: -1,
+  };
+}
+
 const AdminReviewQuestionsPage = () => {
   const { paperId } = useParams<{ paperId: string }>();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
-  const { questions: initialQuestions = [], paperCode = "" } =
-    (location.state as { questions: ParsedQuestion[]; paperId: string; paperCode: string }) ?? {};
+  const { questions: initialQuestions = [], paperCode = "", subject = "Physics" } =
+    (location.state as { questions: ParsedQuestion[]; paperId: string; paperCode: string; subject?: string }) ?? {};
 
   const [questions, setQuestions] = useState<ParsedQuestion[]>(initialQuestions);
   const [approvals, setApprovals] = useState<Record<number, ApprovalStatus>>(() =>
     Object.fromEntries(initialQuestions.map((q) => [q.question_number, "pending"])),
   );
-  const [savingAll, setSavingAll] = useState(false);
+  const [publishing, setPublishing] = useState(false);
 
   const total = questions.length;
   const approvedCount = Object.values(approvals).filter((s) => s === "approved").length;
   const skippedCount  = Object.values(approvals).filter((s) => s === "skipped").length;
   const pendingCount  = total - approvedCount - skippedCount;
+  // Anything not explicitly skipped is included in the test (approved + pending).
+  const includedCount = total - skippedCount;
   const progress = total > 0 ? Math.round((approvedCount / total) * 100) : 0;
 
-  const saveQuestion = async (q: ParsedQuestion): Promise<void> => {
-    const payload: Record<string, unknown> = {
-      paper_id:        paperId,
-      question_number: q.question_number,
-      type:            q.type,
-      stem_html:       q.stem_html,
-      images:          q.images,
-      rich_images:     q.rich_images ?? [],
-      has_latex:       q.has_latex,
-      needs_review:    false,
-    };
-
-    if (q.type === "scq" || q.type === "mcq") {
-      payload.option_1        = q.option_1;
-      payload.option_2        = q.option_2;
-      payload.option_3        = q.option_3;
-      payload.option_4        = q.option_4;
-      payload.correct_options = q.correct_options;
-    }
-    if (q.type === "integer") {
-      payload.correct_integer = q.correct_integer;
-    }
-    if (q.type === "match_column") {
-      payload.match_col1 = q.match_col1;
-      payload.match_col2 = q.match_col2;
-    }
-    if (q.type === "assertion_reasoning") {
-      payload.assertion_text  = q.assertion_text;
-      payload.reason_text     = q.reason_text;
-      payload.correct_options = q.correct_options;
-    }
-
-    const { error } = await (supabase as any).from("questions").insert(payload);
-    if (error) throw new Error(error.message);
-  };
-
+  // Per-question Approve is now a state-only flag (no DB write). The single writer is publishAsTest.
   const handleApprove = async (index: number, updated: ParsedQuestion) => {
-    await saveQuestion(updated);
     setQuestions((prev) => prev.map((q, i) => (i === index ? updated : q)));
     setApprovals((prev) => ({ ...prev, [updated.question_number]: "approved" }));
-    toast.success(`Q${updated.question_number} saved`);
   };
 
   const handleSkip = (num: number) => {
     setApprovals((prev) => ({ ...prev, [num]: "skipped" }));
   };
 
-  const handleSaveAll = async () => {
-    const pending = questions.filter((q) => approvals[q.question_number] === "pending");
-    if (!pending.length) { toast.info("Nothing left to save"); return; }
+  const publishAsTest = async () => {
+    if (!user) { toast.error("You must be signed in"); return; }
+    const included = questions.filter((q) => approvals[q.question_number] !== "skipped");
+    if (!included.length) { toast.error("No questions to publish (all skipped)"); return; }
 
-    setSavingAll(true);
-    let saved = 0, failed = 0;
-    for (const q of pending) {
-      try {
-        await saveQuestion(q);
-        setApprovals((prev) => ({ ...prev, [q.question_number]: "approved" }));
-        saved++;
-      } catch {
-        failed++;
+    setPublishing(true);
+    try {
+      const title = paperCode || `Imported test ${new Date().toISOString().slice(0, 10)}`;
+      const slug = `${slugify(title)}-${Date.now().toString(36)}`;
+
+      const { data: testRow, error: testErr } = await (supabase as any)
+        .from("tests")
+        .insert({
+          title,
+          slug,
+          test_type: "mock",
+          exam_pattern: "jee-main",
+          subjects: [subject],
+          duration_minutes: 180,
+          correct_marks: 4,
+          wrong_marks: -1,
+          total_questions: included.length,
+          total_marks: included.length * 4,
+          visibility: "public",
+          is_published: false, // draft — admin reviews / publishes from /admin/tests
+          created_by: user.id,
+        })
+        .select("id, slug")
+        .single();
+
+      if (testErr || !testRow) throw new Error(testErr?.message ?? "Could not create test");
+
+      const rows = included.map((q, i) => buildTestQuestionRow(q, i, subject, testRow.id));
+      const { error: tqErr } = await (supabase as any).from("test_questions").insert(rows);
+      if (tqErr) {
+        // Best-effort rollback so we don't leave an empty test in /admin/tests
+        await (supabase as any).from("tests").delete().eq("id", testRow.id);
+        throw new Error(tqErr.message);
       }
+
+      toast.success(`Test created with ${included.length} question${included.length === 1 ? "" : "s"}`);
+      navigate("/admin/tests");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      toast.error(`Publish failed: ${msg}`);
+    } finally {
+      setPublishing(false);
     }
-    setSavingAll(false);
-    if (saved)  toast.success(`Saved ${saved} question${saved === 1 ? "" : "s"}`);
-    if (failed) toast.error(`${failed} question${failed === 1 ? "" : "s"} failed to save`);
   };
 
   if (!paperId) {
@@ -634,7 +611,6 @@ const AdminReviewQuestionsPage = () => {
 
   return (
     <div className="p-4 lg:p-6 space-y-6">
-      {/* Page header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
@@ -650,18 +626,17 @@ const AdminReviewQuestionsPage = () => {
           </p>
         </div>
         <button
-          onClick={handleSaveAll}
-          disabled={savingAll || pendingCount === 0}
+          onClick={publishAsTest}
+          disabled={publishing || includedCount === 0}
           className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-40"
         >
-          {savingAll ? "Saving…" : <><Save className="h-4 w-4" /> Save All Pending ({pendingCount})</>}
+          {publishing ? "Publishing…" : <><Save className="h-4 w-4" /> Publish as Test ({includedCount})</>}
         </button>
       </div>
 
-      {/* Progress bar */}
       <div>
         <div className="mb-1 flex justify-between text-xs text-muted-foreground">
-          <span>{approvedCount} of {total} approved</span>
+          <span>{approvedCount} of {total} approved · {includedCount} will be included</span>
           <span>{progress}%</span>
         </div>
         <div className="h-2 rounded-full bg-muted overflow-hidden">
@@ -672,7 +647,6 @@ const AdminReviewQuestionsPage = () => {
         </div>
       </div>
 
-      {/* Summary chips */}
       <div className="flex flex-wrap gap-2">
         {(["scq", "mcq", "integer", "match_column", "assertion_reasoning"] as QuestionType[]).map((t) => {
           const count = questions.filter((q) => q.type === t).length;
@@ -684,27 +658,8 @@ const AdminReviewQuestionsPage = () => {
             </span>
           );
         })}
-        {questions.some((q) => q.omml_detected) && (
-          <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
-            <AlertTriangle className="h-3 w-3" />
-            {questions.filter((q) => q.omml_detected).length} Word equations need LaTeX
-          </span>
-        )}
-        {questions.some((q) => (q.rich_images ?? []).some((r) => r.type === "chemistry")) && (
-          <span className="flex items-center gap-1 rounded-full bg-teal-100 px-2.5 py-1 text-xs font-semibold text-teal-700">
-            <FlaskConical className="h-3 w-3" />
-            Chemistry structures detected
-          </span>
-        )}
-        {questions.some((q) => (q.rich_images ?? []).some((r) => r.type === "equation")) && (
-          <span className="flex items-center gap-1 rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-semibold text-indigo-700">
-            <Sigma className="h-3 w-3" />
-            Equation images → LaTeX
-          </span>
-        )}
       </div>
 
-      {/* Question cards */}
       <div className="space-y-4">
         {questions.map((q, i) => (
           <QuestionCard
@@ -719,33 +674,31 @@ const AdminReviewQuestionsPage = () => {
         ))}
       </div>
 
-      {/* Sticky save all */}
-      {pendingCount > 0 && (
+      {includedCount > 0 && (
         <div className="sticky bottom-4 flex justify-end">
           <button
-            onClick={handleSaveAll}
-            disabled={savingAll}
+            onClick={publishAsTest}
+            disabled={publishing}
             className="flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground shadow-lg hover:opacity-90 disabled:opacity-40"
           >
-            {savingAll ? "Saving…" : (
+            {publishing ? "Publishing…" : (
               <>
                 <Save className="h-4 w-4" />
                 <ChevronRight className="h-4 w-4 -ml-1" />
-                Save All Pending ({pendingCount})
+                Publish as Test ({includedCount})
               </>
             )}
           </button>
         </div>
       )}
 
-      {/* All done banner */}
       {pendingCount === 0 && total > 0 && (
         <div className="flex items-center gap-3 rounded-2xl border border-secondary/40 bg-secondary/10 p-4">
           <CheckCircle2 className="h-5 w-5 shrink-0 text-secondary" />
           <div>
-            <p className="text-sm font-semibold text-foreground">All questions processed</p>
+            <p className="text-sm font-semibold text-foreground">All questions reviewed</p>
             <p className="text-xs text-muted-foreground">
-              {approvedCount} approved, {skippedCount} skipped.
+              {approvedCount} approved, {skippedCount} skipped — click <strong>Publish as Test</strong> to save.
             </p>
           </div>
         </div>

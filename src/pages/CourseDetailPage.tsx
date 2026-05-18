@@ -5,7 +5,6 @@ import {
   Star,
   Users,
   Clock,
-  ShieldCheck,
   Heart,
   ChevronDown,
   Loader2,
@@ -14,7 +13,6 @@ import {
   Video,
   ClipboardCheck,
   Timer,
-  AlertCircle,
   Download,
   ArrowRight,
 } from "lucide-react";
@@ -23,16 +21,8 @@ import { toast } from "sonner";
 import { useCourseDetail } from "@/hooks/useCourseDetail";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { CourseReviews } from "@/components/CourseReviews";
+import EnrollmentModal from "@/components/EnrollmentModal";
 
 type EnrollmentInfo = {
   id: string;
@@ -67,7 +57,6 @@ const CourseDetailPage = () => {
   const [expandedChapter, setExpandedChapter] = useState(0);
   const [enrollment, setEnrollment] = useState<EnrollmentInfo | null>(null);
   const [enrollOpen, setEnrollOpen] = useState(false);
-  const [enrolling, setEnrolling] = useState(false);
   const [completedSlugs, setCompletedSlugs] = useState<Set<string>>(new Set());
 
   const enrolled = !!enrollment;
@@ -196,22 +185,16 @@ const CourseDetailPage = () => {
     setEnrollOpen(true);
   };
 
-  const handleConfirmEnroll = async () => {
+  const handleEnrolled = async () => {
     if (!user || !course) return;
-    setEnrolling(true);
-    const { data, error } = await supabase
+    const { data: enr } = await supabase
       .from("enrollments")
-      .insert({ user_id: user.id, course_id: course.id, is_active: true })
       .select("id, progress_percent, completed_lessons, last_lesson_title, last_accessed_at")
+      .eq("user_id", user.id)
+      .eq("course_id", course.id)
+      .eq("is_active", true)
       .maybeSingle();
-    setEnrolling(false);
-    if (error) {
-      toast.error(error.message || "Could not enroll");
-      return;
-    }
-    setEnrollment(data as EnrollmentInfo);
-    setEnrollOpen(false);
-    toast.success("You're enrolled! Start learning anytime.");
+    setEnrollment(enr as EnrollmentInfo | null);
   };
 
   const discount =
@@ -638,10 +621,6 @@ const CourseDetailPage = () => {
                   )}
                 </div>
 
-                <p className="flex items-center gap-1.5 text-[11px] text-destructive">
-                  <AlertCircle className="h-3 w-3" /> 2 days left at this price
-                </p>
-
                 <button
                   onClick={handleEnrollClick}
                   className="w-full rounded-xl bg-foreground py-3 text-sm font-bold text-background hover:opacity-90 transition-opacity"
@@ -670,39 +649,14 @@ const CourseDetailPage = () => {
         </aside>
       </div>
 
-      {/* Payment coming soon dialog */}
-      <Dialog open={enrollOpen} onOpenChange={(o) => !enrolling && setEnrollOpen(o)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="font-display">Payments coming soon</DialogTitle>
-            <DialogDescription>
-              Online payment integration is not yet enabled. For now, you can confirm your enrollment in{" "}
-              <span className="font-semibold text-foreground">{course.name}</span> in demo mode and start
-              learning right away. Reach out to support for the actual payment flow.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="rounded-xl bg-muted/40 p-3 text-xs text-foreground space-y-1">
-            <p>
-              <span className="text-muted-foreground">Email:</span>{" "}
-              <a className="text-primary font-semibold" href="mailto:support@arke.pro">support@arke.pro</a>
-            </p>
-            <p><span className="text-muted-foreground">Course:</span> {course.name}</p>
-            <p><span className="text-muted-foreground">Price:</span> ₹{Number(course.price).toLocaleString()}</p>
-          </div>
-          <DialogFooter className="gap-2 sm:gap-2">
-            <Button variant="outline" asChild disabled={enrolling}>
-              <Link to="/contact">Contact Support</Link>
-            </Button>
-            <Button onClick={handleConfirmEnroll} disabled={enrolling}>
-              {enrolling ? (
-                <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Enrolling…</>
-              ) : (
-                <>Mark as Enrolled (Demo)</>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EnrollmentModal
+        open={enrollOpen}
+        onClose={() => setEnrollOpen(false)}
+        courseId={course.id}
+        courseName={course.name}
+        coursePrice={Number(course.price)}
+        onEnrolled={handleEnrolled}
+      />
     </div>
   );
 };

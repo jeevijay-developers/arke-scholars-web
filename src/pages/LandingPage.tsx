@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Play, BookOpen, ClipboardCheck, Bot, BarChart3, Swords, Smartphone, Star, Check, Flame, Rocket, GraduationCap, FileText, Trophy, Users, Monitor, Award, Heart, Sparkles, Globe, Video, User, MessageCircle, Quote, Zap, Target, Shield, Clock, ChevronRight, ChevronDown, HelpCircle, Briefcase, IndianRupee } from "lucide-react";
+import { ArrowRight, Play, BookOpen, ClipboardCheck, Bot, BarChart3, Swords, Smartphone, Star, Check, Flame, Rocket, GraduationCap, FileText, Trophy, Users, Monitor, Award, Heart, Sparkles, Globe, Video, User, MessageCircle, Quote, Zap, Target, Shield, Clock, ChevronRight, ChevronDown, HelpCircle, Briefcase, IndianRupee, Menu, X } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { useState } from "react";
 import EducatorApplicationDialog from "@/components/EducatorApplicationDialog";
@@ -26,6 +26,7 @@ const faqs = [
 const LandingPage = () => {
   const { country, setCountry, user } = useAppStore();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const initials = user?.full_name
     ? user.full_name.split(' ').filter(Boolean).slice(0, 2).map((n) => n[0]?.toUpperCase()).join('')
     : 'U';
@@ -50,46 +51,64 @@ const LandingPage = () => {
 
       {/* Navbar */}
       <nav className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md">
-        <div className="container mx-auto flex items-center justify-between px-4 py-3">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent">
-              <Flame className="h-5 w-5 text-primary-foreground" />
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex items-center justify-between">
+            <Link to="/" className="flex items-center gap-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent">
+                <Flame className="h-5 w-5 text-primary-foreground" />
+              </div>
+              <span className="text-xl font-black font-display gradient-text">ARKE</span>
+            </Link>
+            <div className="hidden items-center gap-8 md:flex">
+              <Link to="/courses" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Courses</Link>
+              <Link to="/mentorship" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Mentorship</Link>
+              <Link to="/admissions" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Admission/Scholarship</Link>
+              <Link to="/association" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Association</Link>
             </div>
-            <span className="text-xl font-black font-display gradient-text">ARKE</span>
-          </Link>
-          <div className="hidden items-center gap-8 md:flex">
-            <Link to="/courses" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Courses</Link>
-            <Link to="/mentorship" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Mentorship</Link>
-            <Link to="/admissions" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Admission/Scholarship</Link>
-            <Link to="/association" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Association</Link>
-          </div>
-          <div className="flex items-center gap-3">
-            {user ? (
-              <Link
-                to="/dashboard"
-                className="flex items-center gap-2 rounded-pill border border-border bg-card px-2 py-1 pr-4 hover:border-primary/50 transition-colors"
-                aria-label="Go to dashboard"
-              >
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-xs font-black text-primary-foreground overflow-hidden">
-                  {user.avatar_url ? (
-                    <img src={user.avatar_url} alt={user.full_name} className="h-full w-full object-cover" />
-                  ) : (
-                    initials
-                  )}
-                </div>
-                <span className="text-sm font-semibold text-foreground hidden sm:inline truncate max-w-[120px]">
-                  {user.full_name?.split(' ')[0] || 'Account'}
-                </span>
-              </Link>
-            ) : (
-              <>
-                <Link to="/login" className="text-sm font-semibold text-foreground hover:text-primary transition-colors">Login</Link>
-                <Link to="/signup" className="rounded-pill bg-gradient-to-r from-primary to-accent px-5 py-2 text-sm font-bold text-primary-foreground shadow-blue hover:opacity-90 transition-opacity">
-                  Start Free
+            <div className="flex items-center gap-2 sm:gap-3">
+              {user ? (
+                <Link
+                  to="/dashboard"
+                  className="flex items-center gap-2 rounded-pill border border-border bg-card px-2 py-1 pr-4 hover:border-primary/50 transition-colors"
+                  aria-label="Go to dashboard"
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-xs font-black text-primary-foreground overflow-hidden">
+                    {user.avatar_url ? (
+                      <img src={user.avatar_url} alt={user.full_name} className="h-full w-full object-cover" />
+                    ) : (
+                      initials
+                    )}
+                  </div>
+                  <span className="text-sm font-semibold text-foreground hidden sm:inline truncate max-w-[120px]">
+                    {user.full_name?.split(' ')[0] || 'Account'}
+                  </span>
                 </Link>
-              </>
-            )}
+              ) : (
+                <>
+                  <Link to="/login" className="hidden sm:inline-block text-sm font-semibold text-foreground hover:text-primary transition-colors">Login</Link>
+                  <Link to="/signup" className="rounded-pill bg-gradient-to-r from-primary to-accent px-4 py-1.5 sm:px-5 sm:py-2 text-xs sm:text-sm font-bold text-primary-foreground shadow-blue hover:opacity-90 transition-opacity">
+                    Start Free
+                  </Link>
+                </>
+              )}
+              {/* Hamburger Button */}
+              <button className="md:hidden p-1 text-foreground ml-1" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+                {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              </button>
+            </div>
           </div>
+          {/* Mobile Menu Overlay */}
+          {isMobileMenuOpen && (
+            <div className="md:hidden pt-4 pb-2 flex flex-col gap-4 border-t border-border mt-3 animate-fade-in-up">
+              <Link to="/courses" className="text-sm font-medium text-foreground hover:text-primary transition-colors" onClick={() => setIsMobileMenuOpen(false)}>Courses</Link>
+              <Link to="/mentorship" className="text-sm font-medium text-foreground hover:text-primary transition-colors" onClick={() => setIsMobileMenuOpen(false)}>Mentorship</Link>
+              <Link to="/admissions" className="text-sm font-medium text-foreground hover:text-primary transition-colors" onClick={() => setIsMobileMenuOpen(false)}>Admission/Scholarship</Link>
+              <Link to="/association" className="text-sm font-medium text-foreground hover:text-primary transition-colors" onClick={() => setIsMobileMenuOpen(false)}>Association</Link>
+              {!user && (
+                <Link to="/login" className="text-sm font-medium text-foreground hover:text-primary transition-colors" onClick={() => setIsMobileMenuOpen(false)}>Login</Link>
+              )}
+            </div>
+          )}
         </div>
       </nav>
 
@@ -101,7 +120,7 @@ const LandingPage = () => {
         <div className="absolute inset-0 grid-texture" />
         <div className="container mx-auto px-4 py-20 md:py-28 relative z-10">
           <div className="grid items-center gap-12 md:grid-cols-2">
-            <div className="animate-fade-in-up">
+            <div className="animate-fade-in-up text-center md:text-left">
               <span className="inline-flex items-center gap-2 rounded-pill border border-primary/30 bg-primary/10 px-4 py-1.5 text-sm font-semibold text-primary">
                 <Rocket className="h-4 w-4" /> {country === 'india' ? "India's Rising EdTech Platform" : "UAE's Trusted EdTech Platform"}
               </span>
@@ -110,18 +129,18 @@ const LandingPage = () => {
                 <span className="block text-4xl font-black md:text-5xl lg:text-6xl gradient-text">Reach Your Goals</span>
               </h1>
               <p className="mt-4 text-lg font-semibold text-white/90">Schooling · Olympiads · Competitive Exams</p>
-              <p className="mt-3 max-w-md text-base text-white/70 leading-relaxed">
+              <p className="mt-3 max-w-md mx-auto md:mx-0 text-base text-white/70 leading-relaxed">
                 Master your exams with live classes from top educators, AI-powered doubt solving, and smart test analytics.
               </p>
-              <div className="mt-8 flex flex-wrap items-center gap-4">
-                <Link to="/signup" className="inline-flex items-center gap-2 rounded-pill bg-gradient-to-r from-primary to-accent px-8 py-3.5 text-base font-bold text-primary-foreground shadow-blue hover:opacity-90 transition-all hover:scale-105">
+              <div className="mt-8 flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4">
+                <Link to="/signup" className="inline-flex items-center justify-center w-full sm:w-auto gap-2 rounded-pill bg-gradient-to-r from-primary to-accent px-8 py-3.5 text-base font-bold text-primary-foreground shadow-blue hover:opacity-90 transition-all hover:scale-105">
                   Start for Free <ArrowRight className="h-4 w-4" />
                 </Link>
-                <button className="inline-flex items-center gap-2 rounded-pill border border-white/30 px-6 py-3.5 text-base font-semibold text-white hover:bg-white/10 transition-colors">
+                <button className="inline-flex items-center justify-center w-full sm:w-auto gap-2 rounded-pill border border-white/30 px-6 py-3.5 text-base font-semibold text-white hover:bg-white/10 transition-colors">
                   <Play className="h-4 w-4" /> Watch Demo
                 </button>
               </div>
-              <div className="mt-10 flex flex-wrap items-center gap-6 text-sm text-white/80">
+              <div className="mt-10 flex flex-wrap items-center justify-center md:justify-start gap-4 sm:gap-6 text-sm text-white/80">
                 <span className="inline-flex items-center gap-1.5 font-semibold"><Globe className="h-4 w-4 text-primary" /> Global Presence</span>
                 <span className="inline-flex items-center gap-1.5 font-semibold"><Monitor className="h-4 w-4 text-primary" /> Live Classes</span>
                 <span className="inline-flex items-center gap-1.5 font-semibold"><Award className="h-4 w-4 text-primary" /> Unleashing Potential</span>
@@ -279,7 +298,7 @@ const LandingPage = () => {
         <div className="container mx-auto px-4">
           <div className="text-center animate-fade-in-up">
             <h2 className="text-3xl font-black font-display text-foreground md:text-4xl">Popular Batches</h2>
-            <p className="mt-2 text-muted-foreground">Join thousands of students preparing for their dream</p>
+            <p className="mt-2 text-muted-foreground">Join thousands of students preparing for their dream exams</p>
           </div>
           <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4 stagger-children">
             {[
@@ -476,31 +495,35 @@ const LandingPage = () => {
             <p className="mt-2 text-muted-foreground">See how we compare to traditional coaching</p>
           </div>
           <div className="mt-12 max-w-3xl mx-auto rounded-2xl border border-border bg-card overflow-hidden">
-            <div className="grid grid-cols-3 bg-gradient-to-r from-primary to-accent text-center">
-              <div className="p-4 text-sm font-bold text-white">Feature</div>
-              <div className="p-4 text-sm font-bold text-white">Arke</div>
-              <div className="p-4 text-sm font-bold text-white">Traditional Coaching</div>
-            </div>
-            {[
-              { feature: "Live + Recorded Classes", arke: true, traditional: false },
-              { feature: "AI Doubt Solver (24/7)", arke: true, traditional: false },
-              { feature: "1-on-1 Mentoring", arke: true, traditional: false },
-              { feature: "Flexible Schedule", arke: true, traditional: false },
-              { feature: "Smart Analytics & Tracking", arke: true, traditional: false },
-              { feature: "Affordable Pricing", arke: true, traditional: false },
-              { feature: "Compete with Peers (India Rank)", arke: true, traditional: false },
-              { feature: "Learn from Anywhere", arke: true, traditional: false },
-            ].map((row, i) => (
-              <div key={row.feature} className={`grid grid-cols-3 text-center border-b border-border last:border-0 ${i % 2 === 0 ? '' : 'bg-muted/20'}`}>
-                <div className="p-3 text-xs font-medium text-foreground text-left pl-6">{row.feature}</div>
-                <div className="p-3 text-sm">
-                  {row.arke ? <Check className="h-5 w-5 text-secondary mx-auto" /> : <span className="text-muted-foreground">—</span>}
+            <div className="overflow-x-auto">
+              <div className="min-w-[600px]">
+                <div className="grid grid-cols-3 bg-gradient-to-r from-primary to-accent text-center">
+                  <div className="p-4 text-sm font-bold text-white">Feature</div>
+                  <div className="p-4 text-sm font-bold text-white">Arke</div>
+                  <div className="p-4 text-sm font-bold text-white">Traditional Coaching</div>
                 </div>
-                <div className="p-3 text-sm">
-                  {row.traditional ? <Check className="h-5 w-5 text-secondary mx-auto" /> : <span className="text-muted-foreground">✕</span>}
-                </div>
+                {[
+                  { feature: "Live + Recorded Classes", arke: true, traditional: false },
+                  { feature: "AI Doubt Solver (24/7)", arke: true, traditional: false },
+                  { feature: "1-on-1 Mentoring", arke: true, traditional: false },
+                  { feature: "Flexible Schedule", arke: true, traditional: false },
+                  { feature: "Smart Analytics & Tracking", arke: true, traditional: false },
+                  { feature: "Affordable Pricing", arke: true, traditional: false },
+                  { feature: "Compete with Peers (India Rank)", arke: true, traditional: false },
+                  { feature: "Learn from Anywhere", arke: true, traditional: false },
+                ].map((row, i) => (
+                  <div key={row.feature} className={`grid grid-cols-3 text-center border-b border-border last:border-0 ${i % 2 === 0 ? '' : 'bg-muted/20'}`}>
+                    <div className="p-3 text-sm font-medium text-foreground text-left pl-6">{row.feature}</div>
+                    <div className="p-3 text-sm">
+                      {row.arke ? <Check className="h-5 w-5 text-secondary mx-auto" /> : <span className="text-muted-foreground">—</span>}
+                    </div>
+                    <div className="p-3 text-sm">
+                      {row.traditional ? <Check className="h-5 w-5 text-secondary mx-auto" /> : <span className="text-muted-foreground">✕</span>}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </section>
