@@ -254,9 +254,9 @@ const ProfilePage = () => {
                   city={form.city}
                   state={form.state}
                   country={form.country}
-                  onCityChange={(v) => setForm({ ...form, city: v })}
-                  onStateChange={(v) => setForm({ ...form, state: v })}
-                  onCountryChange={(v) => setForm({ ...form, country: v })}
+                  onCityChange={(v) => setForm((f) => ({ ...f, city: v }))}
+                  onStateChange={(v) => setForm((f) => ({ ...f, state: v }))}
+                  onCountryChange={(v) => setForm((f) => ({ ...f, country: v }))}
                 />
               </div>
               {/* School search — same width as Country */}
