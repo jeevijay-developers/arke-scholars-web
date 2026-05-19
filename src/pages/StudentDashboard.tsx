@@ -8,6 +8,7 @@ import StudentMentorMeetingCard from "@/components/StudentMentorMeetingCard";
 
 import { useAppStore } from "@/store/useAppStore";
 import { Link } from "react-router-dom";
+import SEO from "@/components/SEO";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { useDashboardData } from "@/hooks/useDashboardData";
 
@@ -44,6 +45,7 @@ const StudentDashboard = () => {
 
   return (
     <div className="flex gap-0 pb-20 lg:pb-0">
+      <SEO title="My Dashboard" description="Your ARKE Scholars learning dashboard." />
       {/* Main Content */}
       <div className="flex-1 p-4 lg:p-6 min-w-0">
         {/* Greeting */}
@@ -94,19 +96,19 @@ const StudentDashboard = () => {
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               {data.continueWatching.map(cw => (
-                <div key={cw.lesson_slug + cw.course_id} className="flex items-center gap-3 rounded-xl border border-border p-3 hover-lift cursor-pointer">
+                <Link key={cw.lesson_slug + cw.course_id} to={cw.course_slug ? `/courses/${cw.course_slug}/learn` : "/my-courses"} className="flex items-center gap-3 rounded-xl border border-border p-3 hover-lift">
                   <div className="h-12 w-12 shrink-0 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center">
                     <BookOpen className="h-5 w-5 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-foreground truncate">{cw.lesson_title || cw.course_name || "Lesson"}</p>
-                    <p className="text-[10px] text-muted-foreground">{cw.educator_name || cw.subject || ""}</p>
+                    <p className="text-xs font-bold text-foreground truncate">{cw.course_name || "Course"}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{cw.lesson_title || cw.educator_name || ""}</p>
                     <div className="mt-1.5 h-1.5 rounded-full bg-muted">
                       <div className="h-1.5 rounded-full bg-primary transition-all" style={{ width: `${cw.progress_pct}%` }} />
                     </div>
                   </div>
                   <span className="text-[10px] font-bold text-primary">{cw.progress_pct}%</span>
-                </div>
+                </Link>
               ))}
             </div>
           )}

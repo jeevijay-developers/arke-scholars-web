@@ -21,7 +21,7 @@ export const calcPercent = (
   const num = Math.max(0, toFiniteNumber(numerator));
   const den = Math.max(0, toFiniteNumber(denominator));
   if (den <= 0) return 0;
-  const pct = Math.round((num / den) * 100);
+  const pct = Math.floor((num / den) * 100);
   return Math.min(100, Math.max(0, pct));
 };
 

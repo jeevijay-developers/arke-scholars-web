@@ -477,11 +477,10 @@ const CreateTestPage = () => {
                   return (
                     <label
                       key={oi}
-                      className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 cursor-pointer transition-colors ${
-                        isCorrect
-                          ? "border-secondary bg-secondary/10"
-                          : "border-border bg-background hover:border-primary/40"
-                      }`}
+                      className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 cursor-pointer transition-colors ${isCorrect
+                        ? "border-secondary bg-secondary/10"
+                        : "border-border bg-background hover:border-primary/40"
+                        }`}
                     >
                       <input
                         type="radio"
@@ -517,7 +516,7 @@ const CreateTestPage = () => {
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       <div className="flex">
         {/* Left pane (form) */}
-        <div className="flex-1 lg:w-1/2 lg:flex-none px-4 md:px-8 py-6 pb-28">
+        <div className="flex-1 lg:w-1/2 lg:flex-none px-4 md:px-8 py-6 pb-28 lg:pb-24">
           <div className="max-w-3xl mx-auto">{LeftPane}</div>
         </div>
 
@@ -527,10 +526,10 @@ const CreateTestPage = () => {
         </aside>
       </div>
 
-      {/* Sticky action bar */}
-      <div className="sticky bottom-0 left-0 right-0 z-20 border-t border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
-        <div className="lg:w-1/2 px-4 md:px-8 py-3">
-          <div className="max-w-3xl mx-auto flex gap-3">
+      {/* Floating action bar — fixed on desktop (scoped to left editor pane), full-width on mobile */}
+      <div className="w-full fixed  bottom-0 left-0 right-0 z-20 border-t border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 lg:left-[240px] lg:right-1/2">
+        <div className="px-4 md:px-8 py-3">
+          <div className="max-w-3xl flex gap-3 mx-auto">
             <button
               disabled={submitting}
               onClick={() => submit(false)}

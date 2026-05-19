@@ -37,7 +37,7 @@ export const useLiveClasses = (filter: "all" | "live" | "upcoming" | "past" = "a
     load();
 
     const channel = supabase
-      .channel("live-classes")
+      .channel(`live-classes:${filter}:${Math.random()}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "live_classes" }, () => load())
       .subscribe();
     return () => {

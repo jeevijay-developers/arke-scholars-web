@@ -1,236 +1,10 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, Flame, Mail, Eye, EyeOff, Phone, User, MapPin, Check, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, Mail, Eye, EyeOff, Phone, User, Check, Sparkles, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import logoLight from "@/assets/arke-logo-light.png";
-
-// Keys are lowercase for matching; values are [displayName, state]
-const CITY_STATE_MAP: { [key: string]: [string, string] } = {
-  // Rajasthan
-  "jaipur": ["Jaipur", "Rajasthan"],
-  "kota": ["Kota", "Rajasthan"],
-  "jodhpur": ["Jodhpur", "Rajasthan"],
-  "udaipur": ["Udaipur", "Rajasthan"],
-  "ajmer": ["Ajmer", "Rajasthan"],
-  "bikaner": ["Bikaner", "Rajasthan"],
-  "alwar": ["Alwar", "Rajasthan"],
-  "sikar": ["Sikar", "Rajasthan"],
-  "sri ganganagar": ["Sri Ganganagar", "Rajasthan"],
-  "bharatpur": ["Bharatpur", "Rajasthan"],
-  "pali": ["Pali", "Rajasthan"],
-  "pushkar": ["Pushkar", "Rajasthan"],
-  "bhilwara": ["Bhilwara", "Rajasthan"],
-  "chittorgarh": ["Chittorgarh", "Rajasthan"],
-  "dungarpur": ["Dungarpur", "Rajasthan"],
-  // Delhi
-  "delhi": ["Delhi", "Delhi"],
-  "new delhi": ["New Delhi", "Delhi"],
-  // Haryana
-  "gurugram": ["Gurugram", "Haryana"],
-  "gurgaon": ["Gurgaon", "Haryana"],
-  "faridabad": ["Faridabad", "Haryana"],
-  "hisar": ["Hisar", "Haryana"],
-  "rohtak": ["Rohtak", "Haryana"],
-  "ambala": ["Ambala", "Haryana"],
-  "karnal": ["Karnal", "Haryana"],
-  "panipat": ["Panipat", "Haryana"],
-  "sonipat": ["Sonipat", "Haryana"],
-  "panchkula": ["Panchkula", "Haryana"],
-  "rewari": ["Rewari", "Haryana"],
-  "yamunanagar": ["Yamunanagar", "Haryana"],
-  "bhiwani": ["Bhiwani", "Haryana"],
-  "kurukshetra": ["Kurukshetra", "Haryana"],
-  // Uttar Pradesh
-  "noida": ["Noida", "Uttar Pradesh"],
-  "greater noida": ["Greater Noida", "Uttar Pradesh"],
-  "lucknow": ["Lucknow", "Uttar Pradesh"],
-  "kanpur": ["Kanpur", "Uttar Pradesh"],
-  "varanasi": ["Varanasi", "Uttar Pradesh"],
-  "agra": ["Agra", "Uttar Pradesh"],
-  "meerut": ["Meerut", "Uttar Pradesh"],
-  "allahabad": ["Allahabad", "Uttar Pradesh"],
-  "prayagraj": ["Prayagraj", "Uttar Pradesh"],
-  "ghaziabad": ["Ghaziabad", "Uttar Pradesh"],
-  "mathura": ["Mathura", "Uttar Pradesh"],
-  "aligarh": ["Aligarh", "Uttar Pradesh"],
-  "bareilly": ["Bareilly", "Uttar Pradesh"],
-  "moradabad": ["Moradabad", "Uttar Pradesh"],
-  "gorakhpur": ["Gorakhpur", "Uttar Pradesh"],
-  "firozabad": ["Firozabad", "Uttar Pradesh"],
-  "jhansi": ["Jhansi", "Uttar Pradesh"],
-  "muzaffarnagar": ["Muzaffarnagar", "Uttar Pradesh"],
-  "saharanpur": ["Saharanpur", "Uttar Pradesh"],
-  // Maharashtra
-  "mumbai": ["Mumbai", "Maharashtra"],
-  "pune": ["Pune", "Maharashtra"],
-  "nagpur": ["Nagpur", "Maharashtra"],
-  "aurangabad": ["Aurangabad", "Maharashtra"],
-  "nashik": ["Nashik", "Maharashtra"],
-  "thane": ["Thane", "Maharashtra"],
-  "navi mumbai": ["Navi Mumbai", "Maharashtra"],
-  "solapur": ["Solapur", "Maharashtra"],
-  "kolhapur": ["Kolhapur", "Maharashtra"],
-  "amravati": ["Amravati", "Maharashtra"],
-  "nanded": ["Nanded", "Maharashtra"],
-  "sangli": ["Sangli", "Maharashtra"],
-  "satara": ["Satara", "Maharashtra"],
-  "latur": ["Latur", "Maharashtra"],
-  "akola": ["Akola", "Maharashtra"],
-  "jalgaon": ["Jalgaon", "Maharashtra"],
-  // Gujarat
-  "ahmedabad": ["Ahmedabad", "Gujarat"],
-  "surat": ["Surat", "Gujarat"],
-  "vadodara": ["Vadodara", "Gujarat"],
-  "rajkot": ["Rajkot", "Gujarat"],
-  "gandhinagar": ["Gandhinagar", "Gujarat"],
-  "bhavnagar": ["Bhavnagar", "Gujarat"],
-  "jamnagar": ["Jamnagar", "Gujarat"],
-  "anand": ["Anand", "Gujarat"],
-  "nadiad": ["Nadiad", "Gujarat"],
-  "bharuch": ["Bharuch", "Gujarat"],
-  "mehsana": ["Mehsana", "Gujarat"],
-  // Madhya Pradesh
-  "bhopal": ["Bhopal", "Madhya Pradesh"],
-  "indore": ["Indore", "Madhya Pradesh"],
-  "gwalior": ["Gwalior", "Madhya Pradesh"],
-  "jabalpur": ["Jabalpur", "Madhya Pradesh"],
-  "ujjain": ["Ujjain", "Madhya Pradesh"],
-  "sagar": ["Sagar", "Madhya Pradesh"],
-  "rewa": ["Rewa", "Madhya Pradesh"],
-  "satna": ["Satna", "Madhya Pradesh"],
-  "dewas": ["Dewas", "Madhya Pradesh"],
-  "ratlam": ["Ratlam", "Madhya Pradesh"],
-  "chhindwara": ["Chhindwara", "Madhya Pradesh"],
-  // Telangana
-  "hyderabad": ["Hyderabad", "Telangana"],
-  "warangal": ["Warangal", "Telangana"],
-  "nizamabad": ["Nizamabad", "Telangana"],
-  "karimnagar": ["Karimnagar", "Telangana"],
-  "khammam": ["Khammam", "Telangana"],
-  "secunderabad": ["Secunderabad", "Telangana"],
-  // Andhra Pradesh
-  "vijayawada": ["Vijayawada", "Andhra Pradesh"],
-  "visakhapatnam": ["Visakhapatnam", "Andhra Pradesh"],
-  "vizag": ["Vizag", "Andhra Pradesh"],
-  "tirupati": ["Tirupati", "Andhra Pradesh"],
-  "guntur": ["Guntur", "Andhra Pradesh"],
-  "nellore": ["Nellore", "Andhra Pradesh"],
-  "kurnool": ["Kurnool", "Andhra Pradesh"],
-  "rajahmundry": ["Rajahmundry", "Andhra Pradesh"],
-  // Karnataka
-  "bangalore": ["Bangalore", "Karnataka"],
-  "bengaluru": ["Bengaluru", "Karnataka"],
-  "mysore": ["Mysore", "Karnataka"],
-  "mysuru": ["Mysuru", "Karnataka"],
-  "mangalore": ["Mangalore", "Karnataka"],
-  "mangaluru": ["Mangaluru", "Karnataka"],
-  "hubli": ["Hubli", "Karnataka"],
-  "dharwad": ["Dharwad", "Karnataka"],
-  "belagavi": ["Belagavi", "Karnataka"],
-  "belgaum": ["Belgaum", "Karnataka"],
-  "davangere": ["Davangere", "Karnataka"],
-  "tumkur": ["Tumkur", "Karnataka"],
-  "ballari": ["Ballari", "Karnataka"],
-  "shivamogga": ["Shivamogga", "Karnataka"],
-  // Tamil Nadu
-  "chennai": ["Chennai", "Tamil Nadu"],
-  "coimbatore": ["Coimbatore", "Tamil Nadu"],
-  "madurai": ["Madurai", "Tamil Nadu"],
-  "tiruchirappalli": ["Tiruchirappalli", "Tamil Nadu"],
-  "trichy": ["Trichy", "Tamil Nadu"],
-  "salem": ["Salem", "Tamil Nadu"],
-  "tirunelveli": ["Tirunelveli", "Tamil Nadu"],
-  "vellore": ["Vellore", "Tamil Nadu"],
-  "erode": ["Erode", "Tamil Nadu"],
-  "tiruppur": ["Tiruppur", "Tamil Nadu"],
-  "dindigul": ["Dindigul", "Tamil Nadu"],
-  // Kerala
-  "thiruvananthapuram": ["Thiruvananthapuram", "Kerala"],
-  "trivandrum": ["Trivandrum", "Kerala"],
-  "kochi": ["Kochi", "Kerala"],
-  "cochin": ["Cochin", "Kerala"],
-  "kozhikode": ["Kozhikode", "Kerala"],
-  "calicut": ["Calicut", "Kerala"],
-  "thrissur": ["Thrissur", "Kerala"],
-  "kollam": ["Kollam", "Kerala"],
-  "kannur": ["Kannur", "Kerala"],
-  "palakkad": ["Palakkad", "Kerala"],
-  "malappuram": ["Malappuram", "Kerala"],
-  // West Bengal
-  "kolkata": ["Kolkata", "West Bengal"],
-  "siliguri": ["Siliguri", "West Bengal"],
-  "asansol": ["Asansol", "West Bengal"],
-  "durgapur": ["Durgapur", "West Bengal"],
-  "howrah": ["Howrah", "West Bengal"],
-  "bardhaman": ["Bardhaman", "West Bengal"],
-  // Bihar
-  "patna": ["Patna", "Bihar"],
-  "gaya": ["Gaya", "Bihar"],
-  "muzaffarpur": ["Muzaffarpur", "Bihar"],
-  "bhagalpur": ["Bhagalpur", "Bihar"],
-  "darbhanga": ["Darbhanga", "Bihar"],
-  "purnia": ["Purnia", "Bihar"],
-  // Jharkhand
-  "ranchi": ["Ranchi", "Jharkhand"],
-  "jamshedpur": ["Jamshedpur", "Jharkhand"],
-  "dhanbad": ["Dhanbad", "Jharkhand"],
-  "bokaro": ["Bokaro", "Jharkhand"],
-  // Odisha
-  "bhubaneswar": ["Bhubaneswar", "Odisha"],
-  "cuttack": ["Cuttack", "Odisha"],
-  "rourkela": ["Rourkela", "Odisha"],
-  "sambalpur": ["Sambalpur", "Odisha"],
-  // Punjab
-  "ludhiana": ["Ludhiana", "Punjab"],
-  "amritsar": ["Amritsar", "Punjab"],
-  "jalandhar": ["Jalandhar", "Punjab"],
-  "patiala": ["Patiala", "Punjab"],
-  "bathinda": ["Bathinda", "Punjab"],
-  "pathankot": ["Pathankot", "Punjab"],
-  "mohali": ["Mohali", "Punjab"],
-  // Chandigarh (UT)
-  "chandigarh": ["Chandigarh", "Chandigarh"],
-  // Himachal Pradesh
-  "shimla": ["Shimla", "Himachal Pradesh"],
-  "mandi": ["Mandi", "Himachal Pradesh"],
-  "solan": ["Solan", "Himachal Pradesh"],
-  "dharamsala": ["Dharamsala", "Himachal Pradesh"],
-  "manali": ["Manali", "Himachal Pradesh"],
-  // Uttarakhand
-  "dehradun": ["Dehradun", "Uttarakhand"],
-  "haridwar": ["Haridwar", "Uttarakhand"],
-  "roorkee": ["Roorkee", "Uttarakhand"],
-  "haldwani": ["Haldwani", "Uttarakhand"],
-  "rishikesh": ["Rishikesh", "Uttarakhand"],
-  "nainital": ["Nainital", "Uttarakhand"],
-  // Chhattisgarh
-  "raipur": ["Raipur", "Chhattisgarh"],
-  "bhilai": ["Bhilai", "Chhattisgarh"],
-  "durg": ["Durg", "Chhattisgarh"],
-  "bilaspur": ["Bilaspur", "Chhattisgarh"],
-  // Assam
-  "guwahati": ["Guwahati", "Assam"],
-  "silchar": ["Silchar", "Assam"],
-  "dibrugarh": ["Dibrugarh", "Assam"],
-  "jorhat": ["Jorhat", "Assam"],
-  // Goa
-  "panaji": ["Panaji", "Goa"],
-  "margao": ["Margao", "Goa"],
-  "vasco da gama": ["Vasco da Gama", "Goa"],
-  // Jammu & Kashmir
-  "srinagar": ["Srinagar", "Jammu & Kashmir"],
-  "jammu": ["Jammu", "Jammu & Kashmir"],
-  // UAE
-  "dubai": ["Dubai", "Dubai"],
-  "sharjah": ["Sharjah", "Sharjah"],
-  "abu dhabi": ["Abu Dhabi", "Abu Dhabi"],
-  "ajman": ["Ajman", "Ajman"],
-  "ras al khaimah": ["Ras Al Khaimah", "Ras Al Khaimah"],
-  "umm al quwain": ["Umm Al Quwain", "Umm Al Quwain"],
-  "fujairah": ["Fujairah", "Fujairah"],
-  "al ain": ["Al Ain", "Abu Dhabi"],
-};
+import CityStateFields from "@/components/CityStateFields";
 
 const SignupPage = () => {
   const navigate = useNavigate();
@@ -265,32 +39,7 @@ const SignupPage = () => {
     state: "",
     country: "India",
   });
-  const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-
-  const update = (k: keyof typeof form, v: string) => {
-    setForm((f) => ({ ...f, [k]: v }));
-
-    if (k === "city") {
-      if (v.length > 0) {
-        const suggestions = Object.keys(CITY_STATE_MAP).filter((city) =>
-          city.toLowerCase().startsWith(v.toLowerCase())
-        );
-        setCitySuggestions(suggestions);
-        setShowSuggestions(true);
-      } else {
-        setCitySuggestions([]);
-        setShowSuggestions(false);
-      }
-    }
-  };
-
-  const selectCity = (key: string) => {
-    const entry = CITY_STATE_MAP[key];
-    setForm((f) => ({ ...f, city: entry[0], state: entry[1] }));
-    setCitySuggestions([]);
-    setShowSuggestions(false);
-  };
+  const update = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   const handleSignup = async () => {
     if (!form.full_name || !form.email || !form.password) {
@@ -443,55 +192,16 @@ const SignupPage = () => {
                 </select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm font-medium text-foreground">City</label>
-                <div className="relative mt-1">
-                  <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <input
-                    value={form.city}
-                    onChange={(e) => update("city", e.target.value)}
-                    onFocus={() => form.city.length > 0 && setShowSuggestions(true)}
-                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                    type="text"
-                    placeholder="City"
-                    className="w-full rounded-lg border border-border bg-card py-2.5 pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-                  />
-                  {showSuggestions && citySuggestions.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 rounded-lg border border-border bg-card shadow-lg overflow-hidden">
-                      {citySuggestions.slice(0, 6).map((key) => (
-                        <button
-                          key={key}
-                          type="button"
-                          onMouseDown={(e) => { e.preventDefault(); selectCity(key); }}
-                          className="w-full text-left px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-                        >
-                          {CITY_STATE_MAP[key][0]}
-                          <span className="ml-1.5 text-xs text-muted-foreground">{CITY_STATE_MAP[key][1]}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-foreground">State</label>
-                <input
-                  value={form.state}
-                  onChange={(e) => update("state", e.target.value)}
-                  type="text"
-                  placeholder="State"
-                  className="mt-1 w-full rounded-lg border border-border bg-card py-2.5 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-foreground">Country</label>
-              <select value={form.country} onChange={(e) => update("country", e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground">
-                <option>India</option>
-                <option>UAE</option>
-              </select>
-            </div>
+            <CityStateFields
+              city={form.city}
+              state={form.state}
+              country={form.country}
+              onCityChange={(v) => update("city", v)}
+              onStateChange={(v) => update("state", v)}
+              onCountryChange={(v) => update("country", v)}
+              inputClassName="w-full rounded-lg border border-border bg-card py-2.5 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+              labelClassName="text-sm font-medium text-foreground"
+            />
             <button onClick={handleSignup} disabled={submitting} className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent py-3 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-60 transition-opacity">
               {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Creating Account...</> : "Create Account"}
             </button>

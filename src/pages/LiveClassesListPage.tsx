@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Video, Calendar, Clock, Users, Play, Loader2 } from "lucide-react";
+import SEO from "@/components/SEO";
 import { Link } from "react-router-dom";
 import { useLiveClasses } from "@/hooks/useLiveClasses";
 import LiveBadge from "@/components/LiveBadge";
@@ -40,6 +41,7 @@ const LiveClassesListPage = () => {
 
   return (
     <div className="p-4 lg:p-6 space-y-6">
+      <SEO title="My Live Classes" description="View upcoming and past live classes on ARKE Scholars." />
       <div className="rounded-2xl bg-gradient-to-r from-primary via-accent to-secondary p-6 text-white">
         <div className="flex items-center gap-3 mb-2">
           <Video className="h-7 w-7" />

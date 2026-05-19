@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import SEO from "@/components/SEO";
 import {
   GraduationCap,
   Briefcase,
@@ -200,6 +201,7 @@ const steps = [
 const MentorshipPage = () => {
   return (
     <div className="bg-background">
+      <SEO title="Personal Mentorship for JEE & NEET" description="Get paired with an IIT or AIIMS mentor for 1-on-1 guidance, study planning, and rank-focused strategy. JEE, NEET & Board mentorship on ARKE Scholars." />
       <style>{`
         .no-scrollbar::-webkit-scrollbar {
           display: none;

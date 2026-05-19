@@ -3,12 +3,14 @@ import { useConfirm } from "@/components/ConfirmDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { School, Plus, Edit3, Trash2, Loader2, X, Upload, Users, ChevronRight, Copy, Download, FileText } from "lucide-react";
+import CityStateFields from "@/components/CityStateFields";
 
 type SchoolRow = {
   id: string;
   name: string;
   code: string | null;
   city: string | null;
+  state: string | null;
   country: string | null;
   board: string | null;
   contact_person: string | null;
@@ -121,6 +123,7 @@ const AdminSchoolsPage = () => {
       name: editing.name.trim(),
       code: editing.code?.trim() || (editing.id ? null : generateSchoolCode(editing.name)),
       city: editing.city?.trim() || null,
+      state: editing.state?.trim() || null,
       country: editing.country?.trim() || null,
       board: editing.board || null,
       contact_person: editing.contact_person?.trim() || null,
@@ -297,10 +300,16 @@ const AdminSchoolsPage = () => {
                 </select>
               </Field>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Field label="City"><Input v={editing.city ?? ""} on={(v) => setEditing({ ...editing, city: v })} /></Field>
-              <Field label="Country"><Input v={editing.country ?? ""} on={(v) => setEditing({ ...editing, country: v })} /></Field>
-            </div>
+            <CityStateFields
+              city={editing.city ?? ""}
+              state={editing.state ?? ""}
+              country={editing.country ?? ""}
+              onCityChange={(v) => setEditing({ ...editing, city: v })}
+              onStateChange={(v) => setEditing({ ...editing, state: v })}
+              onCountryChange={(v) => setEditing({ ...editing, country: v })}
+              inputClassName="sch-input"
+              labelClassName="text-xs font-bold uppercase tracking-wider text-muted-foreground"
+            />
             <Field label="Contact person"><Input v={editing.contact_person ?? ""} on={(v) => setEditing({ ...editing, contact_person: v })} /></Field>
             <div className="grid grid-cols-2 gap-2">
               <Field label="Contact email"><Input v={editing.contact_email ?? ""} on={(v) => setEditing({ ...editing, contact_email: v })} /></Field>

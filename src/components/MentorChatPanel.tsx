@@ -251,24 +251,46 @@ const MentorChatPanel = ({ conversations, loading, emptyHint, onActivity }: Prop
                   const mine = m.sender_id === user?.id;
                   const isDirect = m.conversation_type === "direct";
                   const hasAttachment = !!(m.file_url || m.image_url || m.file_path);
+                  const isGroup = active.kind === "group";
+                  const memberProfiles = isGroup && active.kind === "group" ? active.memberProfiles : undefined;
+                  const senderProfile = !mine && isGroup && memberProfiles ? memberProfiles[m.sender_id] : undefined;
+                  const senderInitials = senderProfile
+                    ? senderProfile.name.split(" ").map((n) => n[0]).filter(Boolean).slice(0, 2).join("").toUpperCase()
+                    : "?";
                   return (
                     <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-                      <div
-                        className={`max-w-[75%] rounded-2xl px-3 py-2 text-sm shadow-sm ${
-                          mine ? "bg-primary text-primary-foreground" : "bg-card text-foreground border border-border"
-                        }`}
-                      >
-                        {hasAttachment && <Attachment message={m} mine={mine} />}
-                        {m.content ? <p className="whitespace-pre-wrap break-words">{m.content}</p> : null}
-                        <div className={`mt-1 flex items-center justify-end gap-1 text-[10px] ${mine ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                          <span>{formatTime(m.created_at)}</span>
-                          {mine && isDirect && (
-                            m.read_at ? (
-                              <CheckCheck className="h-3 w-3" aria-label="Seen" />
-                            ) : (
-                              <Check className="h-3 w-3" aria-label="Sent" />
-                            )
-                          )}
+                      {/* Student avatar — only shown to mentor in group chats */}
+                      {!mine && isGroup && senderProfile && (
+                        <div className="mr-2 shrink-0 self-end">
+                          <div className="h-7 w-7 rounded-full bg-secondary/20 text-[10px] font-bold text-secondary overflow-hidden flex items-center justify-center">
+                            {senderProfile.avatar
+                              ? <img src={senderProfile.avatar} alt={senderProfile.name} className="h-full w-full object-cover" />
+                              : senderInitials}
+                          </div>
+                        </div>
+                      )}
+                      <div className={`max-w-[75%] ${!mine && isGroup && senderProfile ? "flex flex-col" : ""}`}>
+                        {/* Student name label — mentor-only, group only */}
+                        {!mine && isGroup && senderProfile && (
+                          <p className="mb-0.5 ml-1 text-[10px] font-semibold text-muted-foreground">{senderProfile.name}</p>
+                        )}
+                        <div
+                          className={`rounded-2xl px-3 py-2 text-sm shadow-sm ${
+                            mine ? "bg-primary text-primary-foreground" : "bg-card text-foreground border border-border"
+                          }`}
+                        >
+                          {hasAttachment && <Attachment message={m} mine={mine} />}
+                          {m.content ? <p className="whitespace-pre-wrap break-words">{m.content}</p> : null}
+                          <div className={`mt-1 flex items-center justify-end gap-1 text-[10px] ${mine ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                            <span>{formatTime(m.created_at)}</span>
+                            {mine && isDirect && (
+                              m.read_at ? (
+                                <CheckCheck className="h-3 w-3" aria-label="Seen" />
+                              ) : (
+                                <Check className="h-3 w-3" aria-label="Sent" />
+                              )
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import SEO from "@/components/SEO";
 import { Star, Users, Loader2, GraduationCap, Sparkles, ArrowRight, BookOpen, Award, Clock } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCourses, type CourseRow } from "@/hooks/useCourses";
@@ -46,6 +47,10 @@ const CoursesPage = () => {
 
   return (
     <div className="bg-background">
+      <SEO
+        title="Online Courses for JEE, NEET & Boards"
+        description="Explore 120+ hour video courses for JEE Main, JEE Advanced, NEET & CBSE Boards. Physics, Chemistry, Maths & Biology by IIT & AIIMS-qualified educators."
+      />
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-to-br from-[hsl(var(--navy))] via-[hsl(var(--navy2))] to-[hsl(222,47%,15%)] py-16 md:py-20">
         <div className="absolute inset-0 opacity-30" style={{ background: "radial-gradient(circle at 30% 50%, hsl(24 95% 53% / 0.25) 0%, transparent 60%)" }} />

@@ -11,6 +11,7 @@ export interface DashboardData {
   percentile: number | null;
   continueWatching: Array<{
     course_id: string;
+    course_slug?: string;
     lesson_title: string | null;
     lesson_slug: string;
     progress_pct: number;
@@ -123,18 +124,19 @@ export const useDashboardData = (): DashboardData => {
       // Continue watching
       const lessons = lessonsRes.data ?? [];
       const courseIds = Array.from(new Set(lessons.map((l) => l.course_id)));
-      let coursesMap: Record<string, { name: string; educator_name: string; subject: string }> = {};
+      let coursesMap: Record<string, { name: string; slug: string; educator_name: string; subject: string }> = {};
       if (courseIds.length > 0) {
         const { data: courses } = await supabase
           .from("courses")
-          .select("id, name, educator_name, subject")
+          .select("id, name, slug, educator_name, subject")
           .in("id", courseIds);
         (courses ?? []).forEach((c) => {
-          coursesMap[c.id] = { name: c.name, educator_name: c.educator_name, subject: c.subject };
+          coursesMap[c.id] = { name: c.name, slug: c.slug, educator_name: c.educator_name, subject: c.subject };
         });
       }
       const continueWatching = lessons.map((l) => ({
         course_id: l.course_id,
+        course_slug: coursesMap[l.course_id]?.slug,
         lesson_title: l.lesson_title,
         lesson_slug: l.lesson_slug,
         progress_pct: calcLessonProgress(l.watched_seconds, l.total_seconds),

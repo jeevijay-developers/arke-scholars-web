@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Flame, Target, Heart, Globe, Users, Sparkles, ArrowRight, GraduationCap, Award, Building2 } from "lucide-react";
+import SEO from "@/components/SEO";
 
 const AboutPage = () => {
   const values = [
@@ -30,6 +31,7 @@ const AboutPage = () => {
 
   return (
     <div className="bg-background">
+      <SEO title="About ARKE Scholars" description="Built in Kota, India's coaching capital — ARKE Scholars helps students crack JEE, NEET & Boards with mentors, live classes, and AI-powered doubt solving." />
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-background to-accent/10 py-12 md:py-20">
         <div className="container mx-auto px-4 text-center">

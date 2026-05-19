@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import SEO from "@/components/SEO";
 import { ArrowRight, Play, BookOpen, ClipboardCheck, Bot, BarChart3, Swords, Smartphone, Check, Rocket, GraduationCap, FileText, Trophy, Users, Monitor, Award, Sparkles, Globe, Video, User, Quote, Clock, ChevronRight, ChevronDown, HelpCircle, Briefcase, IndianRupee, ChevronLeft } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { useState, useRef } from "react";
@@ -104,13 +105,17 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="JEE, NEET & Board Exam Prep Online"
+        description="Prepare for JEE Main, JEE Advanced, NEET & Board exams with ARKE Scholars. Live classes, AI doubt solving, 500+ mock tests & personal mentorship. India & UAE students welcome."
+      />
 
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[hsl(var(--navy))] via-[hsl(var(--navy2))] to-[hsl(222,47%,15%)]">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[hsl(var(--navy))] via-[hsl(var(--navy2))] to-[hsl(222,47%,15%)] min-h-[90vh] md:min-h-0 flex flex-col justify-center">
         <div className="absolute inset-0 opacity-30" style={{ background: 'radial-gradient(circle at 30% 50%, hsl(24 95% 53% / 0.25) 0%, transparent 60%)' }} />
         <div className="absolute inset-0 opacity-20" style={{ background: 'radial-gradient(circle at 70% 30%, hsl(38 92% 50% / 0.2) 0%, transparent 50%)' }} />
         <div className="absolute inset-0 grid-texture" />
-        <div className="container mx-auto px-4 py-12 md:py-28 relative z-10">
+        <div className="container px-4 py-12 md:py-28 relative z-10">
           <div className="grid items-center gap-8 md:gap-12 md:grid-cols-2">
             <div className="animate-fade-in-up">
               <span className="inline-flex items-center gap-1.5 rounded-pill border border-primary/30 bg-primary/10 px-3 py-1 text-xs md:text-sm font-semibold text-primary">

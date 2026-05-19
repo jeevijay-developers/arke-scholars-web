@@ -11,6 +11,7 @@ type Student = {
   full_name: string | null;
   target_exam: string | null;
   class_level: string | null;
+  avatar_url?: string | null;
   coveringFor?: string | null;
   coverageEndsAt?: string | null;
 };
@@ -68,7 +69,7 @@ const MentorStudentsPage = () => {
       const { data: profiles } = allProfileIds.length
         ? await supabase
             .from("profiles")
-            .select("user_id, full_name, target_exam, class_level")
+            .select("user_id, full_name, target_exam, class_level, avatar_url")
             .in("user_id", allProfileIds)
         : { data: [] as any[] };
 
@@ -82,6 +83,7 @@ const MentorStudentsPage = () => {
           full_name: p?.full_name ?? null,
           target_exam: p?.target_exam ?? null,
           class_level: p?.class_level ?? null,
+          avatar_url: p?.avatar_url ?? null,
           coveringFor: primaryName,
           coverageEndsAt: cov?.endsAt ?? null,
         };
@@ -145,8 +147,10 @@ const MentorStudentsPage = () => {
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-secondary/15 text-sm font-bold text-secondary">
-                    {initials}
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-secondary/15 text-sm font-bold text-secondary overflow-hidden">
+                    {s.avatar_url
+                      ? <img src={s.avatar_url} alt={s.full_name ?? initials} className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                      : initials}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-foreground">{s.full_name || "Student"}</p>

@@ -340,8 +340,18 @@ const AdminStudentsPage = () => {
                     <td className="p-3">
                       <div className="flex items-center gap-2">
                         <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-accent/20 text-[10px] font-bold text-primary shrink-0 overflow-hidden">
-                          {u.avatar_url ? (
-                            <img src={u.avatar_url} alt="" loading="lazy" className="h-full w-full object-cover" />
+                          {u.avatar_url?.trim() ? (
+                            <img
+                              src={u.avatar_url}
+                              alt=""
+                              loading="lazy"
+                              className="h-full w-full object-cover"
+                              onError={(e) => {
+                                (e.currentTarget as HTMLImageElement).style.display = "none";
+                                (e.currentTarget.parentElement as HTMLElement).innerText =
+                                  (u.full_name ?? "U").split(" ").map((n) => n[0]).join("").slice(0, 2);
+                              }}
+                            />
                           ) : (
                             (u.full_name ?? "U").split(" ").map((n) => n[0]).join("").slice(0, 2)
                           )}
@@ -410,8 +420,17 @@ const AdminStudentsPage = () => {
             <div className="p-4 space-y-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-accent/20 text-lg font-bold text-primary overflow-hidden">
-                  {drawer.avatar_url ? (
-                    <img src={drawer.avatar_url} alt="" className="h-full w-full object-cover" />
+                  {drawer.avatar_url?.trim() ? (
+                    <img
+                      src={drawer.avatar_url}
+                      alt=""
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).style.display = "none";
+                        (e.currentTarget.parentElement as HTMLElement).innerText =
+                          (drawer.full_name ?? "U").split(" ").map((n) => n[0]).join("").slice(0, 2);
+                      }}
+                    />
                   ) : (
                     (drawer.full_name ?? "U").split(" ").map((n) => n[0]).join("").slice(0, 2)
                   )}

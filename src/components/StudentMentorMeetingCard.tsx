@@ -25,24 +25,43 @@ const StudentMentorMeetingCard = () => {
   const load = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const { data: ann } = await supabase
-      .from("mentor_announcements")
-      .select("id, title, agenda, meeting_url, meeting_at, duration_minutes, mentor_id")
-      .eq("status", "scheduled")
-      .gt("meeting_at", new Date().toISOString())
-      .order("meeting_at", { ascending: true })
-      .limit(1);
+
+    // Get the student's assigned mentor first
+    const { data: assignment } = await supabase
+      .from("mentor_student_assignments")
+      .select("mentor_id")
+      .eq("student_id", user.id)
+      .is("removed_at", null)
+      .maybeSingle();
+
+    if (!assignment?.mentor_id) {
+      setMeeting(null);
+      setLoading(false);
+      return;
+    }
+
+    const [{ data: ann }, { data: prof }] = await Promise.all([
+      supabase
+        .from("mentor_announcements")
+        .select("id, title, agenda, meeting_url, meeting_at, duration_minutes, mentor_id")
+        .eq("mentor_id", assignment.mentor_id)
+        .eq("status", "scheduled")
+        .gt("meeting_at", new Date().toISOString())
+        .order("meeting_at", { ascending: true })
+        .limit(1),
+      supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("user_id", assignment.mentor_id)
+        .maybeSingle(),
+    ]);
+
     const m = (ann ?? [])[0];
     if (!m) {
       setMeeting(null);
       setLoading(false);
       return;
     }
-    const { data: prof } = await supabase
-      .from("profiles")
-      .select("full_name")
-      .eq("user_id", m.mentor_id)
-      .maybeSingle();
     setMeeting({ ...m, mentor_name: prof?.full_name ?? "Your mentor" });
     const { data: rsvp } = await supabase
       .from("mentor_announcement_rsvps")

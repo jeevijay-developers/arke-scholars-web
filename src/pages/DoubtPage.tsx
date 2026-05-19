@@ -143,83 +143,92 @@ const DoubtPage = () => {
       </div>
 
       {showAsk && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowAsk(false)} />
-          <div className="relative w-full max-w-md rounded-2xl bg-card p-5 border border-border shadow-xl space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="relative w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl bg-card border border-border shadow-xl flex flex-col" style={{ maxHeight: "calc(100dvh - 64px)", marginBottom: "64px" }}>
+            {/* Sticky header */}
+            <div className="sticky top-0 z-10 flex items-center justify-between bg-card px-4 pt-4 pb-3 border-b border-border">
               <h3 className="text-base font-bold text-foreground">Ask a doubt</h3>
               <button onClick={() => setShowAsk(false)}>
                 <X className="h-4 w-4 text-muted-foreground" />
               </button>
             </div>
-            <div>
-              <label className="text-xs font-semibold text-foreground">Subject</label>
-              <select value={subject} onChange={(e) => setSubject(e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none">
-                <option>Physics</option>
-                <option>Chemistry</option>
-                <option>Mathematics</option>
-                <option>Biology</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-foreground">Your question</label>
-              <textarea
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                rows={5}
-                placeholder="Describe your doubt clearly..."
-                className="mt-1 w-full rounded-lg border border-border bg-background p-3 text-sm outline-none resize-none focus:border-primary"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-foreground">Attach image (optional)</label>
-              <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] ?? null)} className="mt-1 w-full text-xs" />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-foreground">Who should answer?</label>
-              <div className="mt-1 grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setAnswerMode("ai")}
-                  className={`flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition-colors ${
-                    answerMode === "ai" ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
-                  }`}
-                >
-                  <span className="flex items-center gap-1.5 text-xs font-bold text-foreground">
-                    <Sparkles className="h-3.5 w-3.5 text-primary" /> AI
-                  </span>
-                  <span className="text-[10px] text-muted-foreground">Instant answer</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAnswerMode("educator")}
-                  className={`flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition-colors ${
-                    answerMode === "educator" ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
-                  }`}
-                >
-                  <span className="flex items-center gap-1.5 text-xs font-bold text-foreground">
-                    <GraduationCap className="h-3.5 w-3.5 text-secondary" /> Educator
-                  </span>
-                  <span className="text-[10px] text-muted-foreground">Best for complex doubts</span>
-                </button>
+
+            {/* Scrollable body */}
+            <div className="p-4 space-y-4 overflow-y-auto flex-1">
+              <div>
+                <label className="text-xs font-semibold text-foreground">Subject</label>
+                <select value={subject} onChange={(e) => setSubject(e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none">
+                  <option>Physics</option>
+                  <option>Chemistry</option>
+                  <option>Mathematics</option>
+                  <option>Biology</option>
+                </select>
               </div>
-              {answerMode === "ai" ? (
-                <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2 py-1 text-[10px] font-semibold text-amber-700 dark:text-amber-400">
-                  <AlertTriangle className="h-3 w-3" />
-                  AI generated answer might be incorrect — for complex doubts, ask a teacher.
+              <div>
+                <label className="text-xs font-semibold text-foreground">Your question</label>
+                <textarea
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  rows={4}
+                  placeholder="Describe your doubt clearly..."
+                  className="mt-1 w-full rounded-lg border border-border bg-background p-3 text-sm outline-none resize-none focus:border-primary"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-foreground">Attach image (optional)</label>
+                <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] ?? null)} className="mt-1 w-full text-xs" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-foreground">Who should answer?</label>
+                <div className="mt-1 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAnswerMode("ai")}
+                    className={`flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition-colors ${
+                      answerMode === "ai" ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-foreground">
+                      <Sparkles className="h-3.5 w-3.5 text-primary" /> AI
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">Instant answer</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAnswerMode("educator")}
+                    className={`flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition-colors ${
+                      answerMode === "educator" ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-foreground">
+                      <GraduationCap className="h-3.5 w-3.5 text-secondary" /> Educator
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">Best for complex doubts</span>
+                  </button>
                 </div>
-              ) : (
-                <p className="mt-2 text-[10px] text-muted-foreground">An educator will respond. This may take some time.</p>
-              )}
+                {answerMode === "ai" ? (
+                  <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2 py-1 text-[10px] font-semibold text-amber-700 dark:text-amber-400">
+                    <AlertTriangle className="h-3 w-3" />
+                    AI generated answer might be incorrect — for complex doubts, ask a teacher.
+                  </div>
+                ) : (
+                  <p className="mt-2 text-[10px] text-muted-foreground">An educator will respond. This may take some time.</p>
+                )}
+              </div>
             </div>
-            <button
-              disabled={submitting}
-              onClick={submitDoubt}
-              className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : answerMode === "ai" ? <Sparkles className="h-4 w-4" /> : <GraduationCap className="h-4 w-4" />}
-              {submitting ? "Submitting..." : answerMode === "ai" ? "Submit & get AI answer" : "Send to educator"}
-            </button>
+
+            {/* Sticky footer with submit button */}
+            <div className="sticky bottom-0 bg-card px-4 py-3 border-t border-border">
+              <button
+                disabled={submitting}
+                onClick={submitDoubt}
+                className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : answerMode === "ai" ? <Sparkles className="h-4 w-4" /> : <GraduationCap className="h-4 w-4" />}
+                {submitting ? "Submitting..." : answerMode === "ai" ? "Submit & get AI answer" : "Send to educator"}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Send, Users, Loader2 } from "lucide-react";
+import SEO from "@/components/SEO";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -195,6 +196,7 @@ const LiveClassRoomPage = () => {
 
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden">
+      <SEO title={cls.title} description={`Attending ${cls.subject} live class on ARKE Scholars.`} />
       <div className="shrink-0 bg-gradient-to-r from-[hsl(var(--navy))] to-[hsl(var(--navy2))] px-4 py-3 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3 min-w-0">
           <Link to="/my-live-classes" className="text-white">

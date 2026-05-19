@@ -1,4 +1,5 @@
 import { Shield, Lock, Eye, Database, Cookie, UserCheck, Mail } from "lucide-react";
+import SEO from "@/components/SEO";
 
 const PrivacyPolicyPage = () => {
   const sections = [
@@ -68,6 +69,7 @@ const PrivacyPolicyPage = () => {
 
   return (
     <div className="bg-background">
+      <SEO title="Privacy Policy" description="Read ARKE Scholars' privacy policy to understand how we collect, use, and protect your personal data as a student, parent, or educator on our platform." />
       {/* Hero */}
       <section className="bg-gradient-to-br from-primary/10 via-background to-accent/10 py-16">
         <div className="container mx-auto px-4 text-center">

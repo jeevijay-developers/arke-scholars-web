@@ -1,7 +1,7 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, BookOpen, Video, ClipboardCheck, MessageCircle, Swords, BarChart3, Trophy, User, Settings, Search, Flame, Users } from "lucide-react";
+import { Home, BookOpen, Video, ClipboardCheck, MessageCircle, Swords, BarChart3, Trophy, User, Settings, Search, Users, Menu, X } from "lucide-react";
 import LogoutButton from "@/components/LogoutButton";
-import { memo, useCallback, useMemo } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import arkeLogo from "@/assets/arke-logo.png";
 import LiveBadge from "@/components/LiveBadge";
 import NotificationBell from "@/components/NotificationBell";
@@ -143,40 +143,10 @@ const StudentMobileNav = memo(() => {
 });
 StudentMobileNav.displayName = "StudentMobileNav";
 
-const StudentHeader = memo(({ fullName, avatarUrl }: { fullName: string; avatarUrl?: string }) => (
-  <header className="sticky top-0 z-40 flex items-center justify-between border-b border-border bg-card px-4 py-3 lg:px-6">
-    <div className="flex items-center gap-3">
-      <div className="lg:hidden flex items-center">
-        <div className="bg-white rounded-lg p-1 flex items-center justify-center">
-          <img src={arkeLogo} alt="ARKE Logo" className="h-6 w-auto object-contain" />
-        </div>
-      </div>
-      <div className="relative hidden sm:block">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <input
-          type="text"
-          placeholder="Search courses, tests..."
-          className="w-64 rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-        />
-      </div>
-    </div>
-    <div className="flex items-center gap-3">
-      <NotificationBell />
-      <Link to="/profile" className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-light text-xs font-bold text-primary overflow-hidden">
-        {avatarUrl ? (
-          <img src={avatarUrl} alt={fullName} className="h-full w-full object-cover" />
-        ) : (
-          fullName?.split(" ").map((n) => n[0]).join("").slice(0, 2) || "U"
-        )}
-      </Link>
-    </div>
-  </header>
-));
-StudentHeader.displayName = "StudentHeader";
-
 const StudentLayout = () => {
   const navigate = useNavigate();
-  const { user, currentGoal, setCurrentGoal, notifications } = useAppStore();
+  const { pathname } = useLocation();
+  const { user, notifications } = useAppStore();
   const { signOut } = useAuth();
   useNotifications();
   const { doubts } = useDoubts("mine");
@@ -187,6 +157,7 @@ const StudentLayout = () => {
     () => notifications.filter((n) => !n.read_at && (n.type || "").toLowerCase().includes("live_class")).length,
     [notifications],
   );
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const handleLogout = useCallback(async () => {
     await signOut();
@@ -199,8 +170,32 @@ const StudentLayout = () => {
     ? fullName.split(" ").filter(Boolean).slice(0, 2).map((n) => n[0]?.toUpperCase()).join("")
     : "U";
 
+  const navItems = buildNavItems(pendingDoubtCount, liveUnreadCount, hasLive);
+
+  const renderDrawerItem = (item: StudentNavItem) => {
+    const active = pathname === item.path;
+    return (
+      <Link
+        key={item.path}
+        to={item.path}
+        onClick={() => setDrawerOpen(false)}
+        className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground"}`}
+      >
+        <item.icon className="h-4 w-4 shrink-0" />
+        <span className="flex-1">{item.label}</span>
+        {item.live && <LiveBadge />}
+        {item.badge ? (
+          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
+            {item.badge}
+          </span>
+        ) : null}
+      </Link>
+    );
+  };
+
   return (
     <div className="flex min-h-screen bg-background">
+      {/* Desktop sidebar */}
       <StudentSidebar
         fullName={fullName}
         avatarUrl={user?.avatar_url}
@@ -211,8 +206,100 @@ const StudentLayout = () => {
         hasLive={hasLive}
       />
 
+      {/* Mobile drawer backdrop */}
+      {drawerOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 lg:hidden"
+          onClick={() => setDrawerOpen(false)}
+        />
+      )}
+
+      {/* Mobile slide-out drawer */}
+      <aside
+        className={`fixed top-0 left-0 z-50 h-full w-72 bg-card border-r border-border flex flex-col transition-transform duration-300 lg:hidden ${drawerOpen ? "translate-x-0" : "-translate-x-full"}`}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <div className="bg-white rounded-lg py-1.5 px-3 flex items-center justify-center">
+            <img src={arkeLogo} alt="ARKE Logo" className="h-8 w-auto object-contain" />
+          </div>
+          <button onClick={() => setDrawerOpen(false)} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+            <X className="h-5 w-5 text-muted-foreground" />
+          </button>
+        </div>
+
+        <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Main</p>
+          {navItems.map(renderDrawerItem)}
+          <p className="px-3 pt-3 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Explore</p>
+          {exploreItems.map(renderDrawerItem)}
+          <p className="px-3 pt-3 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Account</p>
+          {accountItems.map(renderDrawerItem)}
+        </nav>
+
+        <div className="border-t border-border p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-light text-xs font-bold text-primary overflow-hidden shrink-0">
+              {user?.avatar_url ? (
+                <img src={user.avatar_url} alt={fullName} className="h-full w-full object-cover" />
+              ) : initials}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-foreground truncate">{fullName || "Guest"}</p>
+              <Link to="/profile" onClick={() => setDrawerOpen(false)} className="text-[10px] text-primary hover:underline">View Profile</Link>
+            </div>
+          </div>
+          <LogoutButton onConfirm={handleLogout} />
+        </div>
+      </aside>
+
       <div className="flex-1 flex flex-col min-w-0">
-        <StudentHeader fullName={fullName} avatarUrl={user?.avatar_url} />
+        {/* Header */}
+        <header className="sticky top-0 z-40 flex items-center border-b border-border bg-card px-4 py-3 lg:px-6">
+          {/* Mobile: hamburger left, logo center, icons right */}
+          <div className="flex items-center gap-3 lg:hidden w-full">
+            <button
+              onClick={() => setDrawerOpen(true)}
+              className="p-1.5 rounded-lg hover:bg-muted transition-colors shrink-0"
+              aria-label="Open menu"
+            >
+              <Menu className="h-5 w-5 text-foreground" />
+            </button>
+            <div className="flex-1 flex justify-center">
+              <Link to="/" onClick={() => setDrawerOpen(false)}>
+                <div className="bg-white rounded-lg p-1 flex items-center justify-center">
+                  <img src={arkeLogo} alt="ARKE Logo" className="h-9 w-auto object-contain" />
+                </div>
+              </Link>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <NotificationBell />
+              <Link to="/profile" className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-light text-xs font-bold text-primary overflow-hidden">
+                {user?.avatar_url ? (
+                  <img src={user.avatar_url} alt={fullName} className="h-full w-full object-cover" />
+                ) : (fullName?.split(" ").map((n) => n[0]).join("").slice(0, 2) || "U")}
+              </Link>
+            </div>
+          </div>
+          {/* Desktop: search left, icons right */}
+          <div className="hidden lg:flex items-center justify-between w-full">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search courses, tests..."
+                className="w-64 rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <NotificationBell />
+              <Link to="/profile" className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-light text-xs font-bold text-primary overflow-hidden">
+                {user?.avatar_url ? (
+                  <img src={user.avatar_url} alt={fullName} className="h-full w-full object-cover" />
+                ) : (fullName?.split(" ").map((n) => n[0]).join("").slice(0, 2) || "U")}
+              </Link>
+            </div>
+          </div>
+        </header>
 
         <main className="flex-1 min-h-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <Outlet />

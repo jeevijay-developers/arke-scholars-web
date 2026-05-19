@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Mail, Phone, MapPin, MessageCircle, Send, Clock, Globe, CheckCircle2, Loader2 } from "lucide-react";
+import SEO from "@/components/SEO";
 import { z } from "zod";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -79,6 +80,7 @@ const ContactPage = () => {
 
   return (
     <div className="bg-background">
+      <SEO title="Contact Us" description="Reach the ARKE Scholars team for queries about courses, mentorship, partnerships, or technical support. We're here for students and parents in India and UAE." />
       {/* Hero */}
       <section className="bg-gradient-to-br from-primary/10 via-background to-accent/10 py-12 md:py-20">
         <div className="container mx-auto px-4 text-center">

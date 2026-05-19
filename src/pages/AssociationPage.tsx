@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Building2, Handshake, GraduationCap, Globe2, Award, ArrowRight, Users, Sparkles } from "lucide-react";
+import SEO from "@/components/SEO";
 
 const partners = [
   { name: "IIT Delhi", type: "Institute" },
@@ -45,6 +46,7 @@ const benefits = [
 const AssociationPage = () => {
   return (
     <div className="bg-background">
+      <SEO title="Institutional Partnerships" description="Partner with ARKE Scholars to bring JEE and NEET preparation to your school. Explore association programs for institutions in India and UAE." />
       <style>{`
         .no-scrollbar::-webkit-scrollbar {
           display: none;

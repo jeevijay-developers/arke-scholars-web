@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import SEO from "@/components/SEO";
 import {
   GraduationCap,
   FileText,
@@ -60,6 +61,7 @@ const documents = [
 const AdmissionsPage = () => {
   return (
     <div className="bg-background">
+      <SEO title="College Admissions Guidance" description="Expert help with IIT, NIT & AIIMS admissions. Application strategy, counselling, and rank-to-college mapping for JEE and NEET qualifiers." />
       <style>{`
         .no-scrollbar::-webkit-scrollbar {
           display: none;

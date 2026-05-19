@@ -1,10 +1,12 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { Home, MessageCircle, Users, BarChart3, Settings, Flame, Search, Megaphone } from "lucide-react";
 import LogoutButton from "@/components/LogoutButton";
+import NotificationBell from "@/components/NotificationBell";
 import { memo, useCallback, useMemo } from "react";
 import arkeLogo from "@/assets/arke-logo.png";
 import { useAuth } from "@/context/AuthContext";
 import { useAppStore } from "@/store/useAppStore";
+import { useNotifications } from "@/hooks/useNotifications";
 import { toast } from "sonner";
 
 type NavItem = { label: string; icon: typeof Home; path: string };
@@ -39,22 +41,17 @@ const MentorSidebar = memo(({ displayName, initials, avatarUrl, onLogout }: { di
         <Link to="/" className="flex items-center justify-center w-full bg-white rounded-xl py-2 px-4 hover:opacity-95 transition-opacity">
           <img src={arkeLogo} alt="ARKE Logo" className="h-10 w-auto object-contain" />
         </Link>
-        <div className="mt-3 rounded-md bg-secondary/15 px-2 py-1 text-center">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-secondary">Mentor Portal</span>
-        </div>
       </div>
 
       <nav className="flex-1 px-3 space-y-1">
-        <p className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Navigation</p>
         {navItems.map((item) => {
           const active = pathname === item.path;
           return (
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground"
-              }`}
+              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground"
+                }`}
             >
               <item.icon className="h-4.5 w-4.5 shrink-0" />
               <span>{item.label}</span>
@@ -81,6 +78,7 @@ MentorSidebar.displayName = "MentorSidebar";
 const MentorLayout = () => {
   const { user, signOut } = useAuth();
   const storeUser = useAppStore((s) => s.user);
+  useNotifications();
   const navigate = useNavigate();
 
   const displayName = useMemo(
@@ -117,6 +115,7 @@ const MentorLayout = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <NotificationBell />
             <Avatar url={storeUser?.avatar_url} initials={initials} className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary/20 text-xs font-bold text-secondary" />
           </div>
         </header>

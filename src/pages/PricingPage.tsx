@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Check, X, Sparkles, Crown, Rocket, Shield, Zap, HelpCircle, ChevronDown, IndianRupee } from "lucide-react";
+import SEO from "@/components/SEO";
 import { useAppStore } from "@/store/useAppStore";
 import { useState } from "react";
 
@@ -102,6 +103,7 @@ const PricingPage = () => {
 
   return (
     <div className="bg-background">
+      <SEO title="Pricing Plans" description="Choose a plan that fits your preparation — from free access to full mentorship bundles. Affordable JEE, NEET & Board prep plans for students in India and UAE." />
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-background to-accent/10 py-16 md:py-24">
         <div className="container mx-auto px-4 text-center">

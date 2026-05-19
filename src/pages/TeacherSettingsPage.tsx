@@ -1,4 +1,5 @@
 import { Settings, User, Wallet, Bell, Shield, Camera, Loader2 } from "lucide-react";
+import CityStateFields from "@/components/CityStateFields";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -19,6 +20,7 @@ const TeacherSettingsPage = () => {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
+  const [state, setState] = useState("");
   const [country, setCountry] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [profileLoading, setProfileLoading] = useState(true);
@@ -51,12 +53,13 @@ const TeacherSettingsPage = () => {
     (async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("full_name, phone, city, country, avatar_url")
+        .select("full_name, phone, city, state, country, avatar_url")
         .eq("user_id", user.id)
         .maybeSingle();
       setName(data?.full_name || "");
       setPhone(data?.phone || "");
-      setCity(data?.city || "");
+      setCity((data as any)?.city || "");
+      setState((data as any)?.state || "");
       setCountry(data?.country || "");
       setAvatarUrl(data?.avatar_url || "");
       setProfileLoading(false);
@@ -68,7 +71,7 @@ const TeacherSettingsPage = () => {
     setSavingProfile(true);
     const { error } = await supabase
       .from("profiles")
-      .update({ full_name: name, phone, city, country })
+      .update({ full_name: name, phone, city, state, country } as any)
       .eq("user_id", user.id);
     setSavingProfile(false);
     if (error) {
@@ -228,22 +231,15 @@ const TeacherSettingsPage = () => {
                 className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary disabled:opacity-60"
               />
             </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">City</label>
-              <input
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
+            <div className="sm:col-span-2">
+              <CityStateFields
+                city={city}
+                state={state}
+                country={country}
+                onCityChange={setCity}
+                onStateChange={setState}
+                onCountryChange={setCountry}
                 disabled={profileLoading}
-                className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary disabled:opacity-60"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">Country</label>
-              <input
-                value={country}
-                onChange={(e) => setCountry(e.target.value)}
-                disabled={profileLoading}
-                className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary disabled:opacity-60"
               />
             </div>
           </div>

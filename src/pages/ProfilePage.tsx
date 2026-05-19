@@ -4,11 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAppStore } from "@/store/useAppStore";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
+import CityStateFields from "@/components/CityStateFields";
 
-const tabItems = ["Personal Info", "Subscription"];
+const tabItems = ["Personal Info"];
 
 const EXAMS = ["IIT JEE", "NEET", "Boards", "JEE + NEET", "Other"];
-
 type SchoolOption = { id: string; name: string; city: string | null };
 
 const ProfilePage = () => {
@@ -21,6 +21,7 @@ const ProfilePage = () => {
     full_name: "",
     phone: "",
     city: "",
+    state: "",
     country: "",
     target_exam: "",
     avatar_url: "",
@@ -56,6 +57,7 @@ const ProfilePage = () => {
           full_name: p.full_name || "",
           phone: p.phone || "",
           city: p.city || "",
+          state: p.state || "",
           country: p.country || "",
           target_exam: p.target_exam || "",
           avatar_url: p.avatar_url || "",
@@ -125,6 +127,7 @@ const ProfilePage = () => {
         full_name: form.full_name,
         phone: form.phone,
         city: form.city,
+        state: form.state,
         country: form.country,
         target_exam: form.target_exam,
         school_id: schoolId,
@@ -245,9 +248,17 @@ const ProfilePage = () => {
               <Field label="Full Name" value={form.full_name} onChange={(v) => setForm({ ...form, full_name: v })} />
               <Field label="Email" value={user?.email || ""} disabled />
               <Field label="Phone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
-              <Field label="City" value={form.city} onChange={(v) => setForm({ ...form, city: v })} />
-              <Field label="Country" value={form.country} onChange={(v) => setForm({ ...form, country: v })} />
               <SelectField label="Target Exam" value={form.target_exam} options={EXAMS} onChange={(v) => setForm({ ...form, target_exam: v })} />
+              <div className="sm:col-span-2">
+                <CityStateFields
+                  city={form.city}
+                  state={form.state}
+                  country={form.country}
+                  onCityChange={(v) => setForm({ ...form, city: v })}
+                  onStateChange={(v) => setForm({ ...form, state: v })}
+                  onCountryChange={(v) => setForm({ ...form, country: v })}
+                />
+              </div>
               {/* School search — same width as Country */}
               <div>
                 <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">School</label>
@@ -309,12 +320,6 @@ const ProfilePage = () => {
               {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               Save Changes
             </button>
-          </div>
-        )}
-
-        {activeTab === 1 && (
-          <div className="rounded-2xl border border-border bg-card p-5 text-center">
-            <p className="text-sm text-muted-foreground">Subscription details coming soon</p>
           </div>
         )}
       </div>

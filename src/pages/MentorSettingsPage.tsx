@@ -1,4 +1,5 @@
 import { Settings, User, Bell, Shield, Camera, Loader2 } from "lucide-react";
+import CityStateFields from "@/components/CityStateFields";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -24,6 +25,7 @@ const MentorSettingsPage = () => {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
+  const [state, setState] = useState("");
   const [country, setCountry] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [loading, setLoading] = useState(true);
@@ -52,12 +54,13 @@ const MentorSettingsPage = () => {
     (async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("full_name, phone, city, country, avatar_url")
+        .select("full_name, phone, city, state, country, avatar_url")
         .eq("user_id", user.id)
         .maybeSingle();
       setName(data?.full_name || "");
       setPhone(data?.phone || "");
-      setCity(data?.city || "");
+      setCity((data as any)?.city || "");
+      setState((data as any)?.state || "");
       setCountry(data?.country || "");
       setAvatarUrl(data?.avatar_url || "");
       setLoading(false);
@@ -69,7 +72,7 @@ const MentorSettingsPage = () => {
     setSaving(true);
     const { error } = await supabase
       .from("profiles")
-      .update({ full_name: name, phone, city, country })
+      .update({ full_name: name, phone, city, state, country } as any)
       .eq("user_id", user.id);
     setSaving(false);
     if (error) {
@@ -198,8 +201,17 @@ const MentorSettingsPage = () => {
             <Field label="Full Name" value={name} onChange={setName} disabled={loading} />
             <Field label="Email" value={email} disabled />
             <Field label="Phone" value={phone} onChange={setPhone} disabled={loading} placeholder="+91 ..." />
-            <Field label="City" value={city} onChange={setCity} disabled={loading} />
-            <Field label="Country" value={country} onChange={setCountry} disabled={loading} />
+            <div className="col-span-2">
+              <CityStateFields
+                city={city}
+                state={state}
+                country={country}
+                onCityChange={setCity}
+                onStateChange={setState}
+                onCountryChange={setCountry}
+                disabled={loading}
+              />
+            </div>
           </div>
           <button
             onClick={saveProfile}

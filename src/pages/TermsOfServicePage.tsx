@@ -1,4 +1,5 @@
 import { FileText, Scale, CreditCard, Ban, AlertTriangle, RefreshCcw, Mail } from "lucide-react";
+import SEO from "@/components/SEO";
 
 const TermsOfServicePage = () => {
   const sections = [
@@ -42,6 +43,7 @@ const TermsOfServicePage = () => {
 
   return (
     <div className="bg-background">
+      <SEO title="Terms of Service" description="Review ARKE Scholars' terms of service governing your use of our learning platform, including course access, subscriptions, and acceptable use policies." />
       {/* Hero */}
       <section className="bg-gradient-to-br from-primary/10 via-background to-accent/10 py-16">
         <div className="container mx-auto px-4 text-center">

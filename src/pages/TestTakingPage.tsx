@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Flag, Clock, Loader2, AlertTriangle } from "lucide-react";
+import SEO from "@/components/SEO";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -302,6 +303,7 @@ const TestTakingPage = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col select-none">
+      <SEO title={test.title} description={`Taking ${test.title} on ARKE Scholars.`} />
       <header className="bg-card border-b border-border px-4 py-3 flex items-center justify-between">
         <div className="min-w-0">
           <p className="text-sm font-bold text-foreground truncate">{test.title}</p>
@@ -331,9 +333,8 @@ const TestTakingPage = () => {
                   <button
                     key={opt.id}
                     onClick={() => handleSelect(opt.id)}
-                    className={`w-full text-left rounded-xl border-2 px-4 py-3 text-sm transition-all ${
-                      selected ? "border-primary bg-primary/5 text-foreground" : "border-border hover:border-muted-foreground/40 text-foreground"
-                    }`}
+                    className={`w-full text-left rounded-xl border-2 px-4 py-3 text-sm transition-all ${selected ? "border-primary bg-primary/5 text-foreground" : "border-border hover:border-muted-foreground/40 text-foreground"
+                      }`}
                   >
                     <span className="font-bold mr-2">{String.fromCharCode(65 + opt.id)}.</span>
                     <MathRenderer content={opt.text} inline />
@@ -353,16 +354,18 @@ const TestTakingPage = () => {
             <button onClick={handleMarkAndNext} className="rounded-lg border border-accent/40 px-3 py-2 text-xs font-medium text-accent flex items-center gap-1">
               <Flag className="h-3 w-3" /> Mark & Next
             </button>
-            <button onClick={handleNext} disabled={currentQ === questions.length - 1} className="rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40 flex items-center gap-1">
-              Save & Next <ArrowRight className="h-3 w-3" />
-            </button>
-            <button
-              onClick={() => handleSubmit(false)}
-              disabled={submitting}
-              className="ml-auto rounded-lg bg-secondary px-4 py-2 text-xs font-bold text-secondary-foreground disabled:opacity-50"
-            >
-              {submitting ? "Submitting..." : "Submit Test"}
-            </button>
+            <div className="flex w-full justify-between gap-4">
+              <button
+                onClick={() => handleSubmit(false)}
+                disabled={submitting}
+                className="rounded-lg bg-secondary px-4 py-2 text-xs font-bold text-secondary-foreground disabled:opacity-50"
+              >
+                {submitting ? "Submitting..." : "Submit Test"}
+              </button>
+              <button onClick={handleNext} disabled={currentQ === questions.length - 1} className="rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground disabled:opacity-40 flex items-center gap-1">
+                Save & Next <ArrowRight className="h-3 w-3" />
+              </button>
+            </div>
           </div>
         </div>
 

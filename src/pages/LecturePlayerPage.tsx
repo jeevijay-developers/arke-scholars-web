@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Play, Pause, Loader2, CheckCircle2, ChevronDown } from "lucide-react";
+import SEO from "@/components/SEO";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -251,6 +252,12 @@ const LecturePlayerPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "hsl(222, 47%, 8%)" }}>
+      {course && activeLesson && (
+        <SEO
+          title={`${activeLesson.title} – ${course.name}`}
+          description={`Watching ${course.name} on ARKE Scholars.`}
+        />
+      )}
       <header className="flex items-center justify-between px-4 py-3 bg-[hsl(var(--navy))]">
         <div className="flex items-center gap-3 min-w-0">
           <Link to={`/courses/${slug}`} className="text-white">
@@ -332,25 +339,14 @@ const LecturePlayerPage = () => {
               </div>
               <button
                 onClick={toggleComplete}
-                className={`shrink-0 inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold transition-colors ${
-                  progressMap[activeLesson.slug]?.is_completed
-                    ? "bg-secondary text-secondary-foreground"
-                    : "bg-white/10 text-white hover:bg-white/20"
-                }`}
+                className={`shrink-0 inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold transition-colors ${progressMap[activeLesson.slug]?.is_completed
+                  ? "bg-secondary text-secondary-foreground"
+                  : "bg-white/10 text-white hover:bg-white/20"
+                  }`}
               >
                 <CheckCircle2 className="h-4 w-4" />
                 {progressMap[activeLesson.slug]?.is_completed ? "Completed" : "Mark as complete"}
               </button>
-            </div>
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-white/80">Notes</p>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                onBlur={saveNotes}
-                placeholder="Take notes for this lesson..."
-                className="w-full h-32 rounded-xl bg-white/5 border border-white/10 p-4 text-sm text-white/80 placeholder:text-white/30 outline-none resize-none focus:border-primary/50"
-              />
             </div>
           </div>
         </div>
@@ -388,9 +384,8 @@ const LecturePlayerPage = () => {
                       <button
                         key={lec.id}
                         onClick={() => setActiveLessonId(lec.id)}
-                        className={`flex items-center gap-3 px-4 py-2.5 text-xs w-full text-left ${
-                          isActive ? "bg-primary/10 border-l-2 border-primary" : "hover:bg-white/5"
-                        } transition-colors`}
+                        className={`flex items-center gap-3 px-4 py-2.5 text-xs w-full text-left ${isActive ? "bg-primary/10 border-l-2 border-primary" : "hover:bg-white/5"
+                          } transition-colors`}
                       >
                         {isDone ? (
                           <CheckCircle2 className="h-4 w-4 text-secondary shrink-0" />

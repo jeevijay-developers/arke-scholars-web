@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import SEO from "@/components/SEO";
 import {
   Video,
   Users,
@@ -83,6 +84,7 @@ const LiveClassesLandingPage = () => {
 
   return (
     <div className="bg-background">
+      <SEO title="Live Online Classes for JEE & NEET" description="Join live classes for JEE, NEET & Boards by top educators. Ask doubts in real-time, attend from India or UAE, and rewatch recordings anytime." />
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-to-br from-[hsl(var(--navy))] via-[hsl(var(--navy2))] to-[hsl(222,47%,15%)] py-20 md:py-28">
         <div className="absolute inset-0 opacity-30" style={{ background: "radial-gradient(circle at 70% 50%, hsl(24 95% 53% / 0.25) 0%, transparent 60%)" }} />

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Search, ChevronRight, Clock, FileText, Loader2 } from "lucide-react";
+import SEO from "@/components/SEO";
 import { Link } from "react-router-dom";
 import { useTests } from "@/hooks/useTests";
 import { useAuth } from "@/context/AuthContext";
@@ -39,6 +40,7 @@ const TestListPage = () => {
 
   return (
     <div className="pb-20 lg:pb-0">
+      <SEO title="My Tests" description="Access your assigned and attempted tests on ARKE Scholars." />
       <div className="bg-[hsl(var(--navy))] grid-texture px-4 pt-4 pb-3">
         <h1 className="text-lg font-black font-display text-white">Tests</h1>
         <p className="text-xs text-white/70">{filtered.length} test{filtered.length === 1 ? "" : "s"} available</p>

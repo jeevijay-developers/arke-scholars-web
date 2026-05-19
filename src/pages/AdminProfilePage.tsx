@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Camera, Loader2, KeyRound, ShieldCheck, User as UserIcon } from "lucide-react";
+import CityStateFields from "@/components/CityStateFields";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
@@ -12,6 +13,7 @@ const AdminProfilePage = () => {
     full_name: "",
     phone: "",
     city: "",
+    state: "",
     country: "",
     avatar_url: "",
   });
@@ -28,7 +30,7 @@ const AdminProfilePage = () => {
     (async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("full_name, phone, city, country, avatar_url")
+        .select("full_name, phone, city, state, country, avatar_url")
         .eq("user_id", authUser.id)
         .maybeSingle();
       if (!active) return;
@@ -36,7 +38,8 @@ const AdminProfilePage = () => {
         setForm({
           full_name: data.full_name || "",
           phone: data.phone || "",
-          city: data.city || "",
+          city: (data as any).city || "",
+          state: (data as any).state || "",
           country: data.country || "",
           avatar_url: data.avatar_url || "",
         });
@@ -57,6 +60,7 @@ const AdminProfilePage = () => {
         full_name: form.full_name,
         phone: form.phone,
         city: form.city,
+        state: form.state,
         country: form.country,
       })
       .eq("user_id", authUser.id);
@@ -186,8 +190,16 @@ const AdminProfilePage = () => {
           <Field label="Full Name" value={form.full_name} onChange={(v) => setForm({ ...form, full_name: v })} />
           <Field label="Email" value={authUser?.email || ""} disabled />
           <Field label="Phone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
-          <Field label="City" value={form.city} onChange={(v) => setForm({ ...form, city: v })} />
-          <Field label="Country" value={form.country} onChange={(v) => setForm({ ...form, country: v })} />
+          <div className="sm:col-span-2">
+            <CityStateFields
+              city={form.city}
+              state={form.state}
+              country={form.country}
+              onCityChange={(v) => setForm({ ...form, city: v })}
+              onStateChange={(v) => setForm({ ...form, state: v })}
+              onCountryChange={(v) => setForm({ ...form, country: v })}
+            />
+          </div>
         </div>
         <button
           onClick={handleSave}

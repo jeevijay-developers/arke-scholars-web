@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import SEO from "@/components/SEO";
 import {
   Trophy,
   Target,
@@ -120,6 +121,7 @@ const TestResultPage = () => {
 
   return (
     <div className="pb-20 lg:pb-0">
+      {attempt && <SEO title={`Result: ${attempt.test_name}`} description={`Your result for ${attempt.test_name} on ARKE Scholars.`} />}
       {/* Hero */}
       <div className="relative overflow-hidden bg-gradient-to-br from-primary via-primary to-primary/80 px-6 py-8 text-center">
         <div className="absolute inset-0 opacity-10 [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:24px_24px]" />

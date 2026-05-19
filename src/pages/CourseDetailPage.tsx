@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import SEO from "@/components/SEO";
 import {
   Play,
   CheckCircle2,
@@ -204,6 +205,17 @@ const CourseDetailPage = () => {
 
   return (
     <div className="bg-background pb-16">
+      {course && (
+        <SEO
+          title={`${course.name} – ${course.subject} Course`}
+          description={
+            course.description
+              ? course.description.slice(0, 155)
+              : `Master ${course.subject} for ${(course as { target_exam?: string }).target_exam ?? "JEE, NEET & Boards"} with ARKE Scholars. Video lectures, chapter tests & PDF notes by expert educators.`
+          }
+          canonical={`/courses/${slug}`}
+        />
+      )}
       {/* Hero */}
       <section className="border-b border-border bg-[hsl(var(--muted))]/30">
         <div className="container mx-auto px-4 py-6">

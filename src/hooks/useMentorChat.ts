@@ -33,8 +33,8 @@ export const getChatFileUrl = async (path: string) => {
 };
 
 export type Conversation =
-  | { kind: "direct"; id: string; title: string; subtitle?: string; peerId: string; unread?: number }
-  | { kind: "group"; id: string; title: string; subtitle?: string; groupId: string; unread?: number };
+  | { kind: "direct"; id: string; title: string; subtitle?: string; peerId: string; unread?: number; peerAvatar?: string | null }
+  | { kind: "group"; id: string; title: string; subtitle?: string; groupId: string; unread?: number; memberProfiles?: Record<string, { name: string; avatar?: string | null }> };
 
 const computeDirectUnread = async (myId: string, peerIds: string[]) => {
   if (!peerIds.length) return new Map<string, number>();
@@ -121,15 +121,37 @@ export const useMentorConversations = () => {
     ]);
 
     const studentIds = (assignments ?? []).map((a) => a.student_id);
-    const { data: profiles } = studentIds.length
-      ? await supabase.from("profiles").select("user_id, full_name").in("user_id", studentIds)
-      : { data: [] as { user_id: string; full_name: string | null }[] };
+    const [{ data: profiles }, { data: mentorProfile }] = await Promise.all([
+      studentIds.length
+        ? supabase.from("profiles").select("user_id, full_name, avatar_url").in("user_id", studentIds)
+        : Promise.resolve({ data: [] as { user_id: string; full_name: string | null; avatar_url: string | null }[] }),
+      supabase.from("profiles").select("full_name").eq("user_id", user.id).maybeSingle(),
+    ]);
+
+    // Keep group names in sync with mentor's current display name
+    const mentorName = mentorProfile?.full_name;
+    if (mentorName && groups?.length) {
+      const staleGroups = groups.filter((g) => g.name !== mentorName && g.name !== `${mentorName}'s Group`);
+      if (staleGroups.length) {
+        await Promise.all(
+          staleGroups.map((g) =>
+            supabase.from("mentor_groups").update({ name: `${mentorName}'s Group` }).eq("id", g.id),
+          ),
+        );
+        staleGroups.forEach((g) => { g.name = `${mentorName}'s Group`; });
+      }
+    }
 
     const groupIds = (groups ?? []).map((g) => g.id);
     const [directUnread, groupUnread] = await Promise.all([
       computeDirectUnread(user.id, studentIds),
       computeGroupUnread(user.id, groupIds),
     ]);
+
+    const memberProfiles: Record<string, { name: string; avatar?: string | null }> = {};
+    (profiles ?? []).forEach((p) => {
+      memberProfiles[p.user_id] = { name: p.full_name || "Student", avatar: p.avatar_url };
+    });
 
     const list: Conversation[] = [];
     (groups ?? []).forEach((g) =>
@@ -140,6 +162,7 @@ export const useMentorConversations = () => {
         subtitle: "Group chat",
         groupId: g.id,
         unread: groupUnread.get(g.id) ?? 0,
+        memberProfiles,
       }),
     );
     (profiles ?? []).forEach((p) =>
@@ -150,6 +173,7 @@ export const useMentorConversations = () => {
         subtitle: "Direct message",
         peerId: p.user_id,
         unread: directUnread.get(p.user_id) ?? 0,
+        peerAvatar: p.avatar_url,
       }),
     );
     setConvos(list);
@@ -365,6 +389,20 @@ export const useMentorMessages = (conversation: Conversation | null, onActivity?
     };
   }, [conversation, user, matchesConvo, markRead]);
 
+  const displayNameRef = useRef<string>("");
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        displayNameRef.current = data?.full_name || (user.user_metadata as any)?.full_name || user.email || "Someone";
+      });
+  }, [user]);
+
   const sendTyping = useCallback(() => {
     if (!typingChannelRef.current || !user) return;
     const now = Date.now();
@@ -373,7 +411,7 @@ export const useMentorMessages = (conversation: Conversation | null, onActivity?
     typingChannelRef.current.send({
       type: "broadcast",
       event: "typing",
-      payload: { userId: user.id, name: (user.user_metadata as any)?.full_name || user.email || "Someone" },
+      payload: { userId: user.id, name: displayNameRef.current || user.email || "Someone" },
     });
   }, [user]);
 
@@ -428,8 +466,8 @@ export const useMentorMessages = (conversation: Conversation | null, onActivity?
         try {
           const { dispatchNotification } = await import("@/lib/notify");
           const senderName =
+            displayNameRef.current ||
             (user.user_metadata as any)?.full_name ||
-            (user.user_metadata as any)?.name ||
             user.email?.split("@")[0] ||
             "Your mentor";
           const preview = text

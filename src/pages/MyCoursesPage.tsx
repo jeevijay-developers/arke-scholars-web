@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import SEO from "@/components/SEO";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { BookOpen, Play, Clock, Star, ArrowRight, Sparkles, GraduationCap, Trophy, Zap, FlaskConical, Compass, Atom, Loader2 } from "lucide-react";
@@ -107,6 +108,7 @@ const MyCoursesPage = () => {
 
   return (
     <div className="pb-20 lg:pb-0">
+      <SEO title="My Courses" description="Continue your enrolled courses on ARKE Scholars." />
       <div className="space-y-6 p-4 lg:p-6">
         {/* Header */}
         <div className="animate-fade-in-up">

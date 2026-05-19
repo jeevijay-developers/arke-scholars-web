@@ -134,7 +134,7 @@ const MentorPerformancePage = () => {
         const lastAttempt = a
           .map((x) => x.attempted_at)
           .filter(Boolean)
-          .sort()
+          .sort((x, y) => new Date(x!).getTime() - new Date(y!).getTime())
           .at(-1) as string | null;
         const activeCourses = e.filter((x) => x.is_active !== false).length;
         const progresses = e
