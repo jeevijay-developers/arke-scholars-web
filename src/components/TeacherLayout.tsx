@@ -1,6 +1,8 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, Video, MessageCircle, Settings, Bell, Search, Flame } from "lucide-react";
+import { Home, Video, MessageCircle, Settings, Search } from "lucide-react";
 import LogoutButton from "@/components/LogoutButton";
+import NotificationBell from "@/components/NotificationBell";
+import { useNotifications } from "@/hooks/useNotifications";
 import { memo, useEffect, useMemo, useState } from "react";
 import arkeLogo from "@/assets/arke-logo.png";
 import { useAppStore } from "@/store/useAppStore";
@@ -95,6 +97,8 @@ const TeacherLayout = () => {
 
   const initials = useMemo(() => getInitials(displayName), [displayName]);
 
+  useNotifications();
+
   const handleLogout = async () => {
     await signOut();
     navigate("/login", { replace: true });
@@ -139,12 +143,7 @@ const TeacherLayout = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button className="relative rounded-lg p-2 text-muted-foreground hover:bg-background transition-colors">
-              <Bell className="h-5 w-5" />
-              {pendingDoubts > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">{pendingDoubts}</span>
-              )}
-            </button>
+            <NotificationBell />
             <Avatar url={storeUser?.avatar_url} initials={initials} className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-light text-xs font-bold text-primary" />
           </div>
         </header>

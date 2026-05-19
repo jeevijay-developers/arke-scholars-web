@@ -36,6 +36,7 @@ type AdminLive = {
 
 type Teacher = { user_id: string; full_name: string | null };
 type Course = { id: string; name: string };
+type Exam = { id: string; name: string };
 
 type Template = {
   id: string;
@@ -97,6 +98,7 @@ const AdminLiveClassesPage = () => {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [exams, setExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -121,7 +123,7 @@ const AdminLiveClassesPage = () => {
 
   const load = async () => {
     setLoading(true);
-    const [classesRes, rolesRes, templatesRes, coursesRes] = await Promise.all([
+    const [classesRes, rolesRes, templatesRes, coursesRes, examsRes] = await Promise.all([
       supabase
         .from("live_classes")
         .select(
@@ -131,6 +133,7 @@ const AdminLiveClassesPage = () => {
       supabase.from("user_roles").select("user_id").eq("role", "teacher"),
       supabase.from("live_class_templates").select("*").order("created_at", { ascending: false }),
       supabase.from("courses").select("id, name").order("name"),
+      supabase.from("exams").select("id, name").order("name"),
     ]);
     const teacherIds = (rolesRes.data ?? []).map((r) => r.user_id);
     const { data: profiles } = teacherIds.length
@@ -145,6 +148,7 @@ const AdminLiveClassesPage = () => {
     );
     setTemplates((templatesRes.data ?? []) as Template[]);
     setCourses((coursesRes.data ?? []) as Course[]);
+    setExams((examsRes.data ?? []) as Exam[]);
     setLoading(false);
   };
 
@@ -682,13 +686,20 @@ const AdminLiveClassesPage = () => {
                 </div>
                 <div>
                   <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Subject</label>
-                  <input
+                  <select
                     required
                     value={form.subject}
                     onChange={(e) => setForm({ ...form, subject: e.target.value })}
                     className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-                    placeholder="Physics"
-                  />
+                  >
+                    <option value="">Select subject</option>
+                    <option value="Physics">Physics</option>
+                    <option value="Chemistry">Chemistry</option>
+                    <option value="Mathematics">Mathematics</option>
+                    <option value="Biology">Biology</option>
+                    <option value="English">English</option>
+                    <option value="General">General</option>
+                  </select>
                 </div>
               </div>
 
@@ -719,13 +730,19 @@ const AdminLiveClassesPage = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Target exam</label>
-                  <input
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Exam</label>
+                  <select
                     value={form.target_exam}
                     onChange={(e) => setForm({ ...form, target_exam: e.target.value })}
                     className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-                    placeholder="JEE Main"
-                  />
+                  >
+                    <option value="">Select exam</option>
+                    {exams.map((exam) => (
+                      <option key={exam.id} value={exam.name}>
+                        {exam.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Meeting URL (optional)</label>
