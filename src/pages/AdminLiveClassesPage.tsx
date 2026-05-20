@@ -12,6 +12,8 @@ import {
   Copy,
   BookmarkPlus,
   LayoutTemplate,
+  Eye,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,6 +51,15 @@ type Template = {
   meeting_url: string | null;
   duration_minutes: number;
   max_participants: number | null;
+};
+
+type RecordedVideo = {
+  id: string;
+  title: string;
+  subject: string;
+  recording_url: string;
+  starts_at: string;
+  educator_name: string;
 };
 
 const statusColors: Record<string, string> = {
@@ -101,6 +112,9 @@ const AdminLiveClassesPage = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [activeTab, setActiveTab] = useState<"live" | "recorded">("live");
+  const [recordedVideos, setRecordedVideos] = useState<RecordedVideo[]>([]);
+  const [recordedLoading, setRecordedLoading] = useState(false);
 
   // Filters & pagination
   const [search, setSearch] = useState("");
@@ -117,6 +131,22 @@ const AdminLiveClassesPage = () => {
   const [cancelTarget, setCancelTarget] = useState<AdminLive | null>(null);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelSubmitting, setCancelSubmitting] = useState(false);
+
+  const loadRecordedVideos = async () => {
+    setRecordedLoading(true);
+    const { data, error } = await supabase
+      .from("live_classes")
+      .select("id, title, subject, recording_url, starts_at, educator_name")
+      .not("recording_url", "is", null)
+      .order("starts_at", { ascending: false });
+
+    if (error) {
+      toast.error("Failed to load recorded videos");
+    } else {
+      setRecordedVideos((data ?? []) as RecordedVideo[]);
+    }
+    setRecordedLoading(false);
+  };
 
   const load = async () => {
     setLoading(true);
@@ -151,11 +181,84 @@ const AdminLiveClassesPage = () => {
 
   useEffect(() => {
     load();
+    loadRecordedVideos();
   }, []);
 
   useEffect(() => {
     setPage(1);
   }, [search, statusFilter, teacherFilter]);
+
+  const viewRecordedVideo = (video: RecordedVideo) => {
+    window.open(video.recording_url, "_blank");
+  };
+
+  const downloadRecordedVideo = async (video: RecordedVideo) => {
+    try {
+      // Extract filename from recording URL
+      const url = new URL(video.recording_url);
+      const pathname = url.pathname;
+      const filename = pathname.split("/").pop() || "recording.m3u8";
+
+      const { data, error } = await supabase.functions.invoke("manage-s3-recordings", {
+        body: {
+          action: "download",
+          filename,
+        },
+      });
+      if (error || !data?.url) {
+        toast.error("Failed to generate download link");
+        return;
+      }
+      const a = document.createElement("a");
+      a.href = data.url;
+      a.download = filename;
+      a.click();
+      toast.success("Download started");
+    } catch (err) {
+      toast.error("Download failed");
+    }
+  };
+
+  const deleteRecordedVideo = async (video: RecordedVideo) => {
+    const ok = await confirm({
+      title: "Delete this recording?",
+      description: "This will permanently remove the video from storage. This action cannot be undone.",
+      confirmLabel: "Delete recording",
+    });
+    if (!ok) return;
+
+    try {
+      // Extract filename from recording URL
+      const url = new URL(video.recording_url);
+      const pathname = url.pathname;
+      const filename = pathname.split("/").pop() || "recording.m3u8";
+
+      const { error: deleteError } = await supabase.functions.invoke("manage-s3-recordings", {
+        body: {
+          action: "delete",
+          filename,
+        },
+      });
+      if (deleteError) {
+        toast.error("Failed to delete from storage");
+        return;
+      }
+      const { error: dbError } = await supabase
+        .from("live_classes")
+        .update({ recording_url: null })
+        .eq("id", video.id);
+
+      if (dbError) {
+        toast.error("Failed to update database");
+        return;
+      }
+
+      toast.success("Recording deleted");
+      loadRecordedVideos();
+    } catch (err) {
+      toast.error("Delete failed");
+    }
+  };
 
   const counts = useMemo(() => {
     const now = new Date();
@@ -505,12 +608,14 @@ const AdminLiveClassesPage = () => {
             >
               <LayoutTemplate className="h-4 w-4" /> Templates ({templates.length})
             </button>
-            <button
-              onClick={openCreate}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-xs font-bold text-primary hover:bg-white/90"
-            >
-              <Plus className="h-4 w-4" /> Schedule class
-            </button>
+            {activeTab === "live" && (
+              <button
+                onClick={openCreate}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-xs font-bold text-primary hover:bg-white/90"
+              >
+                <Plus className="h-4 w-4" /> Schedule class
+              </button>
+            )}
           </div>
         </div>
         <div className="flex gap-4 mt-4 flex-wrap">
@@ -529,88 +634,188 @@ const AdminLiveClassesPage = () => {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
-        <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by title, subject or teacher…"
-            className="flex-1 bg-transparent text-sm outline-none"
-          />
-        </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none"
+      {/* Tab toggle */}
+      <div className="flex gap-2 border-b border-border">
+        <button
+          onClick={() => setActiveTab("live")}
+          className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
+            activeTab === "live"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
         >
-          <option value="all">All statuses</option>
-          <option value="scheduled">Scheduled</option>
-          <option value="live">Live</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
-        <select
-          value={teacherFilter}
-          onChange={(e) => setTeacherFilter(e.target.value)}
-          className="rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none"
+          Live Classes
+        </button>
+        <button
+          onClick={() => {
+            setActiveTab("recorded");
+            loadRecordedVideos();
+          }}
+          className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
+            activeTab === "recorded"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
         >
-          <option value="all">All teachers</option>
-          {teachers.map((t) => (
-            <option key={t.user_id} value={t.user_id}>
-              {t.full_name || "Unnamed"}
-            </option>
-          ))}
-        </select>
+          Recorded Content
+        </button>
       </div>
 
-      {loading ? (
-        <div className="flex h-40 items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        </div>
-      ) : filtered.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-10">
-          {classes.length === 0 ? "No live classes scheduled yet." : "No classes match the filters."}
-        </p>
-      ) : (
+      {activeTab === "live" ? (
         <>
-          <div className="rounded-xl">
-            <List
-              rowComponent={ClassRow}
-              rowCount={pageRows.length}
-              rowHeight={ROW_HEIGHT}
-              rowProps={{}}
-              style={{ height: Math.min(pageRows.length, 8) * ROW_HEIGHT + 8 }}
-            />
+          {/* Filters */}
+          <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
+              <Search className="h-4 w-4 text-muted-foreground" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by title, subject or teacher…"
+                className="flex-1 bg-transparent text-sm outline-none"
+              />
+            </div>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none"
+            >
+              <option value="all">All statuses</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="live">Live</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+            <select
+              value={teacherFilter}
+              onChange={(e) => setTeacherFilter(e.target.value)}
+              className="rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none"
+            >
+              <option value="all">All teachers</option>
+              {teachers.map((t) => (
+                <option key={t.user_id} value={t.user_id}>
+                  {t.full_name || "Unnamed"}
+                </option>
+              ))}
+            </select>
           </div>
 
-          {/* Pagination */}
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>
-              Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of{" "}
-              {filtered.length}
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="rounded-md border border-border px-2 py-1 disabled:opacity-50"
-              >
-                Prev
-              </button>
-              <span>
-                Page {page} / {totalPages}
-              </span>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="rounded-md border border-border px-2 py-1 disabled:opacity-50"
-              >
-                Next
-              </button>
+          {loading ? (
+            <div className="flex h-40 items-center justify-center">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
-          </div>
+          ) : filtered.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-10">
+              {classes.length === 0 ? "No live classes scheduled yet." : "No classes match the filters."}
+            </p>
+          ) : (
+            <>
+              <div className="rounded-xl">
+                <List
+                  rowComponent={ClassRow}
+                  rowCount={pageRows.length}
+                  rowHeight={ROW_HEIGHT}
+                  rowProps={{}}
+                  style={{ height: Math.min(pageRows.length, 8) * ROW_HEIGHT + 8 }}
+                />
+              </div>
+
+              {/* Pagination */}
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>
+                  Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of{" "}
+                  {filtered.length}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="rounded-md border border-border px-2 py-1 disabled:opacity-50"
+                  >
+                    Prev
+                  </button>
+                  <span>
+                    Page {page} / {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className="rounded-md border border-border px-2 py-1 disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </>
+      ) : (
+        <>
+          {recordedLoading ? (
+            <div className="flex h-40 items-center justify-center">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : recordedVideos.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-10">
+              No recorded videos yet. Recorded classes will appear here once they are available.
+            </p>
+          ) : (
+            <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+              {recordedVideos.map((video) => {
+                const url = new URL(video.recording_url);
+                const pathname = url.pathname;
+                const filename = pathname.split("/").pop() || "recording.m3u8";
+                return (
+                  <div key={video.id} className="rounded-xl border border-border bg-card overflow-hidden hover:shadow-md transition-shadow flex flex-col">
+                    {/* Video preview */}
+                    <div className="bg-background aspect-video flex items-center justify-center relative group">
+                      <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+                        <Video className="h-12 w-12 text-muted-foreground/60" />
+                      </div>
+                      <button
+                        onClick={() => viewRecordedVideo(video)}
+                        className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-background/80"
+                        title="Preview video"
+                      >
+                        <Eye className="h-6 w-6 text-white" />
+                      </button>
+                    </div>
+
+                    {/* Video details */}
+                    <div className="p-4 flex-1 flex flex-col">
+                      <h3 className="text-sm font-bold text-foreground truncate">{video.title}</h3>
+                      <p className="text-xs text-muted-foreground mt-1">{video.educator_name} · {video.subject}</p>
+                      <p className="text-xs text-muted-foreground mt-2 truncate">{filename}</p>
+
+                      {/* Action buttons */}
+                      <div className="flex gap-2 mt-4">
+                        <button
+                          onClick={() => viewRecordedVideo(video)}
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-primary/40 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/10"
+                          title="View video"
+                        >
+                          <Eye className="h-3.5 w-3.5" /> View
+                        </button>
+                        <button
+                          onClick={() => downloadRecordedVideo(video)}
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20"
+                          title="Download video"
+                        >
+                          <Download className="h-3.5 w-3.5" /> Download
+                        </button>
+                        <button
+                          onClick={() => deleteRecordedVideo(video)}
+                          className="rounded-lg border border-border p-2 text-destructive hover:bg-destructive/10"
+                          title="Delete video"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </>
       )}
 

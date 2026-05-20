@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { usePagination } from "@/hooks/usePagination";
 import TablePagination from "@/components/TablePagination";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type TestQuestionRow = {
   subject: string;
@@ -75,6 +76,9 @@ const AdminTestsPage = () => {
   const [tests, setTests] = useState<AdminTest[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [viewTest, setViewTest] = useState<AdminTest | null>(null);
+  const [viewQuestions, setViewQuestions] = useState<TestQuestionRow[]>([]);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -95,6 +99,18 @@ const AdminTestsPage = () => {
     if (error) return toast.error(error.message);
     toast.success(publish ? "Test published" : "Test unpublished");
     load();
+  };
+
+  const openViewDialog = async (t: AdminTest) => {
+    setViewTest(t);
+    setLoadingQuestions(true);
+    const { data } = await supabase
+      .from("test_questions")
+      .select("subject, topic, question_text, question_image_url, question_type, options, correct_answer, explanation, difficulty, marks_correct, marks_wrong")
+      .eq("test_id", t.id)
+      .order("position", { ascending: true });
+    setViewQuestions((data ?? []) as TestQuestionRow[]);
+    setLoadingQuestions(false);
   };
 
   const deleteTest = async (t: AdminTest) => {
@@ -186,9 +202,9 @@ const AdminTestsPage = () => {
                     </td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex items-center justify-center gap-1">
-                        <a href={`/tests/${t.slug}/take`} target="_blank" rel="noreferrer" className="rounded-md p-1.5 text-muted-foreground hover:bg-muted transition-colors" title="Preview">
+                        <button onClick={() => openViewDialog(t)} className="rounded-md p-1.5 text-muted-foreground hover:bg-muted transition-colors" title="View test details">
                           <Eye className="h-3.5 w-3.5" />
-                        </a>
+                        </button>
                         <Link to={`/admin/tests/${t.slug}/edit`} className="rounded-md p-1.5 text-foreground hover:bg-muted transition-colors" title="Edit test">
                           <Pencil className="h-3.5 w-3.5" />
                         </Link>
@@ -218,6 +234,56 @@ const AdminTestsPage = () => {
           </div>
         )}
       </div>
+
+      {viewTest && (
+        <Dialog open={!!viewTest} onOpenChange={() => setViewTest(null)}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-xl">{viewTest.title}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase">Type</p>
+                  <p className="text-sm capitalize">{viewTest.test_type} · {viewTest.exam_pattern}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase">Status</p>
+                  <p className="text-sm">{viewTest.is_published ? "Published" : "Draft"}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase">Questions</p>
+                  <p className="text-sm">{viewTest.total_questions}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase">Duration</p>
+                  <p className="text-sm">{viewTest.duration_minutes} minutes</p>
+                </div>
+              </div>
+
+              <div className="border-t border-border pt-4">
+                <h3 className="text-sm font-semibold text-foreground mb-3">Questions</h3>
+                {loadingQuestions ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  </div>
+                ) : viewQuestions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground italic">No questions found.</p>
+                ) : (
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {viewQuestions.map((q, idx) => (
+                      <div key={idx} className="border border-border rounded-lg p-3 bg-muted/30">
+                        <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">Q{idx + 1} · {q.question_type}</p>
+                        <p className="text-xs text-foreground line-clamp-2">{q.question_text}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };

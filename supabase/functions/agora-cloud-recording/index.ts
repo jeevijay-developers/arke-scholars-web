@@ -3,11 +3,73 @@ import { corsHeaders } from "../_shared/cors.ts";
 
 const AGORA_API_BASE = "https://api.agora.io/v1/apps";
 
+// Fixed uint32 UID for the recording bot — must not collide with real users
+const RECORDING_BOT_UID = 999999;
+
+// ---------- Minimal Agora RTC token builder (v007) ----------
+const ROLE_SUBSCRIBER = 2;
+
+function packUint16(v: number): number[] {
+  return [(v >> 8) & 0xff, v & 0xff];
+}
+function packUint32(v: number): number[] {
+  return [(v >> 24) & 0xff, (v >> 16) & 0xff, (v >> 8) & 0xff, v & 0xff];
+}
+function packString(s: string): number[] {
+  const b = new TextEncoder().encode(s);
+  return [...packUint16(b.length), ...b];
+}
+function packMap(m: Map<number, number>): number[] {
+  const out: number[] = [...packUint16(m.size)];
+  for (const [k, v] of m) out.push(...packUint16(k), ...packUint32(v));
+  return out;
+}
+async function hmac256(key: Uint8Array, data: Uint8Array): Promise<Uint8Array> {
+  const k = await crypto.subtle.importKey("raw", key, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return new Uint8Array(await crypto.subtle.sign("HMAC", k, data));
+}
+async function buildBotToken(appId: string, cert: string, channel: string): Promise<string> {
+  const now   = Math.floor(Date.now() / 1000);
+  const salt  = Math.floor(Math.random() * 0xffffffff);
+  const expiry = now + 3600;
+
+  const privileges = new Map<number, number>();
+  privileges.set(1, expiry); // join channel
+  privileges.set(2, expiry); // subscribe audio
+  privileges.set(3, expiry); // subscribe video
+
+  const msgBytes = new Uint8Array([
+    ...packUint32(1),
+    ...packUint32(salt),
+    ...packUint32(now),
+    ...packUint32(expiry),
+    ...packString(channel),
+    ...packString(String(RECORDING_BOT_UID)),
+    ...packMap(privileges),
+  ]);
+
+  const certBytes = new TextEncoder().encode(cert);
+  const toSign    = new TextEncoder().encode(appId + String(now) + String(salt));
+  const signingKey = await hmac256(certBytes, toSign);
+  const sig        = await hmac256(signingKey, msgBytes);
+  const appIdBytes = new TextEncoder().encode(appId);
+
+  const content = new Uint8Array([
+    ...packUint16(sig.length), ...sig,
+    ...packUint16(appIdBytes.length), ...appIdBytes,
+    ...packUint32(now),
+    ...packUint32(salt),
+    ...packUint16(msgBytes.length), ...msgBytes,
+  ]);
+
+  return "007" + btoa(String.fromCharCode(...content));
+}
+// ------------------------------------------------------------
+
 interface StartRequest {
   action: "start";
   channelName: string;
   classId: string;
-  uid: string;
 }
 
 interface StopRequest {
@@ -16,7 +78,6 @@ interface StopRequest {
   classId: string;
   resourceId: string;
   sid: string;
-  uid: string;
 }
 
 type Request = StartRequest | StopRequest;
@@ -28,39 +89,26 @@ function getBasicAuthHeader(customerId: string, customerSecret: string): string 
 async function acquireResource(
   appId: string,
   channelName: string,
-  uid: string,
   authHeader: string,
-): Promise<{ resourceId: string; sid: string } | null> {
+): Promise<{ resourceId: string } | null> {
   const url = `${AGORA_API_BASE}/${appId}/cloud_recording/acquire`;
-  const body = {
-    cname: channelName,
-    uid: uid,
-    clientRequest: {},
-  };
-
   try {
     const res = await fetch(url, {
       method: "POST",
-      headers: {
-        Authorization: authHeader,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
+      headers: { Authorization: authHeader, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        cname: channelName,
+        uid: String(RECORDING_BOT_UID),
+        clientRequest: {},
+      }),
     });
-
     if (!res.ok) {
-      const err = await res.text();
-      console.error(`[Acquire] HTTP ${res.status}: ${err}`);
+      console.error(`[Acquire] HTTP ${res.status}: ${await res.text()}`);
       return null;
     }
-
-    const data = await res.json() as { resourceId?: string; sid?: string };
-    if (!data.resourceId) {
-      console.error("[Acquire] No resourceId in response", data);
-      return null;
-    }
-
-    return { resourceId: data.resourceId, sid: data.sid || "" };
+    const data = await res.json() as { resourceId?: string };
+    if (!data.resourceId) { console.error("[Acquire] No resourceId", data); return null; }
+    return { resourceId: data.resourceId };
   } catch (e) {
     console.error("[Acquire] Error:", e);
     return null;
@@ -70,8 +118,8 @@ async function acquireResource(
 async function startRecording(
   appId: string,
   channelName: string,
-  uid: string,
   resourceId: string,
+  token: string | null,
   authHeader: string,
   bucket: string,
   accessKey: string,
@@ -79,61 +127,40 @@ async function startRecording(
   endpoint: string,
 ): Promise<{ sid: string } | null> {
   const url = `${AGORA_API_BASE}/${appId}/cloud_recording/resourceid/${resourceId}/mode/mix/start`;
-  const body = {
-    cname: channelName,
-    uid: uid,
-    clientRequest: {
-      recordingConfig: {
-        maxIdleTime: 30,
-        streamTypes: 2,
-        audioProfile: 1,
-        channelType: 1,
-        videoStreamType: 0,
-        transcodingConfig: {
-          height: 720,
-          width: 1280,
-          bitrate: 2500,
-          fps: 15,
-          mixedAudioBitrate: 128,
-        },
-      },
-      recordingFileConfig: {
-        avFileType: ["m3u8", "mp4"],
-      },
-      storageConfig: {
-        vendor: 1,
-        region: 0,
-        bucket: bucket,
-        accessKey: accessKey,
-        secretKey: secretKey,
-        endpoint: endpoint,
-        fileNamePrefix: ["arke", "live-class"],
-      },
+  const clientRequest: Record<string, unknown> = {
+    recordingConfig: {
+      maxIdleTime: 30,
+      streamTypes: 2,
+      audioProfile: 1,
+      channelType: 1,
+      videoStreamType: 0,
+      transcodingConfig: { height: 720, width: 1280, bitrate: 2500, fps: 15, mixedAudioBitrate: 128 },
+    },
+    recordingFileConfig: { avFileType: ["m3u8", "mp4"] },
+    storageConfig: {
+      vendor: 1,
+      region: 0,
+      bucket,
+      accessKey,
+      secretKey,
+      endpoint,
+      fileNamePrefix: ["arke", "live-class"],
     },
   };
+  if (token) clientRequest.token = token;
 
   try {
     const res = await fetch(url, {
       method: "POST",
-      headers: {
-        Authorization: authHeader,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
+      headers: { Authorization: authHeader, "Content-Type": "application/json" },
+      body: JSON.stringify({ cname: channelName, uid: String(RECORDING_BOT_UID), clientRequest }),
     });
-
     if (!res.ok) {
-      const err = await res.text();
-      console.error(`[Start] HTTP ${res.status}: ${err}`);
+      console.error(`[Start] HTTP ${res.status}: ${await res.text()}`);
       return null;
     }
-
     const data = await res.json() as { sid?: string };
-    if (!data.sid) {
-      console.error("[Start] No sid in response", data);
-      return null;
-    }
-
+    if (!data.sid) { console.error("[Start] No sid", data); return null; }
     return { sid: data.sid };
   } catch (e) {
     console.error("[Start] Error:", e);
@@ -146,32 +173,19 @@ async function stopRecording(
   resourceId: string,
   sid: string,
   channelName: string,
-  uid: string,
   authHeader: string,
 ): Promise<{ fileList?: Array<{ filename: string }> } | null> {
   const url = `${AGORA_API_BASE}/${appId}/cloud_recording/resourceid/${resourceId}/mode/mix/sid/${sid}/stop`;
-  const body = {
-    cname: channelName,
-    uid: uid,
-    clientRequest: {},
-  };
-
   try {
     const res = await fetch(url, {
       method: "POST",
-      headers: {
-        Authorization: authHeader,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
+      headers: { Authorization: authHeader, "Content-Type": "application/json" },
+      body: JSON.stringify({ cname: channelName, uid: String(RECORDING_BOT_UID), clientRequest: {} }),
     });
-
     if (!res.ok) {
-      const err = await res.text();
-      console.error(`[Stop] HTTP ${res.status}: ${err}`);
+      console.error(`[Stop] HTTP ${res.status}: ${await res.text()}`);
       return null;
     }
-
     return await res.json() as { fileList?: Array<{ filename: string }> };
   } catch (e) {
     console.error("[Stop] Error:", e);
@@ -186,10 +200,11 @@ serve(async (req) => {
 
   try {
     const body = await req.json() as Request;
-    const { action, channelName, classId, uid } = body;
+    const { action, channelName, classId } = body;
 
-    const appId = Deno.env.get("AGORA_APP_ID");
-    const customerId = Deno.env.get("AGORA_CUSTOMER_ID");
+    const appId          = Deno.env.get("AGORA_APP_ID");
+    const appCert        = Deno.env.get("AGORA_APP_CERTIFICATE");
+    const customerId     = Deno.env.get("AGORA_CUSTOMER_ID");
     const customerSecret = Deno.env.get("AGORA_CUSTOMER_SECRET");
 
     if (!appId || !customerId || !customerSecret) {
@@ -202,11 +217,10 @@ serve(async (req) => {
     const authHeader = getBasicAuthHeader(customerId, customerSecret);
 
     if (action === "start") {
-      const bucket = Deno.env.get("AGORA_RECORDING_BUCKET");
+      const bucket    = Deno.env.get("AGORA_RECORDING_BUCKET");
       const accessKey = Deno.env.get("AGORA_RECORDING_S3_ACCESS_KEY");
       const secretKey = Deno.env.get("AGORA_RECORDING_S3_SECRET_KEY");
-      const endpoint = Deno.env.get("AGORA_RECORDING_S3_ENDPOINT");
-      const region = Deno.env.get("AGORA_RECORDING_S3_REGION") || "us-east-1";
+      const endpoint  = Deno.env.get("AGORA_RECORDING_S3_ENDPOINT");
 
       if (!bucket || !accessKey || !secretKey || !endpoint) {
         return new Response(
@@ -215,8 +229,7 @@ serve(async (req) => {
         );
       }
 
-      // Step 1: Acquire resource
-      const acquired = await acquireResource(appId, channelName, uid, authHeader);
+      const acquired = await acquireResource(appId, channelName, authHeader);
       if (!acquired) {
         return new Response(
           JSON.stringify({ error: "Failed to acquire resource" }),
@@ -224,20 +237,16 @@ serve(async (req) => {
         );
       }
 
-      // Step 2: Start recording
-      const started = await startRecording(
-        appId,
-        channelName,
-        uid,
-        acquired.resourceId,
-        authHeader,
-        bucket,
-        accessKey,
-        secretKey,
-        endpoint,
-      );
+      // Generate a token for the recording bot so it can join a token-secured channel
+      let botToken: string | null = null;
+      if (appCert) {
+        botToken = await buildBotToken(appId, appCert, channelName);
+      }
 
-      console.log(`[Recording] Started with resourceId=${acquired.resourceId}, sid=${started?.sid}`);
+      const started = await startRecording(
+        appId, channelName, acquired.resourceId, botToken,
+        authHeader, bucket, accessKey, secretKey, endpoint,
+      );
 
       if (!started) {
         return new Response(
@@ -246,20 +255,17 @@ serve(async (req) => {
         );
       }
 
+      console.log(`[Recording] Started resourceId=${acquired.resourceId} sid=${started.sid}`);
       return new Response(
-        JSON.stringify({
-          success: true,
-          resourceId: acquired.resourceId,
-          sid: started.sid,
-        }),
+        JSON.stringify({ success: true, resourceId: acquired.resourceId, sid: started.sid }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
-    } else if (action === "stop") {
-      const stopReq = body as StopRequest;
-      const { resourceId, sid } = stopReq;
+    }
 
-      // Step 1: Stop recording
-      const stopped = await stopRecording(appId, resourceId, sid, channelName, uid, authHeader);
+    if (action === "stop") {
+      const { resourceId, sid } = body as StopRequest;
+
+      const stopped = await stopRecording(appId, resourceId, sid, channelName, authHeader);
       if (!stopped) {
         return new Response(
           JSON.stringify({ error: "Failed to stop recording" }),
@@ -267,46 +273,41 @@ serve(async (req) => {
         );
       }
 
-      // Step 2: Extract recording URL from fileList
+      // Agora fileList filenames already include the fileNamePrefix path
       let recordingUrl = "";
-      if (stopped.fileList && stopped.fileList.length > 0) {
-        // Find the first .m3u8 file (HLS playlist)
+      if (stopped.fileList?.length) {
         const m3u8File = stopped.fileList.find((f) => f.filename.endsWith(".m3u8"));
         if (m3u8File) {
-          const bucket = Deno.env.get("AGORA_RECORDING_BUCKET");
+          const bucket   = Deno.env.get("AGORA_RECORDING_BUCKET");
           const endpoint = Deno.env.get("AGORA_RECORDING_S3_ENDPOINT");
-          // Construct the public URL
-          recordingUrl = `${endpoint}/${bucket}/arke/live-class/${m3u8File.filename}`;
+          recordingUrl = `${endpoint}/${bucket}/${m3u8File.filename}`;
         }
       }
 
-      // Step 3: Update live_classes with recording_url
+      // Update only the matching live_classes row — classId filter is required
       const supabaseUrl = Deno.env.get("SUPABASE_URL");
       const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-      if (supabaseUrl && supabaseKey && recordingUrl) {
-        const { error } = await fetch(`${supabaseUrl}/rest/v1/live_classes`, {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${supabaseKey}`,
-            "Content-Type": "application/json",
-            Prefer: "return=minimal",
+      if (supabaseUrl && supabaseKey && recordingUrl && classId) {
+        const patchRes = await fetch(
+          `${supabaseUrl}/rest/v1/live_classes?id=eq.${classId}`,
+          {
+            method: "PATCH",
+            headers: {
+              Authorization: `Bearer ${supabaseKey}`,
+              "Content-Type": "application/json",
+              Prefer: "return=minimal",
+            },
+            body: JSON.stringify({ recording_url: recordingUrl }),
           },
-          body: JSON.stringify({ recording_url: recordingUrl }),
-        }).then((r) => r.json() as Promise<{ error?: { message: string } }>);
-
-        if (error) {
-          console.error("[DB Update] Error:", error);
-          // Still return success since recording was stopped; DB update is best-effort
+        );
+        if (!patchRes.ok) {
+          console.error("[DB Update] Error:", await patchRes.text());
         }
       }
 
       return new Response(
-        JSON.stringify({
-          success: true,
-          fileList: stopped.fileList,
-          recordingUrl,
-        }),
+        JSON.stringify({ success: true, fileList: stopped.fileList, recordingUrl }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }

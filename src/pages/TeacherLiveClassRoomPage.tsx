@@ -246,8 +246,11 @@ const TeacherLiveClassRoomPage = () => {
 
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (!isDev) {
+        const { data: { session } } = await supabase.auth.getSession();
         headers["apikey"] = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
-        headers["Authorization"] = `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string}`;
+        if (session?.access_token) {
+          headers["Authorization"] = `Bearer ${session.access_token}`;
+        }
       }
 
       const res = await fetch(url, {
@@ -257,7 +260,6 @@ const TeacherLiveClassRoomPage = () => {
           action: "start",
           channelName: cls.id,
           classId: cls.id,
-          uid: user?.id || "teacher",
         }),
       });
 
@@ -291,8 +293,11 @@ const TeacherLiveClassRoomPage = () => {
 
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (!isDev) {
+        const { data: { session } } = await supabase.auth.getSession();
         headers["apikey"] = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
-        headers["Authorization"] = `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string}`;
+        if (session?.access_token) {
+          headers["Authorization"] = `Bearer ${session.access_token}`;
+        }
       }
 
       const res = await fetch(url, {
@@ -302,7 +307,6 @@ const TeacherLiveClassRoomPage = () => {
           action: "stop",
           channelName: cls.id,
           classId: cls.id,
-          uid: user?.id || "teacher",
           resourceId: recordingIds.resourceId,
           sid: recordingIds.sid,
         }),

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import AgoraRTC, {
-  IAgoraRTCClient,
   ICameraVideoTrack,
   IMicrophoneAudioTrack,
   IRemoteVideoTrack,
@@ -12,6 +11,8 @@ import {
   AlertCircle, Monitor, MonitorOff, Maximize, Minimize, Wifi,
 } from "lucide-react";
 import { toast } from "sonner";
+import { agoraClient } from "@/lib/agoraClient";
+import { supabase } from "@/integrations/supabase/client";
 
 const APP_ID = import.meta.env.VITE_AGORA_APP_ID as string | undefined;
 
@@ -24,8 +25,11 @@ async function fetchToken(channelName: string, uid: number, role: "host" | "audi
   try {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (!isDev) {
+      const { data: { session } } = await supabase.auth.getSession();
       headers["apikey"] = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
-      headers["Authorization"] = `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string}`;
+      if (session?.access_token) {
+        headers["Authorization"] = `Bearer ${session.access_token}`;
+      }
     }
 
     const res = await fetch(url, {
@@ -50,13 +54,13 @@ async function fetchToken(channelName: string, uid: number, role: "host" | "audi
 // 0=unknown, 1=excellent, 2=good, 3=poor, 4=bad, 5=very bad, 6=disconnected
 function NetworkBars({ quality }: { quality: number }) {
   const colors = [
-    "text-white/40",  // 0 unknown
-    "text-green-400", // 1 excellent
-    "text-green-400", // 2 good
-    "text-yellow-400",// 3 poor
-    "text-red-400",   // 4 bad
-    "text-red-500",   // 5 very bad
-    "text-white/40",  // 6 disconnected
+    "text-white/40",   // 0 unknown
+    "text-green-400",  // 1 excellent
+    "text-green-400",  // 2 good
+    "text-yellow-400", // 3 poor
+    "text-red-400",    // 4 bad
+    "text-red-500",    // 5 very bad
+    "text-white/40",   // 6 disconnected
   ];
   const labels = ["", "Excellent", "Good", "Poor", "Bad", "Very bad", ""];
   const color = colors[quality] ?? "text-white/40";
@@ -79,7 +83,6 @@ export type Props = {
 };
 
 const AgoraVideoRoom = ({ channelName, role, uid = 0, onLeave }: Props) => {
-  const clientRef      = useRef<IAgoraRTCClient | null>(null);
   const localVideoRef  = useRef<HTMLDivElement>(null);
   const remoteVideoRef = useRef<HTMLDivElement>(null);
   const containerRef   = useRef<HTMLDivElement>(null);
@@ -105,8 +108,6 @@ const AgoraVideoRoom = ({ channelName, role, uid = 0, onLeave }: Props) => {
       if (!ok) return;
     }
     leftRef.current = true;
-    const client = clientRef.current;
-    if (!client) return;
     if (screenTrackRef.current) {
       try { screenTrackRef.current.stop(); screenTrackRef.current.close(); } catch (_) { /* */ }
       screenTrackRef.current = null;
@@ -116,12 +117,12 @@ const AgoraVideoRoom = ({ channelName, role, uid = 0, onLeave }: Props) => {
       try { localTracksRef.current[1].stop(); localTracksRef.current[1].close(); } catch (_) { /* */ }
       localTracksRef.current = null;
     }
-    try { await client.leave(); } catch (_) { /* */ }
+    try { await agoraClient.leave(); } catch (_) { /* */ }
     setStatus("disconnected");
     onLeave?.();
   }, [onLeave, role]);
 
-  // Play pending remote track once div is visible
+  // Play pending remote track once div is mounted/visible
   useEffect(() => {
     if (!hasRemoteVideo || !pendingRemoteTrack.current) return;
     const track = pendingRemoteTrack.current;
@@ -139,11 +140,8 @@ const AgoraVideoRoom = ({ channelName, role, uid = 0, onLeave }: Props) => {
       return;
     }
 
-    const client = AgoraRTC.createClient({ mode: "live", codec: "vp8" });
-    clientRef.current = client;
-
-    client.on("user-published", async (remoteUser, mediaType) => {
-      await client.subscribe(remoteUser, mediaType);
+    agoraClient.on("user-published", async (remoteUser, mediaType) => {
+      await agoraClient.subscribe(remoteUser, mediaType);
       if (mediaType === "video") {
         const track = remoteUser.videoTrack as IRemoteVideoTrack;
         pendingRemoteTrack.current = track;
@@ -154,24 +152,24 @@ const AgoraVideoRoom = ({ channelName, role, uid = 0, onLeave }: Props) => {
       }
     });
 
-    client.on("user-unpublished", (_u, mediaType) => {
+    agoraClient.on("user-unpublished", (_u, mediaType) => {
       if (mediaType === "video") {
         pendingRemoteTrack.current = null;
         setHasRemoteVideo(false);
       }
     });
 
-    client.on("user-left", () => {
+    agoraClient.on("user-left", () => {
       pendingRemoteTrack.current = null;
       setHasRemoteVideo(false);
     });
 
-    client.on("connection-state-change", (state) => {
+    agoraClient.on("connection-state-change", (state) => {
       if (state === "CONNECTED")    setStatus("live");
       if (state === "DISCONNECTED") setStatus("disconnected");
     });
 
-    client.on("network-quality", (stats) => {
+    agoraClient.on("network-quality", (stats) => {
       const q = role === "host" ? stats.uplinkNetworkQuality : stats.downlinkNetworkQuality;
       setNetworkQuality(q);
     });
@@ -181,9 +179,10 @@ const AgoraVideoRoom = ({ channelName, role, uid = 0, onLeave }: Props) => {
 
     const join = async () => {
       try {
-        await client.setClientRole(role);
+        // setClientRole must be called before join in "live" mode
+        await agoraClient.setClientRole(role);
         const token = await fetchToken(channelName, uid, role);
-        await client.join(APP_ID, channelName, token, uid === 0 ? null : uid);
+        await agoraClient.join(APP_ID, channelName, token, uid === 0 ? null : uid);
         setStatus("live");
 
         if (role === "host") {
@@ -193,7 +192,7 @@ const AgoraVideoRoom = ({ channelName, role, uid = 0, onLeave }: Props) => {
           );
           localTracksRef.current = [audioTrack, videoTrack];
           if (localVideoRef.current) videoTrack.play(localVideoRef.current);
-          await client.publish([audioTrack, videoTrack]);
+          await agoraClient.publish([audioTrack, videoTrack]);
         }
       } catch (err: unknown) {
         if (leftRef.current) return;
@@ -213,8 +212,11 @@ const AgoraVideoRoom = ({ channelName, role, uid = 0, onLeave }: Props) => {
     };
 
     join();
+
     return () => {
       document.removeEventListener("fullscreenchange", onFullscreenChange);
+      // Remove all listeners before leaving so they don't accumulate on remounts
+      agoraClient.removeAllListeners();
       leave();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -237,13 +239,10 @@ const AgoraVideoRoom = ({ channelName, role, uid = 0, onLeave }: Props) => {
   };
 
   const toggleScreenShare = async () => {
-    const client = clientRef.current;
-    if (!client) return;
-
     if (isScreenSharing) {
       if (screenTrackRef.current) {
         try {
-          await client.unpublish(screenTrackRef.current);
+          await agoraClient.unpublish(screenTrackRef.current);
           screenTrackRef.current.stop();
           screenTrackRef.current.close();
         } catch (_) { /* */ }
@@ -253,7 +252,7 @@ const AgoraVideoRoom = ({ channelName, role, uid = 0, onLeave }: Props) => {
       if (localTracksRef.current) {
         const [, camTrack] = localTracksRef.current;
         if (localVideoRef.current) camTrack.play(localVideoRef.current);
-        try { await client.publish(camTrack); } catch (_) { /* */ }
+        try { await agoraClient.publish(camTrack); } catch (_) { /* */ }
       }
       setIsScreenSharing(false);
     } else {
@@ -265,13 +264,13 @@ const AgoraVideoRoom = ({ channelName, role, uid = 0, onLeave }: Props) => {
         screenTrackRef.current = screenTrack;
 
         if (localTracksRef.current) {
-          try { await client.unpublish(localTracksRef.current[1]); } catch (_) { /* */ }
+          try { await agoraClient.unpublish(localTracksRef.current[1]); } catch (_) { /* */ }
         }
         if (localVideoRef.current) screenTrack.play(localVideoRef.current);
-        await client.publish(screenTrack);
+        await agoraClient.publish(screenTrack);
         setIsScreenSharing(true);
 
-        // Handle user stopping screen share via browser's native stop button
+        // Handle user stopping screen share via the browser's native stop button
         (screenTrack as any).on?.("track-ended", () => {
           void toggleScreenShare();
         });
@@ -303,9 +302,9 @@ const AgoraVideoRoom = ({ channelName, role, uid = 0, onLeave }: Props) => {
   }
 
   return (
-    <div ref={containerRef} className="relative h-full w-full min-h-[240px] bg-[#0a0a0a] overflow-hidden">
+    <div ref={containerRef} className="relative h-full w-full bg-[#0a0a0a] overflow-hidden flex flex-col">
       {/* Status pill */}
-      <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-bold text-white backdrop-blur-sm">
+      <div className="absolute top-2 sm:top-3 left-2 sm:left-3 z-20 flex items-center gap-1.5 rounded-full bg-black/70 px-2 sm:px-2.5 py-0.5 sm:py-1 text-[9px] sm:text-[10px] font-bold text-white backdrop-blur-sm">
         {status === "connecting"   && <><Loader2 className="h-3 w-3 animate-spin" /> Connecting…</>}
         {status === "live"         && <><span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" /> LIVE</>}
         {status === "disconnected" && <><WifiOff className="h-3 w-3 text-destructive" /> Disconnected</>}
@@ -313,94 +312,96 @@ const AgoraVideoRoom = ({ channelName, role, uid = 0, onLeave }: Props) => {
 
       {/* Network quality — top right */}
       {status === "live" && networkQuality > 0 && (
-        <div className="absolute top-3 right-3 z-20 rounded-full bg-black/70 px-2.5 py-1 backdrop-blur-sm">
+        <div className="absolute top-2 sm:top-3 right-2 sm:right-3 z-20 rounded-full bg-black/70 px-2 sm:px-2.5 py-0.5 sm:py-1 backdrop-blur-sm">
           <NetworkBars quality={networkQuality} />
         </div>
       )}
 
-      {/* Video area */}
-      {role === "audience" && (
-        <>
-          <div ref={remoteVideoRef} className="absolute inset-0 h-full w-full" />
-          {status === "connecting" && (
-            <div className="absolute inset-0 flex items-center justify-center bg-[#0a0a0a] z-10">
-              <Loader2 className="h-8 w-8 animate-spin text-white/50" />
-            </div>
-          )}
-          {status === "live" && !hasRemoteVideo && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#0a0a0a] z-10">
-              <VideoOff className="h-10 w-10 text-white/30" />
-              <p className="text-sm text-white/50">Waiting for teacher's stream…</p>
-            </div>
-          )}
-        </>
-      )}
+      {/* Video area — fills available space */}
+      <div className="flex-1 relative w-full">
+        {role === "audience" && (
+          <>
+            <div ref={remoteVideoRef} className="absolute inset-0 h-full w-full" />
+            {status === "connecting" && (
+              <div className="absolute inset-0 flex items-center justify-center bg-[#0a0a0a] z-10">
+                <Loader2 className="h-8 w-8 animate-spin text-white/50" />
+              </div>
+            )}
+            {status === "live" && !hasRemoteVideo && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#0a0a0a] z-10">
+                <VideoOff className="h-10 w-10 text-white/30" />
+                <p className="text-sm text-white/50">Waiting for teacher's stream…</p>
+              </div>
+            )}
+          </>
+        )}
 
-      {role === "host" && (
-        <>
-          <div ref={localVideoRef} className="absolute inset-0 h-full w-full" />
-          {status === "connecting" && (
-            <div className="absolute inset-0 flex items-center justify-center bg-[#0a0a0a] z-10">
-              <Loader2 className="h-8 w-8 animate-spin text-white/50" />
-            </div>
-          )}
-          {camOff && !isScreenSharing && status === "live" && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#111] z-10">
-              <VideoOff className="h-10 w-10 text-white/30" />
-              <p className="text-xs text-white/40">Camera is off</p>
-            </div>
-          )}
-          {isScreenSharing && (
-            <div className="absolute top-12 left-3 z-20 rounded-full bg-blue-600/90 px-2.5 py-0.5 text-[10px] font-bold text-white">
-              Screen sharing
-            </div>
-          )}
-        </>
-      )}
+        {role === "host" && (
+          <>
+            <div ref={localVideoRef} className="absolute inset-0 h-full w-full" />
+            {status === "connecting" && (
+              <div className="absolute inset-0 flex items-center justify-center bg-[#0a0a0a] z-10">
+                <Loader2 className="h-8 w-8 animate-spin text-white/50" />
+              </div>
+            )}
+            {camOff && !isScreenSharing && status === "live" && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#111] z-10">
+                <VideoOff className="h-10 w-10 text-white/30" />
+                <p className="text-xs text-white/40">Camera is off</p>
+              </div>
+            )}
+            {isScreenSharing && (
+              <div className="absolute top-12 left-3 z-20 rounded-full bg-blue-600/90 px-2.5 py-0.5 text-[10px] font-bold text-white">
+                Screen sharing
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
-      {/* Controls bar */}
-      <div className="absolute bottom-0 inset-x-0 z-20 flex items-center justify-center gap-3 py-3 bg-gradient-to-t from-black/80 to-transparent">
+      {/* Controls bar — at bottom */}
+      <div className="shrink-0 flex items-center justify-center gap-2 sm:gap-3 py-2 sm:py-3 px-2 sm:px-0 bg-gradient-to-t from-black/80 to-transparent z-20">
         {role === "host" && (
           <>
             <button
               onClick={toggleMic}
               title={micMuted ? "Unmute mic" : "Mute mic"}
-              className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors
+              className={`flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full transition-colors
                 ${micMuted ? "bg-destructive text-white" : "bg-white/10 text-white hover:bg-white/20"}`}
             >
-              {micMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              {micMuted ? <MicOff className="h-3 w-3 sm:h-4 sm:w-4" /> : <Mic className="h-3 w-3 sm:h-4 sm:w-4" />}
             </button>
             <button
               onClick={toggleCam}
               title={camOff ? "Turn camera on" : "Turn camera off"}
-              className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors
+              className={`flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full transition-colors
                 ${camOff ? "bg-destructive text-white" : "bg-white/10 text-white hover:bg-white/20"}`}
             >
-              {camOff ? <VideoOff className="h-4 w-4" /> : <Video className="h-4 w-4" />}
+              {camOff ? <VideoOff className="h-3 w-3 sm:h-4 sm:w-4" /> : <Video className="h-3 w-3 sm:h-4 sm:w-4" />}
             </button>
             <button
               onClick={toggleScreenShare}
               title={isScreenSharing ? "Stop screen share" : "Share screen"}
-              className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors
+              className={`flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full transition-colors
                 ${isScreenSharing ? "bg-blue-600 text-white" : "bg-white/10 text-white hover:bg-white/20"}`}
             >
-              {isScreenSharing ? <MonitorOff className="h-4 w-4" /> : <Monitor className="h-4 w-4" />}
+              {isScreenSharing ? <MonitorOff className="h-3 w-3 sm:h-4 sm:w-4" /> : <Monitor className="h-3 w-3 sm:h-4 sm:w-4" />}
             </button>
           </>
         )}
         <button
           onClick={toggleFullscreen}
           title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+          className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
         >
-          {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+          {isFullscreen ? <Minimize className="h-3 w-3 sm:h-4 sm:w-4" /> : <Maximize className="h-3 w-3 sm:h-4 sm:w-4" />}
         </button>
         <button
           onClick={leave}
           title={role === "host" ? "End stream" : "Leave class"}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive text-white hover:opacity-90 transition-opacity"
+          className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-destructive text-white hover:opacity-90 transition-opacity"
         >
-          <PhoneOff className="h-4 w-4" />
+          <PhoneOff className="h-3 w-3 sm:h-4 sm:w-4" />
         </button>
       </div>
     </div>

@@ -32,11 +32,22 @@ export type CoursePdfRow = {
   position: number;
 };
 
+export type NoteRow = {
+  id: string;
+  course_id: string;
+  title: string;
+  file_url: string;
+  size_bytes: number | null;
+  position: number;
+};
+
 export const useCourseDetail = (slug: string | undefined) => {
   const [course, setCourse] = useState<CourseRow | null>(null);
   const [chapters, setChapters] = useState<ChapterRow[]>([]);
   const [pdfs, setPdfs] = useState<CoursePdfRow[]>([]);
+  const [notes, setNotes] = useState<NoteRow[]>([]);
   const [tests, setTests] = useState<any[]>([]);
+  const [reviewCount, setReviewCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -54,7 +65,9 @@ export const useCourseDetail = (slug: string | undefined) => {
         setCourse(null);
         setChapters([]);
         setPdfs([]);
+        setNotes([]);
         setTests([]);
+        setReviewCount(0);
         setLoading(false);
         return;
       }
@@ -88,6 +101,23 @@ export const useCourseDetail = (slug: string | undefined) => {
         .order("position");
       setPdfs((pdfData ?? []) as CoursePdfRow[]);
 
+      const { data: resourceData } = await supabase
+        .from("course_resources")
+        .select("id, course_id, title, file_url, file_size_bytes, position")
+        .eq("course_id", courseData.id)
+        .in("resource_type", ["pdf", "notes"])
+        .eq("is_published", true)
+        .order("position");
+      const resourceNotes = (resourceData ?? []).map((r: any) => ({
+        id: r.id,
+        course_id: r.course_id,
+        title: r.title,
+        file_url: r.file_url,
+        size_bytes: r.file_size_bytes,
+        position: r.position,
+      }));
+      setNotes(resourceNotes as NoteRow[]);
+
       const { data: testData } = await supabase
         .from("tests")
         .select("id, slug, title, test_type, duration_minutes, total_questions, total_marks, is_published")
@@ -95,10 +125,16 @@ export const useCourseDetail = (slug: string | undefined) => {
         .eq("is_published", true);
       setTests(testData ?? []);
 
+      const { count: rCount } = await supabase
+        .from("course_reviews")
+        .select("id", { count: "exact", head: true })
+        .eq("course_id", courseData.id);
+      setReviewCount(rCount ?? 0);
+
       setLoading(false);
     };
     load();
   }, [slug]);
 
-  return { course, chapters, pdfs, tests, loading };
+  return { course, chapters, pdfs, notes, tests, reviewCount, loading };
 };

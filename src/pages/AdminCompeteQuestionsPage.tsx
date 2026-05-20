@@ -3,10 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Plus, Trash2, Edit3, Loader2, Swords, Search, CheckSquare, Square,
-  Filter, EyeOff, Eye, X,
+  Filter, EyeOff, Eye, X, Upload,
 } from "lucide-react";
 import HtmlField from "@/components/HtmlField";
 import LatexRenderer from "@/components/LatexRenderer";
+import BulkQuestionUploadDialog from "@/components/BulkQuestionUploadDialog";
 import { useExams } from "@/hooks/useExams";
 import TablePagination from "@/components/TablePagination";
 import { SUBJECTS_COMPETE } from "@/lib/constants";
@@ -223,6 +224,7 @@ const AdminCompeteQuestionsPage = () => {
   const [saving, setSaving] = useState(false);
   const inFlight = useRef(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -362,12 +364,20 @@ const AdminCompeteQuestionsPage = () => {
             {total} questions{selected.size > 0 && ` · ${selected.size} selected`}
           </p>
         </div>
-        <button
-          onClick={() => setEditing({ ...BLANK_EDITING })}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:opacity-90 inline-flex items-center gap-1"
-        >
-          <Plus className="h-4 w-4" /> New Question
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowBulkUpload(true)}
+            className="rounded-lg bg-secondary/20 hover:bg-secondary/30 px-4 py-2 text-sm font-bold text-secondary inline-flex items-center gap-1 transition-colors"
+          >
+            <Upload className="h-4 w-4" /> Bulk Upload
+          </button>
+          <button
+            onClick={() => setEditing({ ...BLANK_EDITING })}
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:opacity-90 inline-flex items-center gap-1"
+          >
+            <Plus className="h-4 w-4" /> New Question
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -486,6 +496,16 @@ const AdminCompeteQuestionsPage = () => {
           exams={EXAMS}
         />
       )}
+
+      <BulkQuestionUploadDialog
+        open={showBulkUpload}
+        mode="compete"
+        onClose={() => setShowBulkUpload(false)}
+        onUploaded={() => {
+          setShowBulkUpload(false);
+          load();
+        }}
+      />
     </div>
   );
 };

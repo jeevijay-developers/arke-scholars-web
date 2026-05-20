@@ -10,6 +10,7 @@
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -91,6 +92,25 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    // Verify the caller is an authenticated Supabase user
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const supabaseUrl  = Deno.env.get("SUPABASE_URL");
+      const supabaseAnon = Deno.env.get("SUPABASE_ANON_KEY");
+      if (supabaseUrl && supabaseAnon) {
+        const sbClient = createClient(supabaseUrl, supabaseAnon, {
+          global: { headers: { Authorization: authHeader } },
+        });
+        const { error: authError } = await sbClient.auth.getUser();
+        if (authError) {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+    }
+
     const appId = Deno.env.get("AGORA_APP_ID");
     const cert  = Deno.env.get("AGORA_APP_CERTIFICATE");
 

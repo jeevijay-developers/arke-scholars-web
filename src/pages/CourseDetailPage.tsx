@@ -53,7 +53,7 @@ const CourseDetailPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { course, chapters, pdfs, tests, loading } = useCourseDetail(slug);
+  const { course, chapters, pdfs, notes, tests, reviewCount, loading } = useCourseDetail(slug);
   const [activeTab, setActiveTab] = useState(0);
   const [expandedChapter, setExpandedChapter] = useState(0);
   const [enrollment, setEnrollment] = useState<EnrollmentInfo | null>(null);
@@ -126,50 +126,38 @@ const CourseDetailPage = () => {
     ? course.educator_name.split(" ").filter(Boolean).slice(0, 2).map((n) => n[0]?.toUpperCase()).join("")
     : "ED";
 
-  const tabs = ["About", "Lectures", "Tests", "PDF Notes", "Time"];
+  const allNotes = [...pdfs, ...notes];
+  const tabs = ["About", "Lectures", "Tests", "Notes"];
 
   const stats = enrolled
     ? [
         { value: String(totalLessons), label: "Lectures" },
         { value: String(tests.length), label: "Tests" },
-        { value: String(pdfs.length), label: "PDFs" },
+        { value: String(allNotes.length), label: "Notes" },
         { value: `${totalHours}h`, label: "Total Time" },
         { value: `${progressPercent}%`, label: "Progress" },
       ]
     : [
         { value: String(totalLessons), label: "Lectures" },
         { value: String(tests.length), label: "Tests" },
-        { value: String(pdfs.length), label: "PDFs" },
+        { value: String(allNotes.length), label: "Notes" },
         { value: `${totalHours}h`, label: "Total Time" },
-        { value: `${Number(course.rating || 4.8).toFixed(1)}★`, label: "Rating" },
+        { value: `${course.rating ? Number(course.rating).toFixed(1) : "N/A"}★`, label: "Rating" },
       ];
 
   const courseAny = course as unknown as { what_youll_learn?: string[] | null; requirements?: string[] | null };
   const whatYoullLearn = (courseAny.what_youll_learn && courseAny.what_youll_learn.length > 0)
     ? courseAny.what_youll_learn
-    : [
-        "Core fundamentals and theory",
-        "Problem-solving techniques",
-        "Formula derivations explained",
-        "JEE/NEET exam strategies",
-        "Previous year paper analysis",
-        "Topic-wise revision shortcuts",
-        "Conceptual clarity exercises",
-        "Formula cheats and quick notes",
-      ];
+    : [];
 
   const requirements = (courseAny.requirements && courseAny.requirements.length > 0)
     ? courseAny.requirements
-    : [
-        "Class 11/12 mathematics background",
-        "Basic algebra and calculus",
-        "Curiosity and dedication",
-      ];
+    : [];
 
   const includes = [
     `${totalLessons} video lecture${totalLessons === 1 ? "" : "s"}`,
     `${tests.length} practice test${tests.length === 1 ? "" : "s"}`,
-    `${pdfs.length} PDF note${pdfs.length === 1 ? "" : "s"}`,
+    `${allNotes.length} note${allNotes.length === 1 ? "" : "s"}`,
     "Lifetime access",
   ];
 
@@ -253,12 +241,12 @@ const CourseDetailPage = () => {
               <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Star className="h-3.5 w-3.5 fill-primary text-primary" />
-                  <strong className="text-foreground">{Number(course.rating || 4.8).toFixed(1)}</strong>
-                  <span>({(course.total_enrolled || 2100).toLocaleString()} reviews)</span>
+                  <strong className="text-foreground">{course.rating ? Number(course.rating).toFixed(1) : "N/A"}</strong>
+                  <span>({reviewCount.toLocaleString()} reviews)</span>
                 </span>
                 <span className="flex items-center gap-1">
                   <Users className="h-3.5 w-3.5 text-primary" />
-                  {(course.total_enrolled || 12400).toLocaleString()} enrolled
+                  {(course.total_enrolled ?? 0).toLocaleString()} enrolled
                 </span>
                 <span className="flex items-center gap-1">
                   <Clock className="h-3.5 w-3.5 text-primary" />
@@ -337,26 +325,34 @@ const CourseDetailPage = () => {
 
               <div>
                 <h3 className="text-[11px] font-bold tracking-wider uppercase text-muted-foreground mb-3">What you'll learn</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
-                  {whatYoullLearn.map((item) => (
-                    <div key={item} className="flex items-start gap-2 text-sm text-foreground">
-                      <span className="text-muted-foreground mt-0.5">—</span>
-                      <span>{item}</span>
-                    </div>
-                  ))}
-                </div>
+                {whatYoullLearn.length === 0 ? (
+                  <p className="text-sm text-muted-foreground italic">No details added yet.</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+                    {whatYoullLearn.map((item) => (
+                      <div key={item} className="flex items-start gap-2 text-sm text-foreground">
+                        <span className="text-muted-foreground mt-0.5">—</span>
+                        <span>{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div>
                 <h3 className="text-[11px] font-bold tracking-wider uppercase text-muted-foreground mb-3">Requirements</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
-                  {requirements.map((item) => (
-                    <div key={item} className="flex items-start gap-2 text-sm text-foreground">
-                      <span className="text-muted-foreground mt-0.5">—</span>
-                      <span>{item}</span>
-                    </div>
-                  ))}
-                </div>
+                {requirements.length === 0 ? (
+                  <p className="text-sm text-muted-foreground italic">No requirements listed.</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+                    {requirements.map((item) => (
+                      <div key={item} className="flex items-start gap-2 text-sm text-foreground">
+                        <span className="text-muted-foreground mt-0.5">—</span>
+                        <span>{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <CourseReviews courseId={course.id} enrolled={enrolled} />
@@ -483,30 +479,30 @@ const CourseDetailPage = () => {
             </div>
           )}
 
-          {/* PDF Notes */}
+          {/* Notes */}
           {activeTab === 3 && (
             <div className="mt-6">
-              {pdfs.length === 0 ? (
-                <EmptyTab icon={FileText} title="PDF Notes" description="Downloadable notes and formula sheets will appear here once your educator uploads them." />
+              {allNotes.length === 0 ? (
+                <EmptyTab icon={FileText} title="Notes" description="Downloadable notes and formula sheets will appear here once your educator uploads them." />
               ) : (
                 <div className="space-y-2">
-                  {pdfs.map((pdf) => {
+                  {allNotes.map((note) => {
                     const canDownload = enrolled;
                     return (
                       <div
-                        key={pdf.id}
+                        key={note.id}
                         className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4"
                       >
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
                           <FileText className="h-5 w-5 text-primary" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-bold text-foreground truncate">{pdf.title}</p>
-                          <p className="text-[11px] text-muted-foreground">PDF{pdf.size_bytes ? ` · ${formatBytes(pdf.size_bytes)}` : ""}</p>
+                          <p className="text-sm font-bold text-foreground truncate">{note.title}</p>
+                          <p className="text-[11px] text-muted-foreground">{note.size_bytes ? formatBytes(note.size_bytes) : "Note"}</p>
                         </div>
                         {canDownload ? (
                           <a
-                            href={pdf.file_url}
+                            href={note.file_url}
                             download
                             target="_blank"
                             rel="noopener noreferrer"
