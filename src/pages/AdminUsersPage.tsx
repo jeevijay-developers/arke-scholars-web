@@ -82,13 +82,7 @@ const UserListRow = ({
       </div>
       <div className="p-3 flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-accent/20 text-[10px] font-bold text-primary shrink-0 overflow-hidden">
-            {u.avatar_url ? (
-              <img src={u.avatar_url} alt="" loading="lazy" className="h-full w-full object-cover" />
-            ) : (
-              (u.full_name ?? "U").split(" ").map((n) => n[0]).join("").slice(0, 2)
-            )}
-          </div>
+          <UserAvatar name={u.full_name} avatarUrl={u.avatar_url} size="sm" />
           <div className="min-w-0">
             <p className="font-medium text-foreground truncate">{u.full_name || "Unnamed user"}</p>
             {u.is_suspended && <span className="text-[9px] font-bold text-destructive uppercase">Suspended</span>}
@@ -328,17 +322,7 @@ const AdminUsersPage = () => {
             </div>
             <div className="p-4 space-y-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-accent/20 text-lg font-bold text-primary overflow-hidden">
-                  {drawerUser.avatar_url ? (
-                    <img src={drawerUser.avatar_url} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    (drawerUser.full_name ?? "U")
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")
-                      .slice(0, 2)
-                  )}
-                </div>
+                <UserAvatar name={drawerUser.full_name} avatarUrl={drawerUser.avatar_url} size="lg" />
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-foreground truncate">{drawerUser.full_name || "Unnamed user"}</p>
                   <p className="text-xs text-muted-foreground truncate">{drawerUser.phone || "No phone"}</p>
@@ -473,6 +457,37 @@ const AdminUsersPage = () => {
             </div>
           </div>
         </div>
+      )}
+    </div>
+  );
+};
+
+const UserAvatar = ({
+  name,
+  avatarUrl,
+  size,
+}: {
+  name: string | null | undefined;
+  avatarUrl: string | null | undefined;
+  size: "sm" | "lg";
+}) => {
+  const [imgFailed, setImgFailed] = useState(false);
+  const initials = (name ?? "U").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+  const dim = size === "lg" ? "h-12 w-12 text-lg" : "h-7 w-7 text-[10px]";
+  const showImg = avatarUrl && !imgFailed;
+
+  return (
+    <div className={`flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-accent/20 font-bold text-primary overflow-hidden ${dim}`}>
+      {showImg ? (
+        <img
+          src={avatarUrl}
+          alt=""
+          loading="lazy"
+          className="h-full w-full object-cover"
+          onError={() => setImgFailed(true)}
+        />
+      ) : (
+        initials
       )}
     </div>
   );

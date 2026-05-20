@@ -25,8 +25,8 @@ const SignupPage = () => {
       setGoogleLoading(false);
       toast.error("Could not sign up with Google. Please try again.");
     }
-    // Browser will redirect to Google on success
   };
+
   const [form, setForm] = useState({
     full_name: "",
     countryCode: "+91",
@@ -52,13 +52,26 @@ const SignupPage = () => {
     }
 
     setSubmitting(true);
-    const redirectUrl = `${window.location.origin}/auth/callback`;
 
-    const { error } = await supabase.auth.signUp({
+    // Store profile data so the OTP verify step can set it after verifying
+    sessionStorage.setItem(
+      "pending_signup",
+      JSON.stringify({
+        full_name: form.full_name,
+        phone: `${form.countryCode}${form.phone}`,
+        password: form.password,
+        target_exam: form.target_exam,
+        class_level: form.class_level,
+        city: form.city,
+        state: form.state,
+        country: form.country,
+      }),
+    );
+
+    const { error } = await supabase.auth.signInWithOtp({
       email: form.email,
-      password: form.password,
       options: {
-        emailRedirectTo: redirectUrl,
+        shouldCreateUser: true,
         data: {
           full_name: form.full_name,
           phone: `${form.countryCode}${form.phone}`,
@@ -82,7 +95,7 @@ const SignupPage = () => {
       return;
     }
 
-    toast.success("Verification email sent! Check your inbox.");
+    toast.success("OTP sent to your email!");
     navigate(`/verify-email?email=${encodeURIComponent(form.email)}`);
   };
 
@@ -203,7 +216,7 @@ const SignupPage = () => {
               labelClassName="text-sm font-medium text-foreground"
             />
             <button onClick={handleSignup} disabled={submitting} className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent py-3 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-60 transition-opacity">
-              {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Creating Account...</> : "Create Account"}
+              {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Sending OTP...</> : "Create Account"}
             </button>
           </div>
 

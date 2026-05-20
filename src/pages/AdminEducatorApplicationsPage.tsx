@@ -181,7 +181,7 @@ const AdminEducatorApplicationsPage = () => {
     const rows = filtered.map((a) => [
       format(new Date(a.created_at), "yyyy-MM-dd HH:mm"),
       a.candidate_name, a.email, a.contact_no, a.alt_contact_no ?? "",
-      a.date_of_birth, a.subject, (a.class_level ?? []).join("; "),
+      a.date_of_birth, a.subject, Array.isArray(a.class_level) ? a.class_level.join("; ") : (a.class_level ?? ""),
       a.highest_qualification, a.other_qualification ?? "",
       a.current_organization ?? "", a.previous_organization ?? "",
       a.total_experience, a.current_ctc ?? "", a.expected_ctc,
@@ -331,7 +331,7 @@ const AdminEducatorApplicationsPage = () => {
                     <div>
                       <p className="text-muted-foreground">Subject</p>
                       <p className="font-semibold text-foreground flex items-center gap-1"><GraduationCap className="h-3 w-3 text-primary" />{a.subject}</p>
-                      {a.class_level && a.class_level.length > 0 && <p className="text-[10px] text-muted-foreground mt-0.5">{a.class_level.join(", ")}</p>}
+                      {a.class_level && a.class_level.length > 0 && <p className="text-[10px] text-muted-foreground mt-0.5">{Array.isArray(a.class_level) ? a.class_level.join(", ") : a.class_level}</p>}
                     </div>
                     <div>
                       <p className="text-muted-foreground">Experience</p>
@@ -429,7 +429,7 @@ const AdminEducatorApplicationsPage = () => {
                 <Field icon={Phone} label="Alt. Contact" value={selected.alt_contact_no || "—"} />
                 <Field icon={CalIcon} label="Date of Birth" value={format(new Date(selected.date_of_birth), "dd MMM yyyy")} />
                 <Field icon={GraduationCap} label="Subject" value={selected.subject} />
-                <Field icon={GraduationCap} label="Class Level" value={selected.class_level && selected.class_level.length > 0 ? selected.class_level.join(", ") : "—"} />
+                <Field icon={GraduationCap} label="Class Level" value={selected.class_level && selected.class_level.length > 0 ? (Array.isArray(selected.class_level) ? selected.class_level.join(", ") : String(selected.class_level)) : "—"} />
                 <Field icon={GraduationCap} label="Highest Qualification" value={selected.highest_qualification} />
                 <Field icon={GraduationCap} label="Other Qualification" value={selected.other_qualification || "—"} />
                 <Field icon={Building2} label="Current Organization" value={selected.current_organization || "—"} />
