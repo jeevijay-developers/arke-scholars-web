@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Send, Users, Loader2, Play, Square, Video } from "lucide-react";
+import { ArrowLeft, Send, Users, Loader2, Play, Square, Video, Circle } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -52,6 +52,7 @@ const TeacherLiveClassRoomPage = () => {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   const teacherDisplay = useMemo(
@@ -196,6 +197,21 @@ const TeacherLiveClassRoomPage = () => {
     }
   };
 
+  const toggleRecording = async () => {
+    // TODO: Wire up Agora Cloud Recording once credentials are available.
+    // Requires: AGORA_CUSTOMER_ID, AGORA_CUSTOMER_SECRET (from console.agora.io → RESTful API)
+    // and a cloud storage bucket (S3/GCS/Supabase Storage S3-compatible).
+    // Edge function: supabase/functions/agora-recording/index.ts
+    // On stop: save returned recording URL to live_classes.recording_url
+    if (isRecording) {
+      setIsRecording(false);
+      toast.info("Recording stopped (cloud recording not yet configured)");
+    } else {
+      setIsRecording(true);
+      toast.info("Recording started (cloud recording not yet configured)");
+    }
+  };
+
   const startClass = async () => {
     if (!cls) return;
     setBusy(true);
@@ -245,6 +261,11 @@ const TeacherLiveClassRoomPage = () => {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {isLive && <LiveBadge />}
+          {isLive && isRecording && (
+            <span className="flex items-center gap-1 rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white">
+              <Circle className="h-2 w-2 fill-white" /> REC
+            </span>
+          )}
           <button
             onClick={() => setShowDetails((v) => !v)}
             className="flex items-center gap-1 text-xs text-primary-foreground/80 hover:text-primary-foreground"
@@ -261,13 +282,24 @@ const TeacherLiveClassRoomPage = () => {
             </button>
           )}
           {isLive && (
-            <button
-              onClick={endClass}
-              disabled={busy}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-destructive px-3 py-1.5 text-xs font-bold text-destructive-foreground hover:opacity-90 disabled:opacity-60"
-            >
-              <Square className="h-3.5 w-3.5" /> End class
-            </button>
+            <>
+              <button
+                onClick={toggleRecording}
+                title={isRecording ? "Stop recording" : "Start recording"}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold hover:opacity-90 disabled:opacity-60 transition-colors
+                  ${isRecording ? "bg-red-600 text-white" : "bg-white/10 text-primary-foreground"}`}
+              >
+                <Circle className={`h-3.5 w-3.5 ${isRecording ? "fill-white animate-pulse" : ""}`} />
+                {isRecording ? "Stop REC" : "Record"}
+              </button>
+              <button
+                onClick={endClass}
+                disabled={busy}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-destructive px-3 py-1.5 text-xs font-bold text-destructive-foreground hover:opacity-90 disabled:opacity-60"
+              >
+                <Square className="h-3.5 w-3.5" /> End class
+              </button>
+            </>
           )}
           {isCompleted && (
             <span className="rounded-lg bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">Completed</span>
