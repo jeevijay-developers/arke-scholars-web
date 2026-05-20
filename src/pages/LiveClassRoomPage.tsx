@@ -19,6 +19,7 @@ type ClassRow = {
   meeting_url: string | null;
   recording_url: string | null;
   starts_at: string;
+  course_id: string | null;
 };
 
 type Message = {
@@ -39,6 +40,7 @@ const LiveClassRoomPage = () => {
   const [text, setText] = useState("");
   const [participants, setParticipants] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [hasAccess, setHasAccess] = useState(true);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -52,6 +54,21 @@ const LiveClassRoomPage = () => {
         return;
       }
       const id = row.id;
+
+      // Check enrollment if class is course-linked
+      if (row.course_id && user) {
+        const { data: enrollment } = await supabase
+          .from("enrollments")
+          .select("is_active")
+          .eq("user_id", user.id)
+          .eq("course_id", row.course_id)
+          .maybeSingle();
+        if (!enrollment?.is_active) {
+          setHasAccess(false);
+          setLoading(false);
+          return;
+        }
+      }
 
       const { data: msgs } = await supabase
         .from("live_class_messages")
@@ -185,6 +202,17 @@ const LiveClassRoomPage = () => {
     return (
       <div className="p-10 text-center">
         <p className="text-sm text-muted-foreground">Class not found.</p>
+        <Link to="/my-live-classes" className="mt-4 inline-block text-sm text-primary hover:underline">
+          Back to live classes
+        </Link>
+      </div>
+    );
+  }
+
+  if (!hasAccess) {
+    return (
+      <div className="p-10 text-center">
+        <p className="text-sm text-muted-foreground">You need to enroll in this course to access this live class.</p>
         <Link to="/my-live-classes" className="mt-4 inline-block text-sm text-primary hover:underline">
           Back to live classes
         </Link>

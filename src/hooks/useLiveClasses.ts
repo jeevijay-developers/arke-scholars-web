@@ -16,6 +16,7 @@ export type LiveClassRow = {
   recording_url: string | null;
   description: string | null;
   created_by: string | null;
+  course_id: string | null;
 };
 
 export const useLiveClasses = (filter: "all" | "live" | "upcoming" | "past" = "all") => {

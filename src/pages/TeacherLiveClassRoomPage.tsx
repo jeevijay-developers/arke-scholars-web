@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Send, Users, Loader2, Play, Square, Video } from "lucide-react";
+import { ArrowLeft, Send, Users, Loader2, Play, Square, Video, Circle } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -52,6 +52,8 @@ const TeacherLiveClassRoomPage = () => {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [recordingActive, setRecordingActive] = useState(false);
+  const [recordingIds, setRecordingIds] = useState<{ resourceId: string; sid: string } | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   const teacherDisplay = useMemo(
@@ -218,6 +220,95 @@ const TeacherLiveClassRoomPage = () => {
     navigate("/teacher/dashboard");
   };
 
+  const startRecording = async () => {
+    if (!cls) return;
+    setBusy(true);
+    try {
+      const isDev = import.meta.env.DEV;
+      const url = isDev
+        ? "/api/agora-cloud-recording"
+        : `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agora-cloud-recording`;
+
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (!isDev) {
+        headers["apikey"] = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+        headers["Authorization"] = `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string}`;
+      }
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          action: "start",
+          channelName: cls.id,
+          classId: cls.id,
+          uid: user?.id || "teacher",
+        }),
+      });
+
+      const data = await res.json() as { success?: boolean; resourceId?: string; sid?: string; error?: string };
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to start recording");
+      }
+
+      setRecordingActive(true);
+      setRecordingIds({
+        resourceId: data.resourceId || "",
+        sid: data.sid || "",
+      });
+      toast.success("Recording started");
+    } catch (e) {
+      console.error("[Recording] Start error:", e);
+      toast.error(e instanceof Error ? e.message : "Failed to start recording");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const stopRecording = async () => {
+    if (!cls || !recordingIds) return;
+    setBusy(true);
+    try {
+      const isDev = import.meta.env.DEV;
+      const url = isDev
+        ? "/api/agora-cloud-recording"
+        : `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agora-cloud-recording`;
+
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (!isDev) {
+        headers["apikey"] = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+        headers["Authorization"] = `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string}`;
+      }
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          action: "stop",
+          channelName: cls.id,
+          classId: cls.id,
+          uid: user?.id || "teacher",
+          resourceId: recordingIds.resourceId,
+          sid: recordingIds.sid,
+        }),
+      });
+
+      const data = await res.json() as { success?: boolean; error?: string };
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to stop recording");
+      }
+
+      setRecordingActive(false);
+      setRecordingIds(null);
+      toast.success("Recording saved and will appear in playback");
+    } catch (e) {
+      console.error("[Recording] Stop error:", e);
+      toast.error(e instanceof Error ? e.message : "Failed to stop recording");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
@@ -245,6 +336,12 @@ const TeacherLiveClassRoomPage = () => {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {isLive && <LiveBadge />}
+          {recordingActive && (
+            <div className="flex items-center gap-1.5 rounded-full bg-red-500 px-2 py-0.5">
+              <Circle className="h-2 w-2 fill-current text-white animate-pulse" />
+              <span className="text-xs font-bold text-white">REC</span>
+            </div>
+          )}
           <button
             onClick={() => setShowDetails((v) => !v)}
             className="flex items-center gap-1 text-xs text-primary-foreground/80 hover:text-primary-foreground"
@@ -261,13 +358,32 @@ const TeacherLiveClassRoomPage = () => {
             </button>
           )}
           {isLive && (
-            <button
-              onClick={endClass}
-              disabled={busy}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-destructive px-3 py-1.5 text-xs font-bold text-destructive-foreground hover:opacity-90 disabled:opacity-60"
-            >
-              <Square className="h-3.5 w-3.5" /> End class
-            </button>
+            <>
+              {!recordingActive ? (
+                <button
+                  onClick={startRecording}
+                  disabled={busy}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-bold text-white hover:opacity-90 disabled:opacity-60"
+                >
+                  <Circle className="h-3 w-3" /> Record
+                </button>
+              ) : (
+                <button
+                  onClick={stopRecording}
+                  disabled={busy}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:opacity-90 disabled:opacity-60"
+                >
+                  <Square className="h-3.5 w-3.5" /> Stop rec
+                </button>
+              )}
+              <button
+                onClick={endClass}
+                disabled={busy}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-destructive px-3 py-1.5 text-xs font-bold text-destructive-foreground hover:opacity-90 disabled:opacity-60"
+              >
+                <Square className="h-3.5 w-3.5" /> End class
+              </button>
+            </>
           )}
           {isCompleted && (
             <span className="rounded-lg bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">Completed</span>

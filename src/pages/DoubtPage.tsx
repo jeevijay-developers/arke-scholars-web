@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Brain, Clock, Loader2, X, Sparkles, MessageCircle, ChevronDown, AlertTriangle, GraduationCap, Flag } from "lucide-react";
+import { Plus, Brain, Clock, Loader2, X, Sparkles, MessageCircle, ChevronDown, AlertTriangle, GraduationCap, Flag, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -86,13 +86,23 @@ const DoubtPage = () => {
       const res = await supabase.functions.invoke("ai-doubt-solver", {
         body: { doubtId: doubt.id, subject, question: question.trim() },
       });
-      if (res.data?.busy) {
+
+      if (res.error) {
+        console.error("Edge function error:", res.error);
+        toast.error("Could not get an AI answer. A teacher will respond soon.", { duration: 7000 });
+      } else if (res.data?.busy) {
+        console.warn("AI busy response:", res.data);
         toast.warning("AI is currently busy. Please wait a moment and try again.", { duration: 7000 });
-      } else if (res.error) {
+      } else if (res.data?.success || res.data?.answer) {
+        console.log("AI answer generated successfully");
+        toast.success("AI answer generated! Check your doubt.", { duration: 5000 });
+      } else {
+        console.warn("Unexpected response from AI solver:", res.data);
         toast.error("Could not get an AI answer. A teacher will respond soon.", { duration: 7000 });
       }
     } catch (e) {
-      console.error(e);
+      console.error("Failed to invoke AI solver:", e);
+      toast.error("Could not get an AI answer. A teacher will respond soon.", { duration: 7000 });
     }
   };
 
@@ -236,8 +246,23 @@ const DoubtPage = () => {
   );
 };
 
-const DoubtCard = ({ doubt, expanded, onToggle }: { doubt: DoubtRow; expanded: boolean; onToggle: () => void }) => {
+const DoubtCard = ({ doubt, expanded, onToggle, onDelete }: { doubt: DoubtRow; expanded: boolean; onToggle: () => void; onDelete?: (doubtId: string) => void }) => {
   const [teacherAnswers, setTeacherAnswers] = useState<{ id: string; answer_text: string; responder_role: string; responder_id: string; responder_name?: string; created_at: string }[]>([]);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    const { error } = await supabase.from("doubts").delete().eq("id", doubt.id);
+    if (error) {
+      toast.error("Could not delete doubt");
+      setDeleting(false);
+      return;
+    }
+    toast.success("Doubt deleted");
+    setShowDeleteConfirm(false);
+    onDelete?.(doubt.id);
+  };
 
   const loadAnswers = async () => {
     const { data } = await supabase
@@ -259,26 +284,36 @@ const DoubtCard = ({ doubt, expanded, onToggle }: { doubt: DoubtRow; expanded: b
   };
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4 hover:border-primary/30 transition-colors">
-      <button
-        onClick={() => {
-          onToggle();
-          if (!expanded) loadAnswers();
-        }}
-        className="flex items-start gap-3 w-full text-left"
-      >
-        <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${statusColor[doubt.status] ?? "bg-muted-foreground"}`} />
-        <div className="flex-1 min-w-0">
-          <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-bold ${subjectColors[doubt.subject] ?? "bg-muted text-foreground"}`}>{doubt.subject}</span>
-          <p className="text-sm text-foreground mt-1 line-clamp-2">{doubt.question_text}</p>
-          <div className="flex items-center gap-2 mt-2 text-[10px] text-muted-foreground">
-            <Clock className="h-3 w-3" />
-            <span>{new Date(doubt.created_at).toLocaleString()}</span>
-            <span className="ml-auto capitalize">{doubt.status.replace("_", " ")}</span>
-          </div>
+    <>
+      <div className="rounded-xl border border-border bg-card p-4 hover:border-primary/30 transition-colors">
+        <div className="flex items-start gap-3 mb-3">
+          <button
+            onClick={() => {
+              onToggle();
+              if (!expanded) loadAnswers();
+            }}
+            className="flex items-start gap-3 w-full text-left"
+          >
+            <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${statusColor[doubt.status] ?? "bg-muted-foreground"}`} />
+            <div className="flex-1 min-w-0">
+              <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-bold ${subjectColors[doubt.subject] ?? "bg-muted text-foreground"}`}>{doubt.subject}</span>
+              <p className="text-sm text-foreground mt-1 line-clamp-2">{doubt.question_text}</p>
+              <div className="flex items-center gap-2 mt-2 text-[10px] text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                <span>{new Date(doubt.created_at).toLocaleString()}</span>
+                <span className="ml-auto capitalize">{doubt.status.replace("_", " ")}</span>
+              </div>
+            </div>
+            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
+          </button>
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="h-6 w-6 rounded hover:bg-destructive/10 flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors shrink-0"
+            aria-label="Delete doubt"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
         </div>
-        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
-      </button>
 
       {expanded && (
         <div className="mt-3 space-y-3 pt-3 border-t border-border">
@@ -336,7 +371,41 @@ const DoubtCard = ({ doubt, expanded, onToggle }: { doubt: DoubtRow; expanded: b
           )}
         </div>
       )}
-    </div>
+      </div>
+
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowDeleteConfirm(false)} />
+          <div className="relative bg-card border border-border rounded-2xl shadow-xl max-w-sm w-full p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center">
+                <Trash2 className="h-5 w-5 text-destructive" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-foreground">Delete doubt?</h3>
+                <p className="text-sm text-muted-foreground mt-1">This action cannot be undone. All answers will also be deleted.</p>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 rounded-lg border border-border text-foreground hover:bg-muted/50 transition-colors text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="px-4 py-2 rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50 transition-colors text-sm font-medium flex items-center gap-2"
+              >
+                {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                {deleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 

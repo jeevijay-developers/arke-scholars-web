@@ -33,8 +33,9 @@ serve(async (req) => {
 
     const GOOGLE_AI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
     if (!GOOGLE_AI_API_KEY) {
-      return new Response(JSON.stringify({ error: "AI not configured" }), {
-        status: 500,
+      console.error("[AI] GOOGLE_AI_API_KEY is not set in Supabase secrets");
+      return new Response(JSON.stringify({ busy: true, error: "AI service not configured. Please contact support." }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -74,37 +75,66 @@ serve(async (req) => {
       generationConfig: { maxOutputTokens: 1024, temperature: 0.4 },
     });
 
-    // Try models in order — fall back if one is rate-limited
-    const models = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-flash-8b"];
+    // Try models in order — optimized for free tier
+    // gemini-1.5-flash: cheapest, most available on free tier
+    // gemini-1.5-pro: fallback if flash is rate-limited
+    const models = ["gemini-1.5-flash", "gemini-1.5-pro"];
     let aiJson: any = null;
+    let lastError = "";
 
-    for (const model of models) {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GOOGLE_AI_API_KEY}`;
-      const aiResp = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: requestBody,
-      });
+    for (let attempt = 0; attempt < 2; attempt++) {
+      for (const model of models) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GOOGLE_AI_API_KEY}`;
+          const aiResp = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: requestBody,
+          });
 
-      if (aiResp.status === 429) {
-        console.warn(`[AI] ${model} rate-limited, trying next model...`);
-        // Wait 1s before trying next model
-        await new Promise((r) => setTimeout(r, 1000));
-        continue;
+          if (aiResp.status === 429) {
+            const waitTime = attempt === 0 ? 2000 : 5000;
+            console.warn(`[AI] ${model} rate-limited (attempt ${attempt + 1}), waiting ${waitTime}ms...`);
+            lastError = `${model} rate-limited`;
+            await new Promise((r) => setTimeout(r, waitTime));
+            continue;
+          }
+
+          if (!aiResp.ok) {
+            const t = await aiResp.text();
+            console.error(`[AI] ${model} error ${aiResp.status}:`, t);
+            lastError = `${model} error ${aiResp.status}`;
+            continue;
+          }
+
+          aiJson = await aiResp.json();
+
+          // Check if response contains error from API
+          if (aiJson.error) {
+            console.error(`[AI] ${model} API error:`, aiJson.error);
+            lastError = `${model} API error`;
+            continue;
+          }
+
+          if (aiJson.candidates?.[0]?.content?.parts?.[0]?.text) {
+            console.log(`[AI] Success with ${model}`);
+            break;
+          }
+        } catch (err) {
+          console.error(`[AI] ${model} fetch error:`, err);
+          lastError = `${model} fetch error`;
+          continue;
+        }
       }
 
-      if (!aiResp.ok) {
-        const t = await aiResp.text();
-        console.error(`[AI] ${model} error ${aiResp.status}:`, t);
-        continue;
+      if (aiJson?.candidates?.[0]?.content?.parts?.[0]?.text) {
+        break;
       }
-
-      aiJson = await aiResp.json();
-      break;
     }
 
-    if (!aiJson) {
+    if (!aiJson || !aiJson.candidates?.[0]?.content?.parts?.[0]?.text) {
       // Return 200 so the JS client puts the body in res.data (not res.error)
+      console.error(`[AI] All models failed. Last error: ${lastError}`);
       return new Response(JSON.stringify({ busy: true, error: "AI is currently busy. Please try again in a minute." }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -112,18 +142,27 @@ serve(async (req) => {
     }
 
     const answer: string =
-      aiJson.candidates?.[0]?.content?.parts?.[0]?.text ?? "Sorry, I could not generate an answer.";
+      aiJson.candidates?.[0]?.content?.parts?.[0]?.text ?? aiJson.text ?? "Sorry, I could not generate an answer.";
 
     // Update doubt row with the AI answer (service role to bypass RLS for the system update)
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const admin = createClient(supabaseUrl, serviceKey);
-    await admin
+    const { error: dbError } = await admin
       .from("doubts")
       .update({ ai_answer: answer, status: "ai_solved", updated_at: new Date().toISOString() })
       .eq("id", doubtId);
 
-    return new Response(JSON.stringify({ answer }), {
+    if (dbError) {
+      console.error(`[AI] Failed to update doubt ${doubtId}:`, dbError);
+      return new Response(JSON.stringify({ error: "Failed to save answer to database", answer }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    console.log(`[AI] Successfully solved doubt ${doubtId}`);
+    return new Response(JSON.stringify({ answer, success: true }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
