@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Send, Users, Loader2, Play, Square, Video, Circle } from "lucide-react";
-import { ArrowLeft, Send, Users, Loader2, Play, Square, Video, Circle } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -199,20 +198,20 @@ const TeacherLiveClassRoomPage = () => {
     }
   };
 
-  const toggleRecording = async () => {
-    // TODO: Wire up Agora Cloud Recording once credentials are available.
-    // Requires: AGORA_CUSTOMER_ID, AGORA_CUSTOMER_SECRET (from console.agora.io → RESTful API)
-    // and a cloud storage bucket (S3/GCS/Supabase Storage S3-compatible).
-    // Edge function: supabase/functions/agora-recording/index.ts
-    // On stop: save returned recording URL to live_classes.recording_url
-    if (isRecording) {
-      setIsRecording(false);
-      toast.info("Recording stopped (cloud recording not yet configured)");
-    } else {
-      setIsRecording(true);
-      toast.info("Recording started (cloud recording not yet configured)");
-    }
-  };
+  // const toggleRecording = async () => {
+  //   // TODO: Wire up Agora Cloud Recording once credentials are available.
+  //   // Requires: AGORA_CUSTOMER_ID, AGORA_CUSTOMER_SECRET (from console.agora.io → RESTful API)
+  //   // and a cloud storage bucket (S3/GCS/Supabase Storage S3-compatible).
+  //   // Edge function: supabase/functions/agora-recording/index.ts
+  //   // On stop: save returned recording URL to live_classes.recording_url
+  //   if (isRecording) {
+  //     setIsRecording(false);
+  //     toast.info("Recording stopped (cloud recording not yet configured)");
+  //   } else {
+  //     setIsRecording(true);
+  //     toast.info("Recording started (cloud recording not yet configured)");
+  //   }
+  // };
 
   const startClass = async () => {
     if (!cls) return;

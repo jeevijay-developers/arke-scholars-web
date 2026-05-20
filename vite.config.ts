@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => {
   // loadEnv reads .env files correctly (strips quotes, handles all formats)
   const env     = loadEnv(mode, process.cwd(), "");
   const appId   = env.VITE_AGORA_APP_ID;
-  const appCert = env.AGORA_APP_CERTIFICATE;
+  const appCert = env.VITE_AGORA_APP_CERTIFICATE;
 
   return {
     server: {
