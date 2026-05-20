@@ -9,7 +9,6 @@ import {
   Trash2,
   Search,
   Pencil,
-  ExternalLink,
   Copy,
   BookmarkPlus,
   LayoutTemplate,
@@ -66,7 +65,6 @@ type FormState = {
   courseId: string;
   starts_at: string;
   duration_minutes: number;
-  meeting_url: string;
   description: string;
   target_exam: string;
 };
@@ -78,7 +76,6 @@ const emptyForm: FormState = {
   courseId: "",
   starts_at: "",
   duration_minutes: 60,
-  meeting_url: "",
   description: "",
   target_exam: "",
 };
@@ -209,7 +206,6 @@ const AdminLiveClassesPage = () => {
       courseId: cls.course_id ?? "",
       starts_at: toLocalInput(cls.starts_at),
       duration_minutes: duration,
-      meeting_url: cls.meeting_url ?? "",
       description: cls.description ?? "",
       target_exam: cls.target_exam ?? "",
     });
@@ -229,7 +225,6 @@ const AdminLiveClassesPage = () => {
       courseId: cls.course_id ?? "",
       starts_at: "",
       duration_minutes: duration,
-      meeting_url: cls.meeting_url ?? "",
       description: cls.description ?? "",
       target_exam: cls.target_exam ?? "",
     });
@@ -264,7 +259,6 @@ const AdminLiveClassesPage = () => {
         target_exam: form.target_exam || null,
         starts_at: startsAt.toISOString(),
         ends_at: endsAt.toISOString(),
-        meeting_url: form.meeting_url || null,
         description: form.description || null,
         created_by: form.teacherId,
         course_id: form.courseId || null,
@@ -374,7 +368,6 @@ const AdminLiveClassesPage = () => {
       target_exam: form.target_exam || null,
       educator_name: teacher?.full_name || null,
       teacher_id: form.teacherId || null,
-      meeting_url: form.meeting_url || null,
       duration_minutes: form.duration_minutes,
       created_by: userRes.user?.id,
     });
@@ -397,7 +390,6 @@ const AdminLiveClassesPage = () => {
       courseId: "",
       starts_at: "",
       duration_minutes: t.duration_minutes,
-      meeting_url: t.meeting_url ?? "",
       description: t.description ?? "",
       target_exam: t.target_exam ?? "",
     });
@@ -451,16 +443,6 @@ const AdminLiveClassesPage = () => {
               <span className="flex items-center gap-1">
                 <Calendar className="h-3 w-3" /> {new Date(cls.starts_at).toLocaleString()}
               </span>
-              {cls.meeting_url && (
-                <a
-                  href={cls.meeting_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-1 text-primary hover:underline"
-                >
-                  <ExternalLink className="h-3 w-3" /> Meeting link
-                </a>
-              )}
               {cls.status === "cancelled" && cls.cancellation_reason && (
                 <span className="text-destructive truncate max-w-[280px]" title={cls.cancellation_reason}>
                   Reason: {cls.cancellation_reason}
@@ -743,15 +725,6 @@ const AdminLiveClassesPage = () => {
                       </option>
                     ))}
                   </select>
-                </div>
-                <div>
-                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Meeting URL (optional)</label>
-                  <input
-                    value={form.meeting_url}
-                    onChange={(e) => setForm({ ...form, meeting_url: e.target.value })}
-                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-                    placeholder="Optional external link — Agora stream is built-in"
-                  />
                 </div>
               </div>
 
