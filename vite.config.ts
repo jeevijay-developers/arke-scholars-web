@@ -7,8 +7,8 @@ const { RtcTokenBuilder, RtcRole } = agoraToken;
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   // loadEnv reads .env files correctly (strips quotes, handles all formats)
-  const env     = loadEnv(mode, process.cwd(), "");
-  const appId   = env.VITE_AGORA_APP_ID;
+  const env = loadEnv(mode, process.cwd(), "");
+  const appId = env.VITE_AGORA_APP_ID;
   const appCert = env.AGORA_APP_CERTIFICATE;
 
   return {
@@ -16,6 +16,9 @@ export default defineConfig(({ mode }) => {
       host: "::",
       port: 8080,
       hmr: { overlay: false },
+      allowedHosts: [
+        "clash-antivirus-yearly.ngrok-free.dev"
+      ]
     },
     plugins: [
       react(),
@@ -30,7 +33,7 @@ export default defineConfig(({ mode }) => {
 
             if (!appId || !appCert) {
               res.statusCode = 500;
-              res.end(JSON.stringify({ error: "VITE_AGORA_APP_ID or VITE_AGORA_APP_CERTIFICATE missing in .env" }));
+              res.end(JSON.stringify({ error: "VITE_AGORA_APP_ID or AGORA_APP_CERTIFICATE missing in .env" }));
               return;
             }
 
@@ -38,10 +41,10 @@ export default defineConfig(({ mode }) => {
             req.on("data", (chunk: Buffer) => { body += chunk.toString(); });
             req.on("end", () => {
               try {
-                const parsed      = JSON.parse(body || "{}") as { channelName?: string; uid?: number; role?: string };
+                const parsed = JSON.parse(body || "{}") as { channelName?: string; uid?: number; role?: string };
                 const channelName = parsed.channelName;
-                const uid         = parsed.uid ?? 0;
-                const role        = parsed.role ?? "audience";
+                const uid = parsed.uid ?? 0;
+                const role = parsed.role ?? "audience";
 
                 if (!channelName) {
                   res.statusCode = 400;
@@ -50,8 +53,8 @@ export default defineConfig(({ mode }) => {
                 }
 
                 const agoraRole = role === "host" ? RtcRole.PUBLISHER : RtcRole.SUBSCRIBER;
-                const expiry    = Math.floor(Date.now() / 1000) + 3600;
-                const token     = RtcTokenBuilder.buildTokenWithUid(
+                const expiry = Math.floor(Date.now() / 1000) + 3600;
+                const token = RtcTokenBuilder.buildTokenWithUid(
                   appId, appCert, channelName, uid, agoraRole, expiry, expiry,
                 );
 

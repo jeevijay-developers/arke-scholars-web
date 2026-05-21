@@ -276,20 +276,26 @@ const LiveClassRoomPage = () => {
             {messages.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-6">No messages yet — say hello!</p>
             ) : (
-              messages.map((m) => (
-                <div key={m.id} className="flex items-start gap-2">
-                  <div className={`h-7 w-7 shrink-0 rounded-full text-[10px] font-bold flex items-center justify-center ${m.is_teacher ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>
-                    {m.display_name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+              messages.map((m) => {
+                const isOwn = m.user_id === user?.id;
+                const initials = m.display_name.split(" ").map((n) => n[0]).join("").slice(0, 2);
+                return (
+                  <div key={m.id} className={`flex items-end gap-2 ${isOwn ? "flex-row-reverse" : ""}`}>
+                    <div className={`h-7 w-7 shrink-0 rounded-full text-[10px] font-bold flex items-center justify-center ${m.is_teacher ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>
+                      {initials}
+                    </div>
+                    <div className={`max-w-[75%] min-w-0 ${isOwn ? "items-end" : "items-start"} flex flex-col`}>
+                      <p className={`text-[11px] font-semibold text-foreground flex items-center gap-1 ${isOwn ? "flex-row-reverse" : ""}`}>
+                        {m.is_teacher && <img src="/badge-award-medal.svg" className="h-3.5 w-3.5 shrink-0" alt="Teacher" />}
+                        <span>{m.display_name}</span>
+                      </p>
+                      <div className={`rounded-2xl px-3 py-1.5 ${isOwn ? "rounded-br-sm bg-primary" : "rounded-bl-sm bg-muted"}`}>
+                        <p className={`text-xs break-words ${isOwn ? "text-primary-foreground" : "text-foreground"}`}>{m.message}</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-semibold text-foreground">
-                      {m.display_name}
-                      {m.is_teacher && <span className="ml-1 text-[9px] font-bold text-primary">TEACHER</span>}
-                    </p>
-                    <p className="text-xs text-foreground break-words">{m.message}</p>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
             <div ref={chatEndRef} />
           </div>

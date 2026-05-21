@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import AgoraRTC, {
+  IAgoraRTCClient,
   ICameraVideoTrack,
   IMicrophoneAudioTrack,
   IRemoteVideoTrack,
@@ -11,7 +12,6 @@ import {
   AlertCircle, Monitor, MonitorOff, Maximize, Minimize, Wifi,
 } from "lucide-react";
 import { toast } from "sonner";
-import { agoraClient } from "@/lib/agoraClient";
 import { supabase } from "@/integrations/supabase/client";
 
 const APP_ID = import.meta.env.VITE_AGORA_APP_ID as string | undefined;
@@ -87,23 +87,26 @@ const AgoraVideoRoom = ({ channelName, role, uid = 0, onLeave }: Props) => {
   const remoteVideoRef = useRef<HTMLDivElement>(null);
   const containerRef   = useRef<HTMLDivElement>(null);
   const leftRef        = useRef(false);
+  const clientRef      = useRef<IAgoraRTCClient | null>(null);
 
   const [status,          setStatus]          = useState<ConnectionStatus>("connecting");
   const [micMuted,        setMicMuted]        = useState(false);
   const [camOff,          setCamOff]          = useState(false);
   const [hasRemoteVideo,  setHasRemoteVideo]  = useState(false);
   const [error,           setError]           = useState<string | null>(null);
+  const [isPermissionError, setIsPermissionError] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [networkQuality,  setNetworkQuality]  = useState(0);
   const [isFullscreen,    setIsFullscreen]    = useState(false);
+  const [retryCount,      setRetryCount]      = useState(0);
 
   const pendingRemoteTrack = useRef<IRemoteVideoTrack | null>(null);
   const localTracksRef     = useRef<[IMicrophoneAudioTrack, ICameraVideoTrack] | null>(null);
   const screenTrackRef     = useRef<ILocalVideoTrack | null>(null);
 
-  const leave = useCallback(async () => {
+  const leave = useCallback(async (skipConfirm = false) => {
     if (leftRef.current) return;
-    if (role === "audience") {
+    if (role === "audience" && !skipConfirm) {
       const ok = window.confirm("Leave the live class?");
       if (!ok) return;
     }
@@ -117,7 +120,7 @@ const AgoraVideoRoom = ({ channelName, role, uid = 0, onLeave }: Props) => {
       try { localTracksRef.current[1].stop(); localTracksRef.current[1].close(); } catch (_) { /* */ }
       localTracksRef.current = null;
     }
-    try { await agoraClient.leave(); } catch (_) { /* */ }
+    try { await clientRef.current?.leave(); } catch (_) { /* */ }
     setStatus("disconnected");
     onLeave?.();
   }, [onLeave, role]);
@@ -133,6 +136,9 @@ const AgoraVideoRoom = ({ channelName, role, uid = 0, onLeave }: Props) => {
 
   useEffect(() => {
     leftRef.current = false;
+    setError(null);
+    setIsPermissionError(false);
+    setStatus("connecting");
 
     if (!APP_ID) {
       setError("Agora App ID is missing. Add VITE_AGORA_APP_ID to .env and restart the dev server.");
@@ -140,8 +146,12 @@ const AgoraVideoRoom = ({ channelName, role, uid = 0, onLeave }: Props) => {
       return;
     }
 
-    agoraClient.on("user-published", async (remoteUser, mediaType) => {
-      await agoraClient.subscribe(remoteUser, mediaType);
+    // Create a fresh client per mount — avoids INVALID_OPERATION from a lingering singleton
+    const client = AgoraRTC.createClient({ mode: "live", codec: "vp8" });
+    clientRef.current = client;
+
+    client.on("user-published", async (remoteUser, mediaType) => {
+      await client.subscribe(remoteUser, mediaType);
       if (mediaType === "video") {
         const track = remoteUser.videoTrack as IRemoteVideoTrack;
         pendingRemoteTrack.current = track;
@@ -152,24 +162,24 @@ const AgoraVideoRoom = ({ channelName, role, uid = 0, onLeave }: Props) => {
       }
     });
 
-    agoraClient.on("user-unpublished", (_u, mediaType) => {
+    client.on("user-unpublished", (_u, mediaType) => {
       if (mediaType === "video") {
         pendingRemoteTrack.current = null;
         setHasRemoteVideo(false);
       }
     });
 
-    agoraClient.on("user-left", () => {
+    client.on("user-left", () => {
       pendingRemoteTrack.current = null;
       setHasRemoteVideo(false);
     });
 
-    agoraClient.on("connection-state-change", (state) => {
+    client.on("connection-state-change", (state) => {
       if (state === "CONNECTED")    setStatus("live");
       if (state === "DISCONNECTED") setStatus("disconnected");
     });
 
-    agoraClient.on("network-quality", (stats) => {
+    client.on("network-quality", (stats) => {
       const q = role === "host" ? stats.uplinkNetworkQuality : stats.downlinkNetworkQuality;
       setNetworkQuality(q);
     });
@@ -180,31 +190,57 @@ const AgoraVideoRoom = ({ channelName, role, uid = 0, onLeave }: Props) => {
     const join = async () => {
       try {
         // setClientRole must be called before join in "live" mode
-        await agoraClient.setClientRole(role);
+        await client.setClientRole(role);
         const token = await fetchToken(channelName, uid, role);
-        await agoraClient.join(APP_ID, channelName, token, uid === 0 ? null : uid);
+        await client.join(APP_ID, channelName, token, uid === 0 ? null : uid);
         setStatus("live");
 
         if (role === "host") {
+          // Proactively request permissions so the browser prompt appears before Agora tries
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            stream.getTracks().forEach((t) => t.stop());
+          } catch (permErr) {
+            const msg = permErr instanceof Error ? permErr.message : String(permErr);
+            if (msg.includes("Permission") || msg.includes("NotAllowed") || msg.includes("denied")) {
+              setIsPermissionError(true);
+              setError("Camera or microphone permission denied. Click 'Allow' in your browser's address bar, then click 'Retry'.");
+              setStatus("disconnected");
+              toast.error("Camera/mic access denied");
+              return;
+            }
+          }
+
           const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks(
             { encoderConfig: "music_standard" },
             { encoderConfig: "720p_1" },
           );
+
+          // Guard: component may have unmounted while we awaited tracks
+          if (leftRef.current) {
+            audioTrack.stop(); audioTrack.close();
+            videoTrack.stop(); videoTrack.close();
+            return;
+          }
+
           localTracksRef.current = [audioTrack, videoTrack];
           if (localVideoRef.current) videoTrack.play(localVideoRef.current);
-          await agoraClient.publish([audioTrack, videoTrack]);
+          await client.publish([audioTrack, videoTrack]);
         }
       } catch (err: unknown) {
         if (leftRef.current) return;
         const msg = err instanceof Error ? err.message : String(err);
         let friendly = `Failed to connect: ${msg}`;
-        if (msg.includes("Permission") || msg.includes("NotAllowed")) {
-          friendly = "Camera or microphone permission denied. Click the camera icon in your browser's address bar, allow access, then refresh.";
+        let isPerm = false;
+        if (msg.includes("Permission") || msg.includes("NotAllowed") || msg.includes("denied")) {
+          isPerm = true;
+          friendly = "Camera or microphone permission denied. Click the camera icon in your browser's address bar, allow access, then click 'Retry'.";
         } else if (msg.includes("NotFound") || msg.includes("device")) {
           friendly = "No camera or microphone found. Please connect a device and refresh.";
         } else if (msg.includes("CAN_NOT_GET_GATEWAY") || msg.includes("dynamic use static")) {
           friendly = "Agora token error: your project requires a signed token. Restart the dev server so AGORA_APP_CERTIFICATE is loaded, then try again.";
         }
+        setIsPermissionError(isPerm);
         setError(friendly);
         setStatus("disconnected");
         toast.error("Stream connection failed");
@@ -215,12 +251,24 @@ const AgoraVideoRoom = ({ channelName, role, uid = 0, onLeave }: Props) => {
 
     return () => {
       document.removeEventListener("fullscreenchange", onFullscreenChange);
-      // Remove all listeners before leaving so they don't accumulate on remounts
-      agoraClient.removeAllListeners();
-      leave();
+      client.removeAllListeners();
+      // Mark as left so the join catch block ignores late errors
+      leftRef.current = true;
+      // Clean up tracks then leave — fire-and-forget is fine here since the client is local
+      if (screenTrackRef.current) {
+        try { screenTrackRef.current.stop(); screenTrackRef.current.close(); } catch (_) { /* */ }
+        screenTrackRef.current = null;
+      }
+      if (localTracksRef.current) {
+        try { localTracksRef.current[0].stop(); localTracksRef.current[0].close(); } catch (_) { /* */ }
+        try { localTracksRef.current[1].stop(); localTracksRef.current[1].close(); } catch (_) { /* */ }
+        localTracksRef.current = null;
+      }
+      client.leave().catch(() => { /* */ });
+      clientRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [channelName, role]);
+  }, [channelName, role, retryCount]);
 
   const toggleMic = async () => {
     const track = localTracksRef.current?.[0];
@@ -239,10 +287,13 @@ const AgoraVideoRoom = ({ channelName, role, uid = 0, onLeave }: Props) => {
   };
 
   const toggleScreenShare = async () => {
+    const client = clientRef.current;
+    if (!client) return;
+
     if (isScreenSharing) {
       if (screenTrackRef.current) {
         try {
-          await agoraClient.unpublish(screenTrackRef.current);
+          await client.unpublish(screenTrackRef.current);
           screenTrackRef.current.stop();
           screenTrackRef.current.close();
         } catch (_) { /* */ }
@@ -252,7 +303,7 @@ const AgoraVideoRoom = ({ channelName, role, uid = 0, onLeave }: Props) => {
       if (localTracksRef.current) {
         const [, camTrack] = localTracksRef.current;
         if (localVideoRef.current) camTrack.play(localVideoRef.current);
-        try { await agoraClient.publish(camTrack); } catch (_) { /* */ }
+        try { await client.publish(camTrack); } catch (_) { /* */ }
       }
       setIsScreenSharing(false);
     } else {
@@ -264,10 +315,10 @@ const AgoraVideoRoom = ({ channelName, role, uid = 0, onLeave }: Props) => {
         screenTrackRef.current = screenTrack;
 
         if (localTracksRef.current) {
-          try { await agoraClient.unpublish(localTracksRef.current[1]); } catch (_) { /* */ }
+          try { await client.unpublish(localTracksRef.current[1]); } catch (_) { /* */ }
         }
         if (localVideoRef.current) screenTrack.play(localVideoRef.current);
-        await agoraClient.publish(screenTrack);
+        await client.publish(screenTrack);
         setIsScreenSharing(true);
 
         // Handle user stopping screen share via the browser's native stop button
@@ -297,6 +348,14 @@ const AgoraVideoRoom = ({ channelName, role, uid = 0, onLeave }: Props) => {
       <div className="flex h-full w-full min-h-[240px] flex-col items-center justify-center gap-3 bg-[#0a0a0a] p-6 text-center">
         <AlertCircle className="h-10 w-10 text-destructive shrink-0" />
         <p className="text-sm text-white/80 max-w-sm leading-relaxed">{error}</p>
+        {(isPermissionError || role === "host") && (
+          <button
+            onClick={() => setRetryCount((c) => c + 1)}
+            className="mt-1 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90"
+          >
+            Retry
+          </button>
+        )}
       </div>
     );
   }
@@ -397,7 +456,7 @@ const AgoraVideoRoom = ({ channelName, role, uid = 0, onLeave }: Props) => {
           {isFullscreen ? <Minimize className="h-3 w-3 sm:h-4 sm:w-4" /> : <Maximize className="h-3 w-3 sm:h-4 sm:w-4" />}
         </button>
         <button
-          onClick={leave}
+          onClick={() => leave(false)}
           title={role === "host" ? "End stream" : "Leave class"}
           className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-destructive text-white hover:opacity-90 transition-opacity"
         >
