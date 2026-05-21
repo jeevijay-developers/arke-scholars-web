@@ -12,59 +12,27 @@ import {
   AlertCircle, Monitor, MonitorOff, Maximize, Minimize, Wifi,
 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const APP_ID = import.meta.env.VITE_AGORA_APP_ID as string | undefined;
 
-// --- Agora RTC token builder (Web Crypto, runs in browser & edge) ---
-function packUint16(v: number) { return [(v >> 8) & 0xff, v & 0xff]; }
-function packUint32(v: number) { return [(v >> 24) & 0xff, (v >> 16) & 0xff, (v >> 8) & 0xff, v & 0xff]; }
-function packString(s: string) { const b = new TextEncoder().encode(s); return [...packUint16(b.length), ...b]; }
-function packMap(m: Map<number, number>) {
-  const out = [...packUint16(m.size)];
-  for (const [k, v] of m) out.push(...packUint16(k), ...packUint32(v));
-  return out;
-}
-async function hmac256(key: Uint8Array, data: Uint8Array): Promise<Uint8Array> {
-  const k = await crypto.subtle.importKey(
-    "raw", key.buffer as ArrayBuffer, { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
-  );
-  return new Uint8Array(await crypto.subtle.sign("HMAC", k, data.buffer as ArrayBuffer));
-}
-async function buildAgoraToken(appId: string, cert: string, channel: string, uid: number, role: number): Promise<string> {
-  const now    = Math.floor(Date.now() / 1000);
-  const expiry = now + 7200;
-  const salt   = Math.floor(Math.random() * 0xffffffff);
-  const uidStr = uid === 0 ? "" : String(uid);
-  const privs  = new Map<number, number>([[1, expiry]]);
-  if (role === 1) { privs.set(2, expiry); privs.set(3, expiry); privs.set(4, expiry); }
-  const msgBytes = new Uint8Array([
-    ...packUint32(1), ...packUint32(salt), ...packUint32(now), ...packUint32(expiry),
-    ...packString(channel), ...packString(uidStr), ...packMap(privs),
-  ]);
-  const certBytes   = new TextEncoder().encode(cert);
-  const signingKey  = await hmac256(certBytes, new TextEncoder().encode(appId + now + salt));
-  const sig         = await hmac256(signingKey, msgBytes);
-  const appIdBytes  = new TextEncoder().encode(appId);
-  const content     = new Uint8Array([
-    ...packUint16(sig.length), ...sig,
-    ...packUint16(appIdBytes.length), ...appIdBytes,
-    ...packUint32(now), ...packUint32(salt),
-    ...packUint16(msgBytes.length), ...msgBytes,
-  ]);
-  return "007" + btoa(String.fromCharCode(...content));
-}
 
-async function fetchToken(channelName: string, uid: number, role: "host" | "audience"): Promise<string | null> {
-  const appId = import.meta.env.VITE_AGORA_APP_ID as string | undefined;
-  const cert  = import.meta.env.VITE_AGORA_APP_CERTIFICATE as string | undefined;
-  if (!appId || !cert) return null;
-  try {
-    const agoraRole = role === "host" ? 1 : 2;
-    return await buildAgoraToken(appId, cert, channelName, uid, agoraRole);
-  } catch (e) {
-    console.warn("[Agora] Token build failed:", e);
-    return null;
+async function fetchToken(
+  channelName: string,
+  uid: number,
+  role: "host" | "audience",
+): Promise<string | null> {
+  // Explicitly get the session token — functions.invoke may not always attach it
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    throw new Error("Not authenticated. Please sign in and try again.");
   }
+  const { data, error } = await supabase.functions.invoke("agora-token", {
+    body: { channelName, uid, role },
+    headers: { Authorization: `Bearer ${session.access_token}` },
+  });
+  if (error) throw new Error(error.message || "Failed to fetch Agora token");
+  return (data as { token: string | null } | null)?.token ?? null;
 }
 
 // 0=unknown, 1=excellent, 2=good, 3=poor, 4=bad, 5=very bad, 6=disconnected
@@ -200,6 +168,15 @@ const AgoraVideoRoom = ({ channelName, role, uid = 0, onLeave }: Props) => {
       setNetworkQuality(q);
     });
 
+    client.on("token-privilege-will-expire", async () => {
+      try {
+        const fresh = await fetchToken(channelName, uid, role);
+        if (fresh) await client.renewToken(fresh);
+      } catch (e) {
+        console.warn("[Agora] Token renewal failed:", e);
+      }
+    });
+
     const onFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", onFullscreenChange);
 
@@ -254,7 +231,9 @@ const AgoraVideoRoom = ({ channelName, role, uid = 0, onLeave }: Props) => {
         } else if (msg.includes("NotFound") || msg.includes("device")) {
           friendly = "No camera or microphone found. Please connect a device and refresh.";
         } else if (msg.includes("CAN_NOT_GET_GATEWAY") || msg.includes("dynamic use static")) {
-          friendly = "Agora token error: your project requires a signed token. Restart the dev server so AGORA_APP_CERTIFICATE is loaded, then try again.";
+          friendly = "Could not get a video token from the server. Please try again in a moment.";
+        } else if (msg.includes("Failed to fetch Agora token") || msg.toLowerCase().includes("unauthorized")) {
+          friendly = "Could not get a video token from the server. Please make sure you are signed in and try again.";
         }
         setIsPermissionError(isPerm);
         setError(friendly);
