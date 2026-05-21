@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useRef, useState, useCallback } from "react";
 import AgoraRTC, {
   IAgoraRTCClient,
@@ -205,7 +206,7 @@ const AgoraVideoRoom = ({ channelName, role, uid = 0, onLeave }: Props) => {
           }
 
           const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks(
-            { encoderConfig: "music_standard" },
+            { encoderConfig: "speech_standard" },
             { encoderConfig: "720p_1" },
           );
 
