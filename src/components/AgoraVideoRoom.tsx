@@ -12,39 +12,57 @@ import {
   AlertCircle, Monitor, MonitorOff, Maximize, Minimize, Wifi,
 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 const APP_ID = import.meta.env.VITE_AGORA_APP_ID as string | undefined;
 
+// --- Agora RTC token builder (Web Crypto, runs in browser & edge) ---
+function packUint16(v: number) { return [(v >> 8) & 0xff, v & 0xff]; }
+function packUint32(v: number) { return [(v >> 24) & 0xff, (v >> 16) & 0xff, (v >> 8) & 0xff, v & 0xff]; }
+function packString(s: string) { const b = new TextEncoder().encode(s); return [...packUint16(b.length), ...b]; }
+function packMap(m: Map<number, number>) {
+  const out = [...packUint16(m.size)];
+  for (const [k, v] of m) out.push(...packUint16(k), ...packUint32(v));
+  return out;
+}
+async function hmac256(key: Uint8Array, data: Uint8Array): Promise<Uint8Array> {
+  const k = await crypto.subtle.importKey(
+    "raw", key.buffer as ArrayBuffer, { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
+  );
+  return new Uint8Array(await crypto.subtle.sign("HMAC", k, data.buffer as ArrayBuffer));
+}
+async function buildAgoraToken(appId: string, cert: string, channel: string, uid: number, role: number): Promise<string> {
+  const now    = Math.floor(Date.now() / 1000);
+  const expiry = now + 7200;
+  const salt   = Math.floor(Math.random() * 0xffffffff);
+  const uidStr = uid === 0 ? "" : String(uid);
+  const privs  = new Map<number, number>([[1, expiry]]);
+  if (role === 1) { privs.set(2, expiry); privs.set(3, expiry); privs.set(4, expiry); }
+  const msgBytes = new Uint8Array([
+    ...packUint32(1), ...packUint32(salt), ...packUint32(now), ...packUint32(expiry),
+    ...packString(channel), ...packString(uidStr), ...packMap(privs),
+  ]);
+  const certBytes   = new TextEncoder().encode(cert);
+  const signingKey  = await hmac256(certBytes, new TextEncoder().encode(appId + now + salt));
+  const sig         = await hmac256(signingKey, msgBytes);
+  const appIdBytes  = new TextEncoder().encode(appId);
+  const content     = new Uint8Array([
+    ...packUint16(sig.length), ...sig,
+    ...packUint16(appIdBytes.length), ...appIdBytes,
+    ...packUint32(now), ...packUint32(salt),
+    ...packUint16(msgBytes.length), ...msgBytes,
+  ]);
+  return "007" + btoa(String.fromCharCode(...content));
+}
+
 async function fetchToken(channelName: string, uid: number, role: "host" | "audience"): Promise<string | null> {
-  const isDev = import.meta.env.DEV;
-
-  if (isDev) {
-    try {
-      const res = await fetch("/api/agora-token", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channelName, uid, role }),
-      });
-      if (!res.ok) return null;
-      const data = await res.json() as { token: string | null };
-      return data.token ?? null;
-    } catch (e) {
-      console.warn("[Agora] Dev token fetch failed:", e);
-      return null;
-    }
-  }
-
-  // Production: use the Supabase client so auth headers + URL are handled the same
-  // way as every other working Supabase call in the app.
+  const appId = import.meta.env.VITE_AGORA_APP_ID as string | undefined;
+  const cert  = import.meta.env.VITE_AGORA_APP_CERTIFICATE as string | undefined;
+  if (!appId || !cert) return null;
   try {
-    const { data, error } = await supabase.functions.invoke("agora-token", {
-      body: { channelName, uid, role },
-    });
-    if (error) throw error;
-    return (data as { token: string | null }).token ?? null;
+    const agoraRole = role === "host" ? 1 : 2;
+    return await buildAgoraToken(appId, cert, channelName, uid, agoraRole);
   } catch (e) {
-    console.warn("[Agora] Token fetch failed:", e);
+    console.warn("[Agora] Token build failed:", e);
     return null;
   }
 }
