@@ -1,6 +1,7 @@
 import { admin, corsHeaders, determineWinner, eloDelta, getUser, jsonResponse } from "../_shared/compete.ts";
 
 const QUESTION_TIME_MS = 30_000;
+const BOT_ID = "00000000-0000-0000-0000-000000000000";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -49,7 +50,7 @@ Deno.serve(async (req) => {
         points,
       });
 
-      // Atomic score increment to avoid stale-read race conditions
+      // Atomic score increment
       const isP1 = user.id === match.player1_id;
       if (isP1) {
         await sb.rpc("increment_player1_score", { match_id: matchId, delta: points });
@@ -58,10 +59,10 @@ Deno.serve(async (req) => {
       }
     }
 
-    // If bot match, simulate bot answer for this question (~70% accuracy, random time)
+    // For bot matches, simulate bot answer for this question
     if (match.is_bot && !match.player2_id) {
       const { data: botExisting } = await sb.from("compete_match_answers")
-        .select("id").eq("match_id", matchId).eq("user_id", "00000000-0000-0000-0000-000000000000").eq("question_index", questionIndex).maybeSingle();
+        .select("id").eq("match_id", matchId).eq("user_id", BOT_ID).eq("question_index", questionIndex).maybeSingle();
       if (!botExisting) {
         const { data: q } = await sb.from("compete_questions").select("correct_index, options").eq("id", qid).single();
         const opts = (q?.options as unknown[]) ?? [];
@@ -72,7 +73,7 @@ Deno.serve(async (req) => {
         const botPoints = botCorrect ? 100 + botSpeed : 0;
         await sb.from("compete_match_answers").insert({
           match_id: matchId,
-          user_id: "00000000-0000-0000-0000-000000000000",
+          user_id: BOT_ID,
           question_index: questionIndex,
           question_id: qid,
           selected_index: botSel,
@@ -80,45 +81,57 @@ Deno.serve(async (req) => {
           time_taken_ms: botTime,
           points: botPoints,
         });
-        // Use rpc increment to avoid stale-read race condition
         await sb.rpc("increment_player2_score", { match_id: matchId, delta: botPoints });
       }
     }
 
-    // Determine if both players have answered this question (for advancing the index)
-    const expectedAnswerers = match.is_bot ? 2 : (match.player2_id ? 2 : 1);
-    const { count } = await sb.from("compete_match_answers")
+    const totalQ = match.question_ids.length;
+
+    // Check if this player has now answered all questions
+    const { count: myAnswerCount } = await sb.from("compete_match_answers")
       .select("id", { count: "exact", head: true })
       .eq("match_id", matchId)
-      .eq("question_index", questionIndex);
+      .eq("user_id", user.id);
 
-    let advance = false;
-    if ((count ?? 0) >= expectedAnswerers) advance = true;
+    // Check if both players have answered all questions → finalize
+    const opponentId = match.is_bot ? BOT_ID : (user.id === match.player1_id ? match.player2_id : match.player1_id);
 
-    if (advance) {
-      const next = questionIndex + 1;
-      if (next >= match.question_ids.length) {
-        // Finalize
-        const { data: finalMatch } = await sb.from("compete_matches").select("*").eq("id", matchId).single();
-        const p1 = Number(finalMatch!.player1_score);
-        const p2 = Number(finalMatch!.player2_score);
-        const winnerId = determineWinner(p1, p2, finalMatch!.player1_id, finalMatch!.player2_id);
+    let canFinalize = false;
+    if ((myAnswerCount ?? 0) >= totalQ) {
+      if (!opponentId) {
+        // Solo match (shouldn't happen normally)
+        canFinalize = true;
+      } else {
+        const { count: oppAnswerCount } = await sb.from("compete_match_answers")
+          .select("id", { count: "exact", head: true })
+          .eq("match_id", matchId)
+          .eq("user_id", opponentId);
+        canFinalize = (oppAnswerCount ?? 0) >= totalQ;
+      }
+    }
 
-        let p1After = finalMatch!.player1_rating_before;
-        let p2After = finalMatch!.player2_rating_before;
+    if (canFinalize) {
+      // Re-fetch for fresh scores before finalizing
+      const { data: finalMatch } = await sb.from("compete_matches").select("*").eq("id", matchId).single();
+      if (finalMatch && finalMatch.status === "active") {
+        const p1 = Number(finalMatch.player1_score);
+        const p2 = Number(finalMatch.player2_score);
+        const winnerId = determineWinner(p1, p2, finalMatch.player1_id, finalMatch.player2_id);
 
-        if (!finalMatch!.is_bot && finalMatch!.player2_id) {
-          const p1Score = winnerId === null ? 0.5 : (winnerId === finalMatch!.player1_id ? 1 : 0);
+        let p1After = finalMatch.player1_rating_before;
+        let p2After = finalMatch.player2_rating_before;
+
+        if (!finalMatch.is_bot && finalMatch.player2_id) {
+          const p1Score = winnerId === null ? 0.5 : (winnerId === finalMatch.player1_id ? 1 : 0);
           const p2Score = 1 - p1Score;
-          const d1 = eloDelta(finalMatch!.player1_rating_before, finalMatch!.player2_rating_before, p1Score);
-          const d2 = eloDelta(finalMatch!.player2_rating_before, finalMatch!.player1_rating_before, p2Score);
-          p1After = finalMatch!.player1_rating_before + d1;
-          p2After = finalMatch!.player2_rating_before + d2;
+          const d1 = eloDelta(finalMatch.player1_rating_before, finalMatch.player2_rating_before, p1Score);
+          const d2 = eloDelta(finalMatch.player2_rating_before, finalMatch.player1_rating_before, p2Score);
+          p1After = finalMatch.player1_rating_before + d1;
+          p2After = finalMatch.player2_rating_before + d2;
 
-          // Update ratings table
-          for (const [uid, before, after, win, loss, draw] of [
-            [finalMatch!.player1_id, finalMatch!.player1_rating_before, p1After, p1Score === 1 ? 1 : 0, p1Score === 0 ? 1 : 0, p1Score === 0.5 ? 1 : 0],
-            [finalMatch!.player2_id, finalMatch!.player2_rating_before, p2After, p2Score === 1 ? 1 : 0, p2Score === 0 ? 1 : 0, p2Score === 0.5 ? 1 : 0],
+          for (const [uid, after, win, loss, draw] of [
+            [finalMatch.player1_id, p1After, p1Score === 1 ? 1 : 0, p1Score === 0 ? 1 : 0, p1Score === 0.5 ? 1 : 0],
+            [finalMatch.player2_id, p2After, p2Score === 1 ? 1 : 0, p2Score === 0 ? 1 : 0, p2Score === 0.5 ? 1 : 0],
           ] as const) {
             const { data: cur } = await sb.from("compete_ratings").select("*").eq("user_id", uid as string).maybeSingle();
             if (cur) {
@@ -141,11 +154,6 @@ Deno.serve(async (req) => {
           winner_id: winnerId,
           player1_rating_after: p1After,
           player2_rating_after: p2After,
-        }).eq("id", matchId);
-      } else {
-        await sb.from("compete_matches").update({
-          current_question_index: next,
-          current_question_started_at: new Date().toISOString(),
         }).eq("id", matchId);
       }
     }

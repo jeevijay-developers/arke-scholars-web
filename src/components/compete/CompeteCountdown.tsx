@@ -9,9 +9,11 @@ const CompeteCountdown = ({ match }: Props) => {
   const { user } = useAuth();
   const isP1 = user?.id === match.player1_id;
   const myName = isP1 ? match.player1_name : match.player2_name;
+  const myAvatar = isP1 ? match.player1_avatar : match.player2_avatar;
   const oppName = isP1
     ? (match.player2_name || (match.is_bot ? "Bot" : "Opponent"))
     : match.player1_name;
+  const oppAvatar = isP1 ? match.player2_avatar : match.player1_avatar;
   const target = match.countdown_until ? new Date(match.countdown_until).getTime() : Date.now();
   const [left, setLeft] = useState(() => Math.max(0, Math.ceil((target - Date.now()) / 1000)));
 
@@ -26,9 +28,9 @@ const CompeteCountdown = ({ match }: Props) => {
         <Crown className="h-3 w-3" /> Match Found
       </div>
       <div className="grid grid-cols-3 items-center max-w-md mx-auto gap-2">
-        <Avatar name={myName ?? "You"} ready me />
+        <Avatar name={myName ?? "You"} avatar={myAvatar} ready me />
         <Swords className="h-8 w-8 text-accent mx-auto animate-pulse" />
-        <Avatar name={oppName ?? "Opponent"} ready />
+        <Avatar name={oppName ?? "Opponent"} avatar={oppAvatar} ready />
       </div>
       <div>
         <p className="text-xs uppercase tracking-wider text-white/50 font-bold">Starts in</p>
@@ -41,12 +43,16 @@ const CompeteCountdown = ({ match }: Props) => {
   );
 };
 
-const Avatar = ({ name, ready, me }: { name: string; ready: boolean; me?: boolean }) => {
+const Avatar = ({ name, avatar, ready, me }: { name: string; avatar?: string | null; ready: boolean; me?: boolean }) => {
   const initials = (name || "?").split(" ").map((s) => s[0]).join("").slice(0, 2).toUpperCase();
   return (
     <div className="text-center">
-      <div className={`h-16 w-16 mx-auto rounded-full bg-gradient-to-br ${me ? "from-primary to-accent" : "from-secondary to-primary"} border-2 ${ready ? "border-secondary" : "border-white/20"} flex items-center justify-center`}>
-        <span className="text-base font-black text-white">{initials}</span>
+      <div className={`h-16 w-16 mx-auto rounded-full bg-gradient-to-br ${me ? "from-primary to-accent" : "from-secondary to-primary"} border-2 ${ready ? "border-secondary" : "border-white/20"} overflow-hidden flex items-center justify-center`}>
+        {avatar ? (
+          <img src={avatar} alt={name} className="h-full w-full object-cover" />
+        ) : (
+          <span className="text-base font-black text-white">{initials}</span>
+        )}
       </div>
       <p className="text-xs font-bold text-white mt-2 truncate">{name}</p>
       <p className={`text-[10px] font-bold mt-0.5 ${ready ? "text-secondary" : "text-white/40"}`}>{ready ? "READY" : "Connecting..."}</p>
