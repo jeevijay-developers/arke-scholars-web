@@ -18,35 +18,33 @@ const APP_ID = import.meta.env.VITE_AGORA_APP_ID as string | undefined;
 
 async function fetchToken(channelName: string, uid: number, role: "host" | "audience"): Promise<string | null> {
   const isDev = import.meta.env.DEV;
-  const url = isDev
-    ? "/api/agora-token"
-    : `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agora-token`;
 
+  if (isDev) {
+    try {
+      const res = await fetch("/api/agora-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channelName, uid, role }),
+      });
+      if (!res.ok) return null;
+      const data = await res.json() as { token: string | null };
+      return data.token ?? null;
+    } catch (e) {
+      console.warn("[Agora] Dev token fetch failed:", e);
+      return null;
+    }
+  }
+
+  // Production: use the Supabase client so auth headers + URL are handled the same
+  // way as every other working Supabase call in the app.
   try {
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (!isDev) {
-      const { data: { session } } = await supabase.auth.getSession();
-      headers["apikey"] = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
-      if (session?.access_token) {
-        headers["Authorization"] = `Bearer ${session.access_token}`;
-      }
-    }
-
-    const res = await fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ channelName, uid, role }),
+    const { data, error } = await supabase.functions.invoke("agora-token", {
+      body: { channelName, uid, role },
     });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error((err as any).error ?? `HTTP ${res.status}`);
-    }
-
-    const data = await res.json() as { token: string | null };
-    return data.token ?? null;
+    if (error) throw error;
+    return (data as { token: string | null }).token ?? null;
   } catch (e) {
-    console.warn("[Agora] Token fetch failed, using null:", e);
+    console.warn("[Agora] Token fetch failed:", e);
     return null;
   }
 }
