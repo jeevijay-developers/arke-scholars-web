@@ -152,7 +152,8 @@ const QuestionBankPanel = ({ draggable = false, manage = false, compact = false,
 
   const toggleRow = (id: string) => {
     const next = new Set(selected);
-    next.has(id) ? next.delete(id) : next.add(id);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
     setSelected(next);
   };
 

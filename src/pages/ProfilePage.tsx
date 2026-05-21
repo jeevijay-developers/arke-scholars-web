@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useRef, useState } from "react";
 import { Camera, Flame, Target, ClipboardCheck, Trophy, Loader2, School, Search, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -5,15 +6,16 @@ import { useAppStore } from "@/store/useAppStore";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import CityStateFields from "@/components/CityStateFields";
+import { useExams } from "@/hooks/useExams";
 
 const tabItems = ["Personal Info"];
-
-const EXAMS = ["IIT JEE", "NEET", "Boards", "JEE + NEET", "Other"];
+const CLASS_LEVELS = ["6","7","8","9","10","11","12","Dropper"];
 type SchoolOption = { id: string; name: string; city: string | null };
 
 const ProfilePage = () => {
   const { user } = useAppStore();
   const { user: authUser, refreshProfile } = useAuth();
+  const { examNames: EXAMS } = useExams();
   const [activeTab, setActiveTab] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -24,6 +26,7 @@ const ProfilePage = () => {
     state: "",
     country: "",
     target_exam: "",
+    class_level: "",
     avatar_url: "",
   });
   const [stats, setStats] = useState({ streak: 0, tests: 0, accuracy: 0, percentile: 0 });
@@ -60,6 +63,7 @@ const ProfilePage = () => {
           state: p.state || "",
           country: p.country || "",
           target_exam: p.target_exam || "",
+          class_level: p.class_level || "",
           avatar_url: p.avatar_url || "",
         });
         if (p.school_id) {
@@ -130,6 +134,7 @@ const ProfilePage = () => {
         state: form.state,
         country: form.country,
         target_exam: form.target_exam,
+        class_level: form.class_level || null,
         school_id: schoolId,
       } as any)
       .eq("user_id", authUser.id);
@@ -249,6 +254,7 @@ const ProfilePage = () => {
               <Field label="Email" value={user?.email || ""} disabled />
               <Field label="Phone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
               <SelectField label="Target Exam" value={form.target_exam} options={EXAMS} onChange={(v) => setForm({ ...form, target_exam: v })} />
+              <SelectField label="Class Level" value={form.class_level} options={CLASS_LEVELS} onChange={(v) => setForm({ ...form, class_level: v })} />
               <div className="sm:col-span-2">
                 <CityStateFields
                   city={form.city}

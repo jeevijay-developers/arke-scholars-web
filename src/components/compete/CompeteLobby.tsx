@@ -1,20 +1,21 @@
-import { Trophy, Flame, Star, Swords } from "lucide-react";
+import { Loader2, Trophy, Flame, Star, Swords } from "lucide-react";
 import { CompeteRating } from "@/hooks/useCompeteRating";
-
 import { SUBJECTS_COMPETE as SUBJECTS } from "@/lib/constants";
-const TOPICS: Record<string, string[]> = {
-  Physics: ["Any", "Kinematics", "Laws of Motion"],
-  Chemistry: ["Any", "Atomic Structure", "Periodic Table", "Mole Concept"],
-  Math: ["Any", "Algebra", "Trigonometry", "Calculus"],
-  Biology: ["Any", "Cell", "Human Physiology"],
-};
+
+const CLASS_LEVELS = ["6","7","8", "9", "10", "11", "12", "Dropper"];
 
 type Props = {
   rating: CompeteRating;
+  classLevel: string;
+  targetExam: string;
   subject: string;
-  topic: string;
+  selectedTopics: string[];
+  availableTopics: string[];
+  loadingTopics: boolean;
+  onClassLevel: (c: string) => void;
+  onTargetExam: (e: string) => void;
   onSubject: (s: string) => void;
-  onTopic: (t: string) => void;
+  onTopicsChange: (topics: string[]) => void;
   onQuickMatch: () => void;
   onCreateRoom: () => void;
   onJoinRoom: (code: string) => void;
@@ -22,14 +23,23 @@ type Props = {
   joinCode: string;
   onJoinCodeChange: (c: string) => void;
   busy: boolean;
+  exams: string[];
 };
 
 const CompeteLobby = ({
-  rating, subject, topic, onSubject, onTopic,
+  rating, classLevel, targetExam, subject, selectedTopics, availableTopics, loadingTopics,
+  onClassLevel, onTargetExam, onSubject, onTopicsChange,
   onQuickMatch, onCreateRoom, onJoinRoom, onPracticeBot,
-  joinCode, onJoinCodeChange, busy,
+  joinCode, onJoinCodeChange, busy, exams,
 }: Props) => {
-  const topics = TOPICS[subject] ?? ["Any"];
+
+  const toggleTopic = (t: string) => {
+    if (selectedTopics.includes(t)) {
+      onTopicsChange(selectedTopics.filter((x) => x !== t));
+    } else {
+      onTopicsChange([...selectedTopics, t]);
+    }
+  };
 
   return (
     <div className="space-y-5 animate-fade-in-up">
@@ -47,29 +57,72 @@ const CompeteLobby = ({
       </div>
 
       <div className="max-w-md mx-auto space-y-3">
+
+        {/* Class */}
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-white/50 mb-1.5">Class</p>
+          <div className="flex flex-wrap gap-2">
+            {CLASS_LEVELS.map((c) => (
+              <button
+                key={c}
+                onClick={() => onClassLevel(c)}
+                className={`rounded-full px-3 py-1.5 text-xs font-bold transition-colors ${classLevel === c ? "bg-secondary text-secondary-foreground" : "bg-white/10 text-white/80 hover:bg-white/20"}`}
+              >{c === "Dropper" ? "Dropper" : `Class ${c}`}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Exam */}
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-white/50 mb-1.5">Exam</p>
+          <div className="flex flex-wrap gap-2">
+            {exams.map((e) => (
+              <button
+                key={e}
+                onClick={() => onTargetExam(e)}
+                className={`rounded-full px-3 py-1.5 text-xs font-bold transition-colors ${targetExam === e ? "bg-secondary text-secondary-foreground" : "bg-white/10 text-white/80 hover:bg-white/20"}`}
+              >{e}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Subject */}
         <div>
           <p className="text-[11px] font-bold uppercase tracking-wider text-white/50 mb-1.5">Subject</p>
           <div className="flex flex-wrap gap-2">
             {SUBJECTS.map((s) => (
               <button
                 key={s}
-                onClick={() => { onSubject(s); onTopic("Any"); }}
+                onClick={() => { onSubject(s); onTopicsChange([]); }}
                 className={`rounded-full px-3 py-1.5 text-xs font-bold transition-colors ${subject === s ? "bg-primary text-primary-foreground" : "bg-white/10 text-white/80 hover:bg-white/20"}`}
               >{s}</button>
             ))}
           </div>
         </div>
+
+        {/* Topics — multi-select */}
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-wider text-white/50 mb-1.5">Topic</p>
-          <div className="flex flex-wrap gap-2">
-            {topics.map((t) => (
-              <button
-                key={t}
-                onClick={() => onTopic(t)}
-                className={`rounded-full px-3 py-1.5 text-xs font-bold transition-colors ${topic === t ? "bg-accent text-accent-foreground" : "bg-white/10 text-white/80 hover:bg-white/20"}`}
-              >{t}</button>
-            ))}
-          </div>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-white/50 mb-1.5">
+            Topics
+            <span className="ml-1 normal-case font-normal text-white/30">(pick any — empty = all)</span>
+          </p>
+          {loadingTopics ? (
+            <div className="flex items-center gap-2 text-white/50 text-xs">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading topics…
+            </div>
+          ) : availableTopics.length === 0 ? (
+            <p className="text-xs text-white/40">No topics available for this selection</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {availableTopics.map((t) => (
+                <button
+                  key={t}
+                  onClick={() => toggleTopic(t)}
+                  className={`rounded-full px-3 py-1.5 text-xs font-bold transition-colors ${selectedTopics.includes(t) ? "bg-accent text-accent-foreground" : "bg-white/10 text-white/80 hover:bg-white/20"}`}
+                >{t}</button>
+              ))}
+            </div>
+          )}
         </div>
 
         <button

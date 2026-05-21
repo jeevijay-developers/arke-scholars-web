@@ -8,6 +8,8 @@ import CompeteMatchView from "@/components/compete/CompeteMatch";
 import CompeteResult from "@/components/compete/CompeteResult";
 import { useCompeteRating } from "@/hooks/useCompeteRating";
 import { useCompeteMatch } from "@/hooks/useCompeteMatch";
+import { useCompeteTopics } from "@/hooks/useCompeteTopics";
+import { useExams } from "@/hooks/useExams";
 import { useAuth } from "@/context/AuthContext";
 
 type Phase = "lobby" | "searching" | "countdown" | "match" | "result";
@@ -16,9 +18,13 @@ const STORAGE_KEY = "compete:active_match_id";
 const CompetePage = () => {
   const { user } = useAuth();
   const { rating, refresh } = useCompeteRating();
+  const { examNames: exams } = useExams();
+
   const [phase, setPhase] = useState<Phase>("lobby");
+  const [classLevel, setClassLevel] = useState("11");
+  const [targetExam, setTargetExam] = useState("JEE Main");
   const [subject, setSubject] = useState("Physics");
-  const [topic, setTopic] = useState("Any");
+  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [matchId, setMatchId] = useState<string | null>(null);
   const [roomCode, setRoomCode] = useState<string | null>(null);
   const [joinCode, setJoinCode] = useState("");
@@ -26,6 +32,21 @@ const CompetePage = () => {
   const pollTimer = useRef<number | null>(null);
 
   const { match, questions, answers } = useCompeteMatch(matchId);
+  const { topics: availableTopics, loading: loadingTopics } = useCompeteTopics(subject, classLevel, targetExam);
+
+  // Pre-fill class + exam from user profile on mount
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("profiles")
+      .select("class_level, target_exam")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.class_level) setClassLevel(data.class_level);
+        if (data?.target_exam) setTargetExam(data.target_exam);
+      });
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Resume: on mount, look for stored match id and check if it's still active
   useEffect(() => {
@@ -40,8 +61,13 @@ const CompetePage = () => {
         .maybeSingle();
       if (!data) { localStorage.removeItem(STORAGE_KEY); return; }
       if (data.player1_id !== user.id && data.player2_id !== user.id) { localStorage.removeItem(STORAGE_KEY); return; }
-      if (data.status === "active" || data.status === "pending") {
+      if (data.status === "active") {
         setMatchId(stored);
+        setPhase("match");
+        toast.info("Resumed your match");
+      } else if (data.status === "pending") {
+        setMatchId(stored);
+        setPhase("searching");
         toast.info("Resumed your match");
       } else {
         localStorage.removeItem(STORAGE_KEY);
@@ -51,7 +77,7 @@ const CompetePage = () => {
 
   // Persist active match id
   useEffect(() => {
-    if (matchId && (phase === "countdown" || phase === "match")) {
+    if (matchId && (phase === "countdown" || phase === "match" || phase === "searching")) {
       localStorage.setItem(STORAGE_KEY, matchId);
     } else if (phase === "lobby" || phase === "result") {
       localStorage.removeItem(STORAGE_KEY);
@@ -103,7 +129,7 @@ const CompetePage = () => {
     setBusy(true);
     try {
       const { data, error } = await supabase.functions.invoke("compete-matchmake", {
-        body: { action: "find", subject, topic },
+        body: { action: "find", subject, topics: selectedTopics, classLevel, targetExam },
       });
       if (error) throw error;
       if (data.status === "matched") {
@@ -122,7 +148,7 @@ const CompetePage = () => {
     setBusy(true);
     try {
       const { data, error } = await supabase.functions.invoke("compete-create-room", {
-        body: { subject, topic },
+        body: { subject, topics: selectedTopics, classLevel, targetExam },
       });
       if (error) throw error;
       setMatchId(data.match_id);
@@ -150,7 +176,7 @@ const CompetePage = () => {
     setBusy(true);
     try {
       const { data, error } = await supabase.functions.invoke("compete-matchmake", {
-        body: { action: "bot", subject, topic },
+        body: { action: "bot", subject, topics: selectedTopics, classLevel, targetExam },
       });
       if (error) throw error;
       setMatchId(data.match_id);
@@ -186,14 +212,24 @@ const CompetePage = () => {
         {phase === "lobby" && (
           <CompeteLobby
             rating={rating}
-            subject={subject} topic={topic}
-            onSubject={setSubject} onTopic={setTopic}
+            classLevel={classLevel}
+            targetExam={targetExam}
+            subject={subject}
+            selectedTopics={selectedTopics}
+            availableTopics={availableTopics}
+            loadingTopics={loadingTopics}
+            onClassLevel={setClassLevel}
+            onTargetExam={setTargetExam}
+            onSubject={setSubject}
+            onTopicsChange={setSelectedTopics}
             onQuickMatch={handleQuickMatch}
             onCreateRoom={handleCreateRoom}
             onJoinRoom={handleJoinRoom}
             onPracticeBot={handlePracticeBot}
-            joinCode={joinCode} onJoinCodeChange={setJoinCode}
+            joinCode={joinCode}
+            onJoinCodeChange={setJoinCode}
             busy={busy}
+            exams={exams}
           />
         )}
         {phase === "searching" && (

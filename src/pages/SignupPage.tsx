@@ -33,8 +33,8 @@ const SignupPage = () => {
     phone: "",
     email: "",
     password: "",
-    target_exam: "IIT JEE",
-    class_level: "Class 6",
+    target_exam: "JEE Main",
+    class_level: "11",
     city: "",
     state: "",
     country: "India",
@@ -185,23 +185,24 @@ const SignupPage = () => {
               <div>
                 <label className="text-sm font-medium text-foreground">Target Exam</label>
                 <select value={form.target_exam} onChange={(e) => update("target_exam", e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground">
-                  <option>IIT JEE</option>
+                  <option>JEE Main</option>
+                  <option>JEE Advanced</option>
                   <option>NEET</option>
                   <option>Boards</option>
-                  <option>JEE + NEET</option>
+                  <option>Foundation</option>
                 </select>
               </div>
               <div>
                 <label className="text-sm font-medium text-foreground">Class</label>
                 <select value={form.class_level} onChange={(e) => update("class_level", e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground">
-                  <option>Class 6</option>
-                  <option>Class 7</option>
-                  <option>Class 8</option>
-                  <option>Class 9</option>
-                  <option>Class 10</option>
-                  <option>Class 11</option>
-                  <option>Class 12</option>
-                  <option>Dropper</option>
+                  <option value="6">Class 6</option>
+                  <option value="7">Class 7</option>
+                  <option value="8">Class 8</option>
+                  <option value="9">Class 9</option>
+                  <option value="10">Class 10</option>
+                  <option value="11">Class 11</option>
+                  <option value="12">Class 12</option>
+                  <option value="Dropper">Dropper</option>
                 </select>
               </div>
             </div>

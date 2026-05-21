@@ -58,32 +58,61 @@ export async function getOrCreateRating(sb: ReturnType<typeof admin>, userId: st
   return created!;
 }
 
+function shuffle<T>(arr: T[]): T[] {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 export async function pickQuestionIds(
   sb: ReturnType<typeof admin>,
   subject: string,
-  topic: string,
+  topics: string[],    // empty = any topic
+  classLevel: string,
+  targetExam: string,
   count = 10,
 ): Promise<string[]> {
-  // Pull a wider candidate set then shuffle in JS (PostgREST has no random()).
-  let q = sb.from("compete_questions").select("id").eq("is_active", true);
-  if (subject) q = q.eq("subject", subject);
-  if (topic && topic !== "Any") q = q.eq("topic", topic);
-  const { data } = await q.limit(60);
-  let pool = (data ?? []).map((r) => r.id as string);
-  if (pool.length < count) {
-    // fall back to subject only
-    const { data: d2 } = await sb.from("compete_questions").select("id").eq("is_active", true).eq("subject", subject).limit(60);
-    pool = (d2 ?? []).map((r) => r.id as string);
+  const activTopics = topics.filter((t) => t && t !== "Any");
+
+  const fetchPool = async (topicFilter: string | null, useClassExam: boolean): Promise<string[]> => {
+    let q = sb.from("compete_questions").select("id").eq("is_active", true).eq("subject", subject);
+    if (topicFilter) q = q.eq("topic", topicFilter);
+    if (useClassExam) {
+      q = q.eq("class_level", classLevel).eq("target_exam", targetExam);
+    }
+    const { data } = await q.limit(60);
+    return (data ?? []).map((r) => r.id as string);
+  };
+
+  let pool: string[] = [];
+
+  if (activTopics.length > 0) {
+    // Even distribution across selected topics
+    const perTopic = Math.ceil(count / activTopics.length);
+    for (const t of activTopics) {
+      let ids = await fetchPool(t, true);
+      if (ids.length === 0) ids = await fetchPool(t, false); // fallback: ignore class/exam
+      pool.push(...shuffle(ids).slice(0, perTopic));
+    }
+  } else {
+    // No topic filter — pull from full subject pool
+    pool = await fetchPool(null, true);
+    if (pool.length < count) {
+      pool = await fetchPool(null, false); // fallback: ignore class/exam
+    }
   }
+
+  pool = shuffle([...new Set(pool)]); // deduplicate then shuffle
+
+  // Final fallback: any active question at all
   if (pool.length < count) {
     const { data: d3 } = await sb.from("compete_questions").select("id").eq("is_active", true).limit(60);
-    pool = (d3 ?? []).map((r) => r.id as string);
+    const extra = (d3 ?? []).map((r) => r.id as string).filter((id) => !pool.includes(id));
+    pool.push(...shuffle(extra));
   }
-  // shuffle
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
+
   return pool.slice(0, count);
 }
 

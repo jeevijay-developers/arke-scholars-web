@@ -49,12 +49,13 @@ Deno.serve(async (req) => {
         points,
       });
 
-      // Update player score
+      // Atomic score increment to avoid stale-read race conditions
       const isP1 = user.id === match.player1_id;
-      const updatePatch = isP1
-        ? { player1_score: Number(match.player1_score) + points }
-        : { player2_score: Number(match.player2_score) + points };
-      await sb.from("compete_matches").update(updatePatch).eq("id", matchId);
+      if (isP1) {
+        await sb.rpc("increment_player1_score", { match_id: matchId, delta: points });
+      } else {
+        await sb.rpc("increment_player2_score", { match_id: matchId, delta: points });
+      }
     }
 
     // If bot match, simulate bot answer for this question (~70% accuracy, random time)
@@ -79,7 +80,8 @@ Deno.serve(async (req) => {
           time_taken_ms: botTime,
           points: botPoints,
         });
-        await sb.from("compete_matches").update({ player2_score: Number(match.player2_score) + botPoints }).eq("id", matchId);
+        // Use rpc increment to avoid stale-read race condition
+        await sb.rpc("increment_player2_score", { match_id: matchId, delta: botPoints });
       }
     }
 

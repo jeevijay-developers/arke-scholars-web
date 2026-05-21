@@ -9,7 +9,9 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const action = String(body.action || "find"); // find | poll | cancel | bot
     const subject = String(body.subject || "Physics");
-    const topic = String(body.topic || "Any");
+    const topics: string[] = Array.isArray(body.topics) ? body.topics : [];
+    const classLevel = String(body.classLevel || "11");
+    const targetExam = String(body.targetExam || "JEE Main");
 
     const sb = admin();
     const profile = await getProfileMini(sb, user.id);
@@ -22,9 +24,8 @@ Deno.serve(async (req) => {
     }
 
     if (action === "bot") {
-      // Force bot match
       await sb.from("compete_queue").delete().eq("user_id", user.id);
-      const questionIds = await pickQuestionIds(sb, subject, topic, 10);
+      const questionIds = await pickQuestionIds(sb, subject, topics, classLevel, targetExam, 10);
       const { data: match } = await sb.from("compete_matches").insert({
         player1_id: user.id,
         player2_id: null,
@@ -33,7 +34,7 @@ Deno.serve(async (req) => {
         player2_name: randomBotName(),
         player1_rating_before: rating.rating,
         player2_rating_before: 1000,
-        subject, topic,
+        subject, topic: topics.length > 0 ? topics.join(", ") : "Any",
         question_ids: questionIds,
         total_questions: questionIds.length,
         status: "active",
@@ -55,36 +56,58 @@ Deno.serve(async (req) => {
     }
 
     // action === "find"
-    // Insert/upsert our own queue row
     await sb.from("compete_queue").upsert({
       user_id: user.id,
-      target_exam: exam,
-      class_level: profile.class_level,
-      subject, topic,
+      target_exam: targetExam,
+      class_level: classLevel,
+      subject,
+      topic: topics.length > 0 ? topics[0] : "Any",
+      topics: topics,
       rating: rating.rating,
       status: "waiting",
       match_id: null,
     }, { onConflict: "user_id" });
 
-    // Search for an opponent (same exam, class, subject, topic, ±200 ELO)
-    const { data: candidates } = await sb
+    // Search: same exam + subject, rating ±200
+    // Prefer same class_level; fall back to any if opponent has been waiting >20s
+    const waitingCutoff = new Date(Date.now() - 20000).toISOString();
+
+    const { data: sameLevelCandidates } = await sb
       .from("compete_queue")
       .select("*")
       .eq("status", "waiting")
       .eq("subject", subject)
-      .eq("topic", topic)
-      .eq("target_exam", exam)
+      .eq("target_exam", targetExam)
+      .eq("class_level", classLevel)
       .neq("user_id", user.id)
       .gte("rating", rating.rating - 200)
       .lte("rating", rating.rating + 200)
       .order("created_at", { ascending: true })
       .limit(5);
 
-    let opponent = (candidates ?? []).find((c) => !profile.class_level || !c.class_level || c.class_level === profile.class_level);
-    if (!opponent && candidates && candidates.length > 0) opponent = candidates[0];
+    const { data: anyLevelCandidates } = await sb
+      .from("compete_queue")
+      .select("*")
+      .eq("status", "waiting")
+      .eq("subject", subject)
+      .eq("target_exam", targetExam)
+      .neq("user_id", user.id)
+      .lte("created_at", waitingCutoff)  // been waiting >20s
+      .gte("rating", rating.rating - 200)
+      .lte("rating", rating.rating + 200)
+      .order("created_at", { ascending: true })
+      .limit(5);
+
+    const candidates = [
+      ...(sameLevelCandidates ?? []),
+      ...(anyLevelCandidates ?? []).filter((c) =>
+        !(sameLevelCandidates ?? []).some((s) => s.user_id === c.user_id)
+      ),
+    ];
+
+    const opponent = candidates[0] ?? null;
 
     if (opponent) {
-      // Atomically claim opponent row
       const { data: claimed } = await sb
         .from("compete_queue")
         .update({ status: "matched" })
@@ -92,9 +115,11 @@ Deno.serve(async (req) => {
         .eq("status", "waiting")
         .select("*")
         .maybeSingle();
+
       if (claimed) {
         const oppProfile = await getProfileMini(sb, opponent.user_id);
-        const questionIds = await pickQuestionIds(sb, subject, topic, 10);
+        // Use the initiator's topics + class/exam for question picking
+        const questionIds = await pickQuestionIds(sb, subject, topics, classLevel, targetExam, 10);
         const { data: match } = await sb.from("compete_matches").insert({
           player1_id: user.id,
           player2_id: opponent.user_id,
@@ -104,7 +129,8 @@ Deno.serve(async (req) => {
           player2_avatar: oppProfile.avatar_url,
           player1_rating_before: rating.rating,
           player2_rating_before: opponent.rating,
-          subject, topic,
+          subject,
+          topic: topics.length > 0 ? topics.join(", ") : "Any",
           question_ids: questionIds,
           total_questions: questionIds.length,
           status: "active",
@@ -112,9 +138,7 @@ Deno.serve(async (req) => {
           countdown_until: new Date(Date.now() + 5000).toISOString(),
           current_question_started_at: new Date(Date.now() + 5000).toISOString(),
         }).select("*").single();
-        // Notify opponent via their queue row
         await sb.from("compete_queue").update({ match_id: match!.id }).eq("user_id", opponent.user_id);
-        // Remove my queue row
         await sb.from("compete_queue").delete().eq("user_id", user.id);
         return jsonResponse({ status: "matched", match_id: match!.id });
       }
@@ -123,6 +147,6 @@ Deno.serve(async (req) => {
     return jsonResponse({ status: "waiting" });
   } catch (e) {
     console.error("matchmake error", e);
-    return jsonResponse({ error: String(e?.message ?? e) }, 500);
+    return jsonResponse({ error: String((e as any)?.message ?? e) }, 500);
   }
 });

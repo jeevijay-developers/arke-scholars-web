@@ -7,15 +7,16 @@ Deno.serve(async (req) => {
     if (!user) return jsonResponse({ error: "Unauthorized" }, 401);
     const body = await req.json().catch(() => ({}));
     const subject = String(body.subject || "Physics");
-    const topic = String(body.topic || "Any");
+    const topics: string[] = Array.isArray(body.topics) ? body.topics : [];
+    const classLevel = String(body.classLevel || "11");
+    const targetExam = String(body.targetExam || "JEE Main");
 
     const sb = admin();
     const profile = await getProfileMini(sb, user.id);
     const rating = await getOrCreateRating(sb, user.id, profile.target_exam || "general");
-    const questionIds = await pickQuestionIds(sb, subject, topic, 10);
+    const questionIds = await pickQuestionIds(sb, subject, topics, classLevel, targetExam, 10);
 
     let code = randomCode(6);
-    // ensure uniqueness
     for (let i = 0; i < 5; i++) {
       const { data: exists } = await sb.from("compete_matches").select("id").eq("room_code", code).maybeSingle();
       if (!exists) break;
@@ -27,7 +28,8 @@ Deno.serve(async (req) => {
       player1_name: profile.full_name,
       player1_avatar: profile.avatar_url,
       player1_rating_before: rating.rating,
-      subject, topic,
+      subject,
+      topic: topics.length > 0 ? topics.join(", ") : "Any",
       question_ids: questionIds,
       total_questions: questionIds.length,
       status: "pending",
@@ -38,6 +40,6 @@ Deno.serve(async (req) => {
     if (error) return jsonResponse({ error: error.message }, 400);
     return jsonResponse({ match_id: match.id, room_code: code });
   } catch (e) {
-    return jsonResponse({ error: String(e?.message ?? e) }, 500);
+    return jsonResponse({ error: String((e as any)?.message ?? e) }, 500);
   }
 });

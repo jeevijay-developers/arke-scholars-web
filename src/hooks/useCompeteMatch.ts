@@ -85,8 +85,20 @@ export const useCompeteMatch = (matchId: string | null) => {
 
     const channel = supabase
       .channel(`compete-match-${matchId}`)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "compete_matches", filter: `id=eq.${matchId}` }, (payload) => {
-        setMatch(payload.new as unknown as CompeteMatch);
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "compete_matches", filter: `id=eq.${matchId}` }, async (payload) => {
+        const updated = payload.new as unknown as CompeteMatch;
+        setMatch(updated);
+        // Load questions when match transitions from pending→active (room join scenario)
+        if (updated.status === "active" && loadedQuestionsFor.current !== matchId && updated.question_ids?.length) {
+          loadedQuestionsFor.current = matchId;
+          const { data: qs } = await supabase
+            .from("compete_questions")
+            .select("id, question_text, options, correct_index, explanation")
+            .in("id", updated.question_ids);
+          const byId = new Map((qs ?? []).map((q) => [q.id, q]));
+          const ordered = updated.question_ids.map((id: string) => byId.get(id)).filter(Boolean) as CompeteQuestion[];
+          setQuestions(ordered);
+        }
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "compete_match_answers", filter: `match_id=eq.${matchId}` }, (payload) => {
         setAnswers((prev) => [...prev, payload.new as unknown as CompeteAnswer]);

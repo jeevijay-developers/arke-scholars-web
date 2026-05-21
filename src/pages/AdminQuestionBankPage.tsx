@@ -3,7 +3,7 @@ import QuestionBankPanel from "@/components/QuestionBankPanel";
 
 const AdminQuestionBankPage = () => {
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 m-2">
       <div className="flex items-center gap-3">
         <div className="rounded-xl bg-primary/10 p-2">
           <Library className="h-5 w-5 text-primary" />
@@ -16,7 +16,7 @@ const AdminQuestionBankPage = () => {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-border bg-card overflow-hidden h-[calc(100vh-180px)]">
+      <div className="rounded-2xl m-2 border border-border bg-card overflow-hidden h-[calc(100vh-180px)]">
         <QuestionBankPanel manage tableView />
       </div>
     </div>
