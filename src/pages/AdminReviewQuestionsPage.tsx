@@ -146,7 +146,8 @@ const QuestionCard = ({ q: initial, index, total, approval, onApprove, onSkip }:
     [4, q.option_4],
   ];
 
-  const imgCount = q.images?.length ?? 0;
+  const stemHasImages = /<img/i.test(q.stem_html ?? "");
+  const imgCount = (q.images?.length ?? 0) + (stemHasImages ? 1 : 0);
 
   return (
     <div
@@ -228,7 +229,7 @@ const QuestionCard = ({ q: initial, index, total, approval, onApprove, onSkip }:
 
           {showPreview && (
             <div className="mt-2 rounded-xl border border-border bg-muted/30 p-3">
-              <LatexRenderer html={q.stem_html} />
+              <LatexRenderer html={q.stem_html} className="[&_img]:hidden" />
             </div>
           )}
         </div>

@@ -94,6 +94,10 @@ import AdminSchoolsPage from "./pages/AdminSchoolsPage";
 import AdminUploadQuestionsPage from "./pages/AdminUploadQuestionsPage";
 import AdminReviewQuestionsPage from "./pages/AdminReviewQuestionsPage";
 import StudentMentorChatPage from "./pages/StudentMentorChatPage";
+import BattleLobby from "./pages/BattleLobby";
+import BattleRoom from "./pages/BattleRoom";
+import BattleResult from "./pages/BattleResult";
+import BattleLeaderboard from "./pages/BattleLeaderboard";
 import { AuthProvider } from "./context/AuthContext";
 import NotFound from "./pages/NotFound";
 
@@ -166,6 +170,10 @@ const App = () => (
                 <Route path="/live-classes/:slug" element={<LiveClassRoomPage />} />
                 
                 <Route path="/compete" element={<CompetePage />} />
+                <Route path="/battle" element={<BattleLobby />} />
+                <Route path="/battle/room/:battleId" element={<BattleRoom />} />
+                <Route path="/battle/result/:battleId" element={<BattleResult />} />
+                <Route path="/battle/leaderboard" element={<BattleLeaderboard />} />
                 <Route path="/doubts" element={<DoubtPage />} />
                 <Route path="/leaderboard" element={<LeaderboardPage />} />
                 <Route path="/analytics" element={<AnalyticsPage />} />
