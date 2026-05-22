@@ -199,6 +199,26 @@ const CompetePage = () => {
     await handlePracticeBot();
   };
 
+  const handleQuit = async () => {
+    if (!matchId || !user) return;
+    try {
+      const opponentId = match?.player1_id === user.id ? match?.player2_id : match?.player1_id;
+      await supabase
+        .from("compete_matches")
+        .update({
+          status: "finished",
+          winner_id: opponentId ?? null,
+          finished_at: new Date().toISOString(),
+        })
+        .eq("id", matchId);
+    } catch {}
+    localStorage.removeItem(STORAGE_KEY);
+    setMatchId(null);
+    setRoomCode(null);
+    setPhase("lobby");
+    toast.info("You forfeited the match.");
+  };
+
   const handlePlayAgain = () => {
     setMatchId(null);
     setRoomCode(null);
@@ -243,7 +263,7 @@ const CompetePage = () => {
           <CompeteCountdown match={match} />
         )}
         {phase === "match" && match && (
-          <CompeteMatchView match={match} questions={questions} answers={answers} />
+          <CompeteMatchView match={match} questions={questions} answers={answers} onQuit={handleQuit} />
         )}
         {phase === "result" && match && (
           <CompeteResult match={match} questions={questions} answers={answers} onPlayAgain={handlePlayAgain} onLobby={handlePlayAgain} />

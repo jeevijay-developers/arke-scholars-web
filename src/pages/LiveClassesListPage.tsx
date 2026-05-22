@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
-import { Video, Calendar, Clock, Users, Play, Loader2 } from "lucide-react";
+import { Video, Calendar, Play, Loader2 } from "lucide-react";
 import SEO from "@/components/SEO";
 import { Link } from "react-router-dom";
 import { useLiveClasses } from "@/hooks/useLiveClasses";
+import { useEnrolledCourseIds } from "@/hooks/useEnrolledCourseIds";
+import { useAuth } from "@/context/AuthContext";
 import LiveBadge from "@/components/LiveBadge";
 
 const subjectColors: Record<string, string> = {
@@ -24,20 +25,27 @@ const formatDate = (iso: string) => {
 
 const LiveClassesListPage = () => {
   const { classes: liveAndUpcoming, loading } = useLiveClasses("all");
+  const { enrolledCourseIds, loading: enrollmentLoading } = useEnrolledCourseIds();
+  const { isStaff, isTeacher } = useAuth();
 
-  const now = new Date();
-  const live = liveAndUpcoming.filter((c) => c.status === "live");
-  const upcoming = liveAndUpcoming.filter(
-    (c) => c.status === "scheduled" && new Date(c.starts_at) >= now,
-  );
-
-  if (loading) {
+  if (loading || enrollmentLoading) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
       </div>
     );
   }
+
+  const canSeeAll = isStaff || isTeacher;
+  const visible = canSeeAll
+    ? liveAndUpcoming
+    : liveAndUpcoming.filter((c) => c.course_id === null || enrolledCourseIds.has(c.course_id));
+
+  const now = new Date();
+  const live = visible.filter((c) => c.status === "live");
+  const upcoming = visible.filter(
+    (c) => c.status === "scheduled" && new Date(c.starts_at) >= now,
+  );
 
   return (
     <div className="p-4 lg:p-6 space-y-6">

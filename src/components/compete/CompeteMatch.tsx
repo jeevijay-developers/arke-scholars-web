@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Crown, Timer } from "lucide-react";
+import { Crown, Timer, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { CompeteMatch, CompeteQuestion, CompeteAnswer } from "@/hooks/useCompeteMatch";
@@ -12,9 +12,10 @@ type Props = {
   match: CompeteMatch;
   questions: CompeteQuestion[];
   answers: CompeteAnswer[];
+  onQuit?: () => void;
 };
 
-const CompeteMatchView = ({ match, questions, answers }: Props) => {
+const CompeteMatchView = ({ match, questions, answers, onQuit }: Props) => {
   const { user } = useAuth();
   const isP1 = user?.id === match.player1_id;
   const myId = user?.id ?? "";
@@ -23,6 +24,7 @@ const CompeteMatchView = ({ match, questions, answers }: Props) => {
   const [myQIndex, setMyQIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [confirmQuit, setConfirmQuit] = useState(false);
   const [timeLeft, setTimeLeft] = useState(QUESTION_TIME_MS);
   const [waitingForOpponent, setWaitingForOpponent] = useState(false);
   const submittedRef = useRef<Set<number>>(new Set());
@@ -150,6 +152,37 @@ const CompeteMatchView = ({ match, questions, answers }: Props) => {
           </div>
           <p className="text-xs text-white/40">{oppAnswerCount}/{totalQ} questions answered</p>
         </div>
+        {onQuit && (
+          <div className="max-w-xl mx-auto">
+            {!confirmQuit ? (
+              <button
+                onClick={() => setConfirmQuit(true)}
+                className="w-full flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white/50 hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive transition-all"
+              >
+                <LogOut className="h-4 w-4" /> Quit Match
+              </button>
+            ) : (
+              <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-center space-y-3">
+                <p className="text-sm font-bold text-white">Quit this match?</p>
+                <p className="text-xs text-white/50">You'll forfeit and return to the lobby.</p>
+                <div className="flex gap-2 justify-center">
+                  <button
+                    onClick={() => setConfirmQuit(false)}
+                    className="rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-semibold text-white/70 hover:bg-white/10 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={onQuit}
+                    className="rounded-lg bg-destructive px-4 py-1.5 text-xs font-semibold text-white hover:bg-destructive/80 transition-all"
+                  >
+                    Yes, Quit
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   }
@@ -219,6 +252,39 @@ const CompeteMatchView = ({ match, questions, answers }: Props) => {
           );
         })}
       </div>
+
+      {/* Quit */}
+      {onQuit && (
+        <div className="max-w-xl mx-auto">
+          {!confirmQuit ? (
+            <button
+              onClick={() => setConfirmQuit(true)}
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white/50 hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive transition-all"
+            >
+              <LogOut className="h-4 w-4" /> Quit Match
+            </button>
+          ) : (
+            <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-center space-y-3">
+              <p className="text-sm font-bold text-white">Quit this match?</p>
+              <p className="text-xs text-white/50">You'll forfeit and return to the lobby.</p>
+              <div className="flex gap-2 justify-center">
+                <button
+                  onClick={() => setConfirmQuit(false)}
+                  className="rounded-lg border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-semibold text-white/70 hover:bg-white/10 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={onQuit}
+                  className="rounded-lg bg-destructive px-4 py-1.5 text-xs font-semibold text-white hover:bg-destructive/80 transition-all"
+                >
+                  Yes, Quit
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

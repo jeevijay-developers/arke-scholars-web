@@ -16,6 +16,7 @@ export type TestRow = {
   starts_at: string | null;
   ends_at: string | null;
   created_at: string;
+  course_id: string | null;
 };
 
 export const useTests = (testType?: string) => {

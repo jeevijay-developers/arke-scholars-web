@@ -4,6 +4,7 @@ import SEO from "@/components/SEO";
 import { Link } from "react-router-dom";
 import { useTests } from "@/hooks/useTests";
 import { useAuth } from "@/context/AuthContext";
+import { useEnrolledCourseIds } from "@/hooks/useEnrolledCourseIds";
 import { supabase } from "@/integrations/supabase/client";
 
 const subTabs = [
@@ -18,7 +19,8 @@ const TestListPage = () => {
   const [activeSub, setActiveSub] = useState("all");
   const [search, setSearch] = useState("");
   const { tests, loading } = useTests(activeSub);
-  const { user } = useAuth();
+  const { user, isStaff, isTeacher } = useAuth();
+  const { enrolledCourseIds, loading: enrollmentLoading } = useEnrolledCourseIds();
   const [attemptStatus, setAttemptStatus] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -36,7 +38,11 @@ const TestListPage = () => {
       });
   }, [user, tests]);
 
-  const filtered = tests.filter((t) => t.title.toLowerCase().includes(search.toLowerCase()));
+  const canSeeAll = isStaff || isTeacher;
+  const visible = canSeeAll
+    ? tests
+    : tests.filter((t) => t.course_id === null || enrolledCourseIds.has(t.course_id));
+  const filtered = visible.filter((t) => t.title.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="pb-20 lg:pb-0">
@@ -72,7 +78,7 @@ const TestListPage = () => {
           ))}
         </div>
 
-        {loading ? (
+        {loading || enrollmentLoading ? (
           <div className="flex h-40 items-center justify-center">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
           </div>
