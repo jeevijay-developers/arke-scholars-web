@@ -483,11 +483,17 @@ function parseDocument(
         continue;
       }
 
-      // Default: stem continuation
+      // Default: stem continuation or inline option paragraph
       if (!accum.optionsDone) {
+        const rawText = paraText(block.xml).trim();
         const h = buildParaHtml(block.xml, ridToImage);
-        if (h) accum.stemParas.push(h);
-        accum.stemRids.push(...paraImageRids(block.xml));
+        // Option paragraph on its own line: starts with (1), (2), (3), or (4)
+        if (/^\([1-4]\)\s/.test(rawText) && h) {
+          accum.optCells.push([h]);
+        } else if (h) {
+          accum.stemParas.push(h);
+          accum.stemRids.push(...paraImageRids(block.xml));
+        }
       }
     } else {
       // Table block

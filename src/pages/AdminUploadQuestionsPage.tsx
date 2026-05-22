@@ -282,6 +282,11 @@ const AdminUploadQuestionsPage = () => {
                     <p className="text-xs text-foreground leading-relaxed line-clamp-2">
                       {stemText || <em className="text-muted-foreground">No stem text</em>}
                     </p>
+                    {/<img/i.test(q.stem_html ?? "") && (
+                      <span className="inline-flex items-center gap-0.5 mt-0.5 text-[10px] text-muted-foreground">
+                        <ImageIcon className="h-3 w-3" /> image
+                      </span>
+                    )}
                   </div>
                   <span className="mt-1 shrink-0 text-muted-foreground">
                     {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
@@ -293,7 +298,7 @@ const AdminUploadQuestionsPage = () => {
 
                     <div>
                       <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Question</p>
-                      <LatexRenderer html={q.stem_html} className="text-xs" />
+                      <LatexRenderer html={q.stem_html} className="text-xs [&_img]:hidden" />
                     </div>
 
                     {options.length > 0 && (
@@ -306,7 +311,7 @@ const AdminUploadQuestionsPage = () => {
                             return (
                               <div key={i} className={`flex items-start gap-1.5 rounded-lg px-2.5 py-1.5 ${isCorrect ? "bg-green-50 border border-green-200" : "bg-muted/30"}`}>
                                 <span className={`shrink-0 font-bold ${isCorrect ? "text-green-600" : "text-muted-foreground"}`}>({num})</span>
-                                <LatexRenderer html={opt} className={`text-xs ${isCorrect ? "text-green-700" : "text-foreground"}`} />
+                                <LatexRenderer html={opt} className={`text-xs [&_img]:hidden ${isCorrect ? "text-green-700" : "text-foreground"}`} />
                               </div>
                             );
                           })}
@@ -338,7 +343,7 @@ const AdminUploadQuestionsPage = () => {
                     {q.solution_html && (
                       <div>
                         <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Solution</p>
-                        <LatexRenderer html={q.solution_html} className="text-xs" />
+                        <LatexRenderer html={q.solution_html} className="text-xs [&_img]:hidden" />
                       </div>
                     )}
                   </div>

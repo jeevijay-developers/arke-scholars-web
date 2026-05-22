@@ -93,6 +93,7 @@ const MENTORS: { name: string; college: string; img: string }[] = [
   { name: "Lucky Agrawal",            college: "IIT Kanpur",      img: "/arke/lucky agarwal.jpeg" },
   { name: "Yash Jain",                college: "IIT Bombay",      img: "/arke/yash jain.jpeg" },
   { name: "Amit Bhartiya",            college: "IIT Bombay",      img: "/arke/amit bhartiya.jpeg" },
+  { name: "Naman",                    college: "IISC Bengaluru",  img: "/arke/naman-iisc-bengaluru.jpeg" },
 ];
 
 // Display order for college sections
@@ -107,6 +108,7 @@ const COLLEGE_ORDER = [
   "IIT Gandhinagar",
   "IIT Roorkee",
   "BITS Pilani",
+  "IISC Bengaluru"
 ];
 
 // Colour palette per college — header accent + badge
@@ -121,6 +123,7 @@ const COLLEGE_THEME: Record<string, { header: string; badge: string }> = {
   "IIT Gandhinagar":  { header: "text-indigo-600 dark:text-indigo-400",badge: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400" },
   "IIT Roorkee":      { header: "text-red-600 dark:text-red-400",      badge: "bg-red-500/10 text-red-600 dark:text-red-400" },
   "BITS Pilani":      { header: "text-fuchsia-600 dark:text-fuchsia-400", badge: "bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400" },
+  "IISC Bengaluru": { header: "text-teal-600 dark:text-teal-400",    badge: "bg-teal-500/10 text-teal-600 dark:text-teal-400" },
 };
 
 function getTheme(college: string) {

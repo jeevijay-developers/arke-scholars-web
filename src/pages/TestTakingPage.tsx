@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import MathRenderer from "@/components/MathRenderer";
+import LatexRenderer from "@/components/LatexRenderer";
 
 type TestQuestion = {
   id: string;
@@ -21,6 +22,7 @@ type TestQuestion = {
 };
 
 type QStatus = "not-visited" | "answered" | "not-answered" | "marked" | "answered-marked";
+type AnswerState = { selected?: number | null; multiSelected?: number[]; value?: string; mapping?: Record<string, string> };
 
 const TestTakingPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -36,7 +38,7 @@ const TestTakingPage = () => {
   const [submitting, setSubmitting] = useState(false);
 
   const [currentQ, setCurrentQ] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, { selected: number | null }>>({});
+  const [answers, setAnswers] = useState<Record<string, AnswerState>>({});
   const [statuses, setStatuses] = useState<Record<string, QStatus>>({});
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [tabSwitches, setTabSwitches] = useState(0);
@@ -176,10 +178,39 @@ const TestTakingPage = () => {
   const q = questions[currentQ];
   const updateStatus = (id: string, status: QStatus) => setStatuses((prev) => ({ ...prev, [id]: status }));
 
-  const handleSelect = (optIdx: number) => {
+  const isAnswered = (ans: AnswerState | undefined, qType: string) => {
+    if (!ans) return false;
+    if (qType === "mcq") return (ans.multiSelected?.length ?? 0) > 0;
+    if (qType === "integer") return (ans.value?.trim() ?? "").length > 0;
+    if (qType === "match_column") return Object.keys(ans.mapping ?? {}).length > 0;
+    return ans.selected != null;
+  };
+
+  const handleSelect = (optId: number) => {
     if (!q) return;
-    setAnswers((prev) => ({ ...prev, [q.id]: { selected: optIdx } }));
-    updateStatus(q.id, "answered");
+    if (q.question_type === "mcq") {
+      const prev = answers[q.id]?.multiSelected ?? [];
+      const next = prev.includes(optId) ? prev.filter((x) => x !== optId) : [...prev, optId];
+      setAnswers((a) => ({ ...a, [q.id]: { multiSelected: next } }));
+      updateStatus(q.id, next.length > 0 ? "answered" : "not-answered");
+    } else {
+      setAnswers((a) => ({ ...a, [q.id]: { selected: optId } }));
+      updateStatus(q.id, "answered");
+    }
+  };
+
+  const handleIntegerInput = (val: string) => {
+    if (!q) return;
+    setAnswers((a) => ({ ...a, [q.id]: { value: val } }));
+    updateStatus(q.id, val.trim() ? "answered" : "not-answered");
+  };
+
+  const handleMatchSelect = (key: string, val: string) => {
+    if (!q) return;
+    const prev = answers[q.id]?.mapping ?? {};
+    const next = val ? { ...prev, [key]: val } : Object.fromEntries(Object.entries(prev).filter(([k]) => k !== key));
+    setAnswers((a) => ({ ...a, [q.id]: { mapping: next } }));
+    updateStatus(q.id, Object.keys(next).length > 0 ? "answered" : "not-answered");
   };
 
   const handleNext = () => {
@@ -189,12 +220,12 @@ const TestTakingPage = () => {
   const handlePrev = () => currentQ > 0 && setCurrentQ(currentQ - 1);
   const handleMarkAndNext = () => {
     if (!q) return;
-    updateStatus(q.id, answers[q.id]?.selected != null ? "answered-marked" : "marked");
+    updateStatus(q.id, isAnswered(answers[q.id], q.question_type) ? "answered-marked" : "marked");
     handleNext();
   };
   const handleClear = () => {
     if (!q) return;
-    setAnswers((prev) => ({ ...prev, [q.id]: { selected: null } }));
+    setAnswers((prev) => ({ ...prev, [q.id]: {} }));
     updateStatus(q.id, "not-answered");
   };
 
@@ -324,24 +355,92 @@ const TestTakingPage = () => {
               {q.topic && <span>· {q.topic}</span>}
               <span className="ml-auto">+{q.marks_correct} / {q.marks_wrong}</span>
             </div>
-            <div className="text-sm text-foreground leading-relaxed"><MathRenderer content={q.question_text} /></div>
+            <div className="text-sm text-foreground leading-relaxed"><LatexRenderer html={q.question_text} /></div>
             {q.question_image_url && <img src={q.question_image_url} alt="" className="rounded-lg max-h-64" />}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {q.options.map((opt) => {
-                const selected = answers[q.id]?.selected === opt.id;
-                return (
-                  <button
-                    key={opt.id}
-                    onClick={() => handleSelect(opt.id)}
-                    className={`w-full text-left rounded-xl border-2 px-4 py-3 text-sm transition-all ${selected ? "border-primary bg-primary/5 text-foreground" : "border-border hover:border-muted-foreground/40 text-foreground"
-                      }`}
-                  >
-                    <span className="font-bold mr-2">{String.fromCharCode(65 + opt.id)}.</span>
-                    <MathRenderer content={opt.text} inline />
-                  </button>
-                );
-              })}
-            </div>
+            {/* Integer */}
+            {q.question_type === "integer" && (
+              <div className="flex justify-center py-2">
+                <div className="space-y-2 text-center">
+                  <p className="text-xs font-semibold text-muted-foreground">Enter your answer (integer / decimal)</p>
+                  <input
+                    type="number"
+                    value={answers[q.id]?.value ?? ""}
+                    onChange={(e) => handleIntegerInput(e.target.value)}
+                    className="w-48 rounded-xl border-2 border-border px-4 py-3 text-center text-lg font-bold text-foreground focus:border-primary focus:outline-none"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Match the column */}
+            {q.question_type === "match_column" && (() => {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const opts = q.options as any;
+              const col1: { key: string; value: string }[] = opts?.col1 ?? [];
+              const col2: { key: string; value: string }[] = opts?.col2 ?? [];
+              const mapping = answers[q.id]?.mapping ?? {};
+              return (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4 text-xs font-bold text-muted-foreground uppercase tracking-wide pb-1 border-b border-border">
+                    <span>Column I</span>
+                    <span>Column II</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="space-y-2">
+                      {col1.map((entry) => (
+                        <div key={entry.key} className="flex items-center gap-2">
+                          <span className="w-8 shrink-0 font-bold text-primary">({entry.key})</span>
+                          <span className="flex-1 text-xs text-foreground">{entry.value}</span>
+                          <select
+                            value={mapping[entry.key] ?? ""}
+                            onChange={(e) => handleMatchSelect(entry.key, e.target.value)}
+                            className="rounded-lg border border-border bg-background px-2 py-1 text-xs outline-none focus:border-primary"
+                          >
+                            <option value="">—</option>
+                            {col2.map((c2) => <option key={c2.key} value={c2.key}>{c2.key}</option>)}
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="space-y-2">
+                      {col2.map((entry) => (
+                        <div key={entry.key} className="flex items-center gap-2">
+                          <span className="w-8 shrink-0 font-bold text-primary">({entry.key})</span>
+                          <span className="text-xs text-foreground">{entry.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* SCQ / MCQ / Assertion-Reasoning options */}
+            {q.question_type !== "integer" && q.question_type !== "match_column" && (() => {
+              const opts = q.options as { id: number; text: string }[];
+              if (!opts?.length) return null;
+              const isMcq = q.question_type === "mcq";
+              return (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {opts.map((opt, idx) => {
+                    const isSelected = isMcq
+                      ? (answers[q.id]?.multiSelected ?? []).includes(opt.id)
+                      : answers[q.id]?.selected === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        onClick={() => handleSelect(opt.id)}
+                        className={`w-full text-left rounded-xl border-2 px-4 py-3 text-sm transition-all ${isSelected ? "border-primary bg-primary/5 text-foreground" : "border-border hover:border-muted-foreground/40 text-foreground"}`}
+                      >
+                        <span className="font-bold mr-2">{String.fromCharCode(65 + idx)}.</span>
+                        <MathRenderer content={opt.text} inline />
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
 
           <div className="flex flex-wrap gap-2">

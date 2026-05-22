@@ -22,6 +22,21 @@ const TestListPage = () => {
   const { user, isStaff, isTeacher } = useAuth();
   const { enrolledCourseIds, loading: enrollmentLoading } = useEnrolledCourseIds();
   const [attemptStatus, setAttemptStatus] = useState<Record<string, string>>({});
+  const [courseNames, setCourseNames] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const ids = [...new Set(tests.map((t) => t.course_id).filter(Boolean))] as string[];
+    if (!ids.length) { setCourseNames({}); return; }
+    supabase
+      .from("courses")
+      .select("id, name")
+      .in("id", ids)
+      .then(({ data }) => {
+        const map: Record<string, string> = {};
+        (data ?? []).forEach((c) => { map[c.id] = c.name; });
+        setCourseNames(map);
+      });
+  }, [tests]);
 
   useEffect(() => {
     if (!user) return;
@@ -114,6 +129,10 @@ const TestListPage = () => {
                           <Clock className="h-3 w-3" /> {t.duration_minutes} min
                         </span>
                         {t.subjects.length > 0 && <span>{t.subjects.join(" · ")}</span>}
+                        {t.course_id
+                          ? <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">{courseNames[t.course_id] ?? "Course"}</span>
+                          : <span className="rounded-full bg-secondary/15 px-2 py-0.5 text-[10px] font-bold text-secondary">Free</span>
+                        }
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1">

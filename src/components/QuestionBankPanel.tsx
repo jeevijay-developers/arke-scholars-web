@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Search, Plus, Edit2, Trash2, GripVertical, BookMarked, ArrowUp, ArrowDown, ArrowUpDown, X } from "lucide-react";
+import { Search, Plus, Edit2, Trash2, GripVertical, BookMarked, ArrowUp, ArrowDown, ArrowUpDown, X, ImageIcon } from "lucide-react";
 import { useDraggable } from "@dnd-kit/core";
 import { useQuestionBank, type BankQuestion } from "@/hooks/useQuestionBank";
 import QuestionEditorDialog from "./QuestionEditorDialog";
@@ -53,8 +53,13 @@ const QuestionCard = ({ q, draggable, onEdit, onDelete, compact }: CardProps) =>
             {q.topic && <span className="text-[10px] font-medium text-muted-foreground">{q.topic}</span>}
             <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold capitalize ${difficultyColor(q.difficulty)}`}>{q.difficulty}</span>
           </div>
+          {/<img/i.test(q.question_text ?? "") && (
+            <span className="inline-flex items-center gap-0.5 mb-1 text-[10px] text-muted-foreground">
+              <ImageIcon className="h-3 w-3" /> image
+            </span>
+          )}
           <div className={`text-foreground ${compact ? "text-xs line-clamp-2" : "text-sm line-clamp-3"}`}>
-            <LatexRenderer html={q.question_text} />
+            <LatexRenderer html={q.question_text} className="[&_img]:hidden" />
           </div>
         </div>
         {(onEdit || onDelete) && (
@@ -318,9 +323,14 @@ const QuestionBankPanel = ({ draggable = false, manage = false, compact = false,
                             <span className="rounded bg-muted px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
                               {(q.question_type ?? "scq").replace("_", " ")}
                             </span>
+                            {/<img/i.test(q.question_text ?? "") && (
+                              <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                                <ImageIcon className="h-3 w-3" />
+                              </span>
+                            )}
                           </div>
                           <div className="text-foreground line-clamp-2">
-                            <LatexRenderer html={q.question_text} />
+                            <LatexRenderer html={q.question_text} className="[&_img]:hidden" />
                           </div>
                         </td>
                         <td className="px-3 py-2">
