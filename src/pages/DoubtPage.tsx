@@ -88,20 +88,20 @@ const DoubtPage = () => {
       });
 
       if (res.error) {
-        console.error("Edge function error:", res.error);
+        // console.error("Edge function error:", res.error);
         toast.error("Could not get an AI answer. A teacher will respond soon.", { duration: 7000 });
       } else if (res.data?.busy) {
-        console.warn("AI busy response:", res.data);
+        // console.warn("AI busy response:", res.data);
         toast.warning("AI is currently busy. Please wait a moment and try again.", { duration: 7000 });
       } else if (res.data?.success || res.data?.answer) {
-        console.log("AI answer generated successfully");
+        // console.log("AI answer generated successfully");
         toast.success("AI answer generated! Check your doubt.", { duration: 5000 });
       } else {
-        console.warn("Unexpected response from AI solver:", res.data);
+        // console.warn("Unexpected response from AI solver:", res.data);
         toast.error("Could not get an AI answer. A teacher will respond soon.", { duration: 7000 });
       }
     } catch (e) {
-      console.error("Failed to invoke AI solver:", e);
+      // console.error("Failed to invoke AI solver:", e);
       toast.error("Could not get an AI answer. A teacher will respond soon.", { duration: 7000 });
     }
   };

@@ -255,17 +255,7 @@ const ProfilePage = () => {
               <Field label="Phone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
               <SelectField label="Target Exam" value={form.target_exam} options={EXAMS} onChange={(v) => setForm({ ...form, target_exam: v })} />
               <SelectField label="Class Level" value={form.class_level} options={CLASS_LEVELS} onChange={(v) => setForm({ ...form, class_level: v })} />
-              <div className="sm:col-span-2">
-                <CityStateFields
-                  city={form.city}
-                  state={form.state}
-                  country={form.country}
-                  onCityChange={(v) => setForm((f) => ({ ...f, city: v }))}
-                  onStateChange={(v) => setForm((f) => ({ ...f, state: v }))}
-                  onCountryChange={(v) => setForm((f) => ({ ...f, country: v }))}
-                />
-              </div>
-              {/* School search — same width as Country */}
+              {/* School pairs with Class Level */}
               <div>
                 <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">School</label>
                 {schoolName ? (
@@ -316,6 +306,17 @@ const ProfilePage = () => {
                   </div>
                 )}
                 <p className="mt-1 text-[10px] text-muted-foreground">Linking your school lets you appear on your school's leaderboard</p>
+              </div>
+              {/* City / State / Country — spans full width */}
+              <div className="sm:col-span-2">
+                <CityStateFields
+                  city={form.city}
+                  state={form.state}
+                  country={form.country}
+                  onCityChange={(v) => setForm((f) => ({ ...f, city: v }))}
+                  onStateChange={(v) => setForm((f) => ({ ...f, state: v }))}
+                  onCountryChange={(v) => setForm((f) => ({ ...f, country: v }))}
+                />
               </div>
             </div>
             <button

@@ -42,7 +42,7 @@ const MENTORS: { name: string; college: string; img: string }[] = [
   { name: "Utkarsh Daga",             college: "IIT Bombay",      img: "/arke/utkarsh daga .jpeg" },
   { name: "Rushi Patel",              college: "IIT Delhi",       img: "/arke/rushi patel.jpeg" },
   { name: "Akhaj Bansal",             college: "IIT Delhi",       img: "/arke/akhaj bansal.jpeg" },
-  { name: "Roshan Garg",              college: "IIT Kanpur",      img: "/arke/roshan garg.jpeg" },
+  { name: "Rohan Garg",              college: "IIT Kanpur",      img: "/arke/rohan garg.jpeg" },
   { name: "Vishwajeet Singh Solanki", college: "IIT Kharagpur",   img: "/arke/vishwajeet singh solanki.jpeg" },
   { name: "Abhinav Singhal",          college: "IIT Kanpur",      img: "/arke/abhinav singhal.jpeg" },
   { name: "Spandan Patil",            college: "IIT Kanpur",      img: "/arke/spandan patil.jpeg" },
@@ -63,7 +63,7 @@ const MENTORS: { name: string; college: string; img: string }[] = [
   { name: "Utkarsh Sawarn",           college: "IIT Kanpur",      img: "/arke/utkarsh sawarn.jpeg" },
   { name: "Harsh Katara",             college: "IIT Guwahati",    img: "/arke/harsh katara.jpeg" },
   { name: "Rasesh Srivastava",        college: "IIT Guwahati",    img: "/arke/rashesh srivastav.jpeg" },
-  { name: "Parth Sankala",            college: "IIT Delhi",       img: "/arke/parth sankala .jpeg" },
+  { name: "Parth Sankala",            college: "IIT Delhi",       img: "/arke/parth sankala iit delhi.jpeg" },
   { name: "Somya Kumar",              college: "IIT Kharagpur",   img: "/arke/somya kumar.jpeg" },
   { name: "Chinmay Bindlish",         college: "IIT Delhi",       img: "/arke/chinmay bindlish .jpeg" },
   { name: "Madhav Maheshwari",        college: "IIT Delhi",       img: "/arke/madhav maheshwari.jpeg" },
@@ -86,6 +86,10 @@ const MENTORS: { name: string; college: string; img: string }[] = [
   { name: "Stuti Singh",              college: "IIT Kanpur",      img: "/arke/stuti singh.jpeg" },
   { name: "Aditya Mishra",            college: "IIT Kanpur",      img: "/arke/aditya mishra.jpeg" },
   { name: "Anand Kumar",              college: "IIT Kharagpur",   img: "/arke/anand kumar.jpeg" },
+  { name: "Anand Kumar",              college: "IIT Kanpur",      img: "/arke/anand kumar iit kanpur.jpeg" },
+  { name: "Shlok Mishra",             college: "IIT Kanpur",      img: "/arke/Shlok Mishra-IIT Kanpur.jpg" },
+  { name: "Swastik Singhal",          college: "IIT Kanpur",      img: "/arke/swastik singhal iit kanpur.jpeg" },
+  { name: "Shubham Bihani",           college: "IIT Roorkee · IIM Bangalore", img: "/arke/Shubham Bihani IIT rookee IIM Banglore.jpeg" },
   { name: "Lucky Agrawal",            college: "IIT Kanpur",      img: "/arke/lucky agarwal.jpeg" },
   { name: "Yash Jain",                college: "IIT Bombay",      img: "/arke/yash jain.jpeg" },
   { name: "Amit Bhartiya",            college: "IIT Bombay",      img: "/arke/amit bhartiya.jpeg" },
@@ -101,6 +105,7 @@ const COLLEGE_ORDER = [
   "IIT Guwahati",
   "IIT BHU Varanasi",
   "IIT Gandhinagar",
+  "IIT Roorkee",
   "BITS Pilani",
 ];
 
@@ -114,6 +119,7 @@ const COLLEGE_THEME: Record<string, { header: string; badge: string }> = {
   "IIT Guwahati":     { header: "text-teal-600 dark:text-teal-400",    badge: "bg-teal-500/10 text-teal-600 dark:text-teal-400" },
   "IIT BHU Varanasi": { header: "text-yellow-700 dark:text-yellow-400",badge: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400" },
   "IIT Gandhinagar":  { header: "text-indigo-600 dark:text-indigo-400",badge: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400" },
+  "IIT Roorkee":      { header: "text-red-600 dark:text-red-400",      badge: "bg-red-500/10 text-red-600 dark:text-red-400" },
   "BITS Pilani":      { header: "text-fuchsia-600 dark:text-fuchsia-400", badge: "bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400" },
 };
 
