@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState } from "react";
-import { Crown, RotateCw, Home, TrendingUp, TrendingDown, Check, X, Share2, Download, Flame, Zap, Target } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Crown, RotateCw, Home, TrendingUp, TrendingDown, Check, X, Share2, Flame, Zap, Target } from "lucide-react";
 import { CompeteMatch, CompeteQuestion, CompeteAnswer } from "@/hooks/useCompeteMatch";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
@@ -34,7 +34,6 @@ const CompeteResult = ({ match, questions, answers, onPlayAgain, onLobby }: Prop
   const titleColor = draw ? "text-white" : won ? "text-accent" : "text-destructive";
 
   const [tab, setTab] = useState<"summary" | "review">("summary");
-  const cardRef = useRef<HTMLDivElement>(null);
 
   const myAnswers = useMemo(
     () => answers.filter((a) => a.user_id === myId).sort((a, b) => a.question_index - b.question_index),
@@ -68,37 +67,10 @@ const CompeteResult = ({ match, questions, answers, onPlayAgain, onLobby }: Prop
     }
   };
 
-  const handleDownloadCard = () => {
-    const svg = `
-<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
-  <defs>
-    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0" stop-color="#1E293B"/>
-      <stop offset="1" stop-color="#0F172A"/>
-    </linearGradient>
-  </defs>
-  <rect width="800" height="450" fill="url(#bg)"/>
-  <text x="40" y="60" fill="#F97316" font-family="sans-serif" font-weight="900" font-size="20">ARKE · COMPETE</text>
-  <text x="40" y="130" fill="${won ? "#10B981" : draw ? "#FFFFFF" : "#EF4444"}" font-family="sans-serif" font-weight="900" font-size="68">${title.toUpperCase()}</text>
-  <text x="40" y="180" fill="#FFFFFF" font-family="sans-serif" font-size="20">${escapeXml(myName ?? "You")} vs ${escapeXml(oppName ?? "Opponent")}</text>
-  <text x="40" y="280" fill="#F97316" font-family="sans-serif" font-weight="900" font-size="92">${Math.round(myScore)}</text>
-  <text x="40" y="310" fill="#94A3B8" font-family="sans-serif" font-size="16">vs ${Math.round(oppScore)}</text>
-  <text x="40" y="370" fill="#FFFFFF" font-family="sans-serif" font-size="18">${accuracy}% accuracy · ${correctCount}/${myAnswers.length} correct</text>
-  <text x="40" y="400" fill="#94A3B8" font-family="sans-serif" font-size="14">${match.subject} · ${match.topic}${myAfter != null ? ` · Rating ${myAfter} (${delta >= 0 ? "+" : ""}${delta})` : ""}</text>
-</svg>`.trim();
-    const blob = new Blob([svg], { type: "image/svg+xml" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `arke-compete-${match.id.slice(0, 8)}.svg`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   return (
     <div className="space-y-5 max-w-3xl mx-auto py-6 animate-fade-in-up">
       {/* Hero */}
-      <div ref={cardRef} className="text-center">
+      <div className="text-center">
         <Crown className={`h-12 w-12 mx-auto ${won ? "text-accent" : "text-white/30"}`} />
         <h2 className={`text-3xl font-black font-display ${titleColor}`}>{title}</h2>
         <div className="grid grid-cols-2 gap-3 max-w-md mx-auto mt-4">
@@ -226,9 +198,6 @@ const CompeteResult = ({ match, questions, answers, onPlayAgain, onLobby }: Prop
         <button onClick={handleShare} className="rounded-lg bg-white/10 px-4 py-3 text-sm font-bold text-white hover:bg-white/15 inline-flex items-center justify-center gap-1">
           <Share2 className="h-4 w-4" /> Share
         </button>
-        <button onClick={handleDownloadCard} className="rounded-lg bg-white/10 px-4 py-3 text-sm font-bold text-white hover:bg-white/15 inline-flex items-center justify-center gap-1">
-          <Download className="h-4 w-4" /> Card
-        </button>
       </div>
     </div>
   );
@@ -257,8 +226,5 @@ const Badge = ({ ok, label }: { ok?: boolean; label: string }) => (
   </span>
 );
 
-function escapeXml(s: string) {
-  return s.replace(/[<>&'"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" }[c]!));
-}
 
 export default CompeteResult;

@@ -216,7 +216,7 @@ const CompetePage = () => {
     setMatchId(null);
     setRoomCode(null);
     setPhase("lobby");
-    toast.info("You forfeited the match.");
+    toast.info("You quit the match.");
   };
 
   const handlePlayAgain = () => {

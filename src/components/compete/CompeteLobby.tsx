@@ -130,7 +130,12 @@ const CompeteLobby = ({
           disabled={busy}
           className="w-full rounded-xl bg-gradient-to-r from-primary to-accent px-6 py-4 text-base font-black text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-60"
         >
-          {busy ? "Working..." : "Find Opponent"}
+          {busy ? (
+            <span className="inline-flex items-center justify-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Finding your perfect match...
+            </span>
+          ) : "Find Opponent"}
         </button>
 
         <div className="grid grid-cols-2 gap-2">
