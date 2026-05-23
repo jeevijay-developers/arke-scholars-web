@@ -246,10 +246,10 @@ const MentorshipPage = () => {
               <Sparkles className="h-4 w-4" /> 1:1 Mentorship Program
             </span>
             <h1 className="mt-6 font-display text-4xl font-black text-white md:text-5xl lg:text-6xl">
-              Mentorship by <span className="gradient-text">IITians, IIMians & AIIMS doctors</span>
+              Mentorship by <span className="gradient-text">IITians, IIMians & MITians doctors</span>
             </h1>
             <p className="mt-5 text-lg text-white/80">
-              Arke is programmed and designed directly by toppers from IIT, IIM and AIIMS. The mentorship you get here
+              Arke is programmed and designed directly under toppers from IIT, IIM and AIIMS. The mentorship you get here
               comes straight from IITians currently studying at IIT Delhi, Bombay, Kharagpur and other premier IITs.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
