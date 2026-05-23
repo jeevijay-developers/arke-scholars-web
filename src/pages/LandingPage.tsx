@@ -114,10 +114,10 @@ const LandingPage = () => {
             "@context": "https://schema.org",
             "@type": "Organization",
             "name": "ARKE Scholars",
-            "alternateName": "Arke",
+            "alternateName": ["Arke", "Arke Scholars", "Arke Pro", "Arke EdTech", "arke.pro"],
             "url": "https://arke.pro",
             "logo": "https://arke.pro/logo.png",
-            "description": "India's next-gen learning platform for JEE, NEET, and Board exams",
+            "description": "ARKE Scholars (arke.pro) is India's next-gen EdTech platform for JEE Main, JEE Advanced, NEET, and CBSE Board exam preparation, serving students in India and UAE.",
             "foundingDate": "2024",
             "areaServed": ["IN", "AE"],
             "sameAs": [
@@ -171,7 +171,7 @@ const LandingPage = () => {
               </h1>
               <p className="mt-3 text-base font-semibold text-white/90">Schooling · Olympiads · Competitive Exams</p>
               <p className="mt-2 max-w-md text-sm md:text-base text-white/70 leading-relaxed">
-                Master your exams with live classes from top educators, AI-powered doubt solving, and smart test analytics.
+                <strong className="text-white/90">ARKE Scholars</strong> (arke.pro) is India's next-gen EdTech platform. Master JEE, NEET &amp; Board exams with live classes from top educators, AI-powered doubt solving, and smart test analytics.
               </p>
               <div className="mt-6 md:mt-8 flex items-center gap-3">
                 <Link to="/signup" className="inline-flex items-center gap-1.5 rounded-pill bg-gradient-to-r from-primary to-accent px-5 py-2.5 md:px-8 md:py-3.5 text-sm md:text-base font-bold text-primary-foreground shadow-blue hover:opacity-90 transition-all hover:scale-105">

@@ -583,6 +583,35 @@ const AdminReviewQuestionsPage = () => {
         throw new Error(tqErr.message);
       }
 
+      // Also populate the reusable question bank. Non-fatal: pool failure
+      // must not roll back the published test.
+      const poolRows = included.map((q) => ({
+        paper_id: paperId,
+        question_number: q.question_number,
+        type: q.type,
+        stem_html: q.stem_html,
+        option_1: q.option_1 || null,
+        option_2: q.option_2 || null,
+        option_3: q.option_3 || null,
+        option_4: q.option_4 || null,
+        correct_options: q.correct_options?.length ? q.correct_options : null,
+        correct_integer: q.correct_integer ?? null,
+        match_col1: q.match_col1 ?? null,
+        match_col2: q.match_col2 ?? null,
+        match_answer: q.match_answer ?? null,
+        assertion_text: q.assertion_text ?? null,
+        reason_text: q.reason_text ?? null,
+        images: q.images,
+        solution_html: q.solution_html || null,
+        has_latex: q.has_latex,
+        needs_review: false,
+      }));
+      const { error: poolErr } = await (supabase as any).from("questions").insert(poolRows);
+      if (poolErr) {
+        console.warn("Question bank insert failed:", poolErr.message);
+        toast.warning("Test published, but question bank insert failed — questions not added to bank.");
+      }
+
       toast.success(`Test created with ${included.length} question${included.length === 1 ? "" : "s"}`);
       navigate("/admin/tests");
     } catch (err: unknown) {
