@@ -39,7 +39,30 @@ const SignupPage = () => {
     state: "",
     country: "India",
   });
-  const update = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
+
+  const FOUNDATION_CLASSES = [
+    { value: "6", label: "Class 6" },
+    { value: "7", label: "Class 7" },
+    { value: "8", label: "Class 8" },
+    { value: "9", label: "Class 9" },
+    { value: "10", label: "Class 10" },
+  ];
+  const SENIOR_CLASSES = [
+    { value: "11", label: "Class 11" },
+    { value: "12", label: "Class 12" },
+    { value: "Dropper", label: "12th Pass / Dropper" },
+  ];
+  const isFoundation = form.target_exam === "Foundation";
+  const classOptions = isFoundation ? FOUNDATION_CLASSES : SENIOR_CLASSES;
+
+  const update = (k: keyof typeof form, v: string) =>
+    setForm((f) => {
+      if (k === "target_exam") {
+        const foundation = v === "Foundation";
+        return { ...f, target_exam: v, class_level: foundation ? "6" : "11" };
+      }
+      return { ...f, [k]: v };
+    });
 
   const handleSignup = async () => {
     if (!form.full_name || !form.email || !form.password) {
@@ -195,14 +218,9 @@ const SignupPage = () => {
               <div>
                 <label className="text-sm font-medium text-foreground">Class</label>
                 <select value={form.class_level} onChange={(e) => update("class_level", e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground">
-                  <option value="6">Class 6</option>
-                  <option value="7">Class 7</option>
-                  <option value="8">Class 8</option>
-                  <option value="9">Class 9</option>
-                  <option value="10">Class 10</option>
-                  <option value="11">Class 11</option>
-                  <option value="12">Class 12</option>
-                  <option value="Dropper">Dropper</option>
+                  {classOptions.map((c) => (
+                    <option key={c.value} value={c.value}>{c.label}</option>
+                  ))}
                 </select>
               </div>
             </div>

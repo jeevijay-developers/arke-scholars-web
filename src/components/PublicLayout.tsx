@@ -1,12 +1,12 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
-import { Flame, Heart, Globe, Menu, X } from "lucide-react";
+import { Flame, Heart, Globe, Menu, X, Phone } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { useEffect, useState } from "react";
 import arkeLogo from "@/assets/arke-logo.png";
 
 const PublicLayout = () => {
   const location = useLocation();
-  const { country, setCountry, user } = useAppStore();
+  const { user } = useAppStore();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const initials = user?.full_name
     ? user.full_name.split(" ").filter(Boolean).slice(0, 2).map((n) => n[0]?.toUpperCase()).join("")
@@ -27,23 +27,10 @@ const PublicLayout = () => {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Region banner */}
       <div className="bg-gradient-to-r from-primary to-accent py-1.5">
-        <div className="container mx-auto flex items-center justify-center gap-3 px-4">
+        <div className="container mx-auto flex items-center justify-center gap-2 px-4">
           <Globe className="h-3.5 w-3.5 text-primary-foreground" />
-          <span className="text-[11px] font-medium text-primary-foreground/80">Choose your region:</span>
-          <div className="flex rounded-full bg-primary-foreground/20 p-0.5">
-            <button
-              onClick={() => setCountry("india")}
-              className={`rounded-full px-3 py-0.5 text-[11px] font-bold transition-colors ${country === "india" ? "bg-primary-foreground text-primary" : "text-primary-foreground/80 hover:text-primary-foreground"}`}
-            >
-              🇮🇳 India
-            </button>
-            <button
-              onClick={() => setCountry("dubai")}
-              className={`rounded-full px-3 py-0.5 text-[11px] font-bold transition-colors ${country === "dubai" ? "bg-primary-foreground text-primary" : "text-primary-foreground/80 hover:text-primary-foreground"}`}
-            >
-              🇦🇪 Dubai
-            </button>
-          </div>
+          <span className="text-[11px] font-medium text-primary-foreground/80">Serving students across</span>
+          <span className="rounded-full bg-primary-foreground/20 px-3 py-0.5 text-[11px] font-bold text-primary-foreground">🇮🇳 India</span>
         </div>
       </div>
 
@@ -165,6 +152,9 @@ const PublicLayout = () => {
             })}
           </div>
           <div className="flex items-center gap-2 md:gap-3 shrink-0">
+            <Link to="/contact" className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" aria-label="Contact us">
+              <Phone className="h-4 w-4" />
+            </Link>
             {user ? (
               <Link
                 to="/dashboard"

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import SEO from "@/components/SEO";
+import { toast } from "sonner";
 import { ArrowRight, Play, BookOpen, ClipboardCheck, Bot, BarChart3, Swords, Smartphone, Check, Rocket, GraduationCap, FileText, Trophy, Users, Monitor, Award, Sparkles, Globe, Video, User, Quote, Clock, ChevronRight, ChevronDown, HelpCircle, Briefcase, IndianRupee, ChevronLeft } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { useState, useRef } from "react";
@@ -99,8 +100,27 @@ function MobileCarousel({ children, className = "" }: { children: React.ReactNod
   );
 }
 
+const HOW_IT_WORKS_STEPS = [
+  { step: "1", icon: User, title: "Sign Up Free", desc: "Create your account in under 30 seconds. Choose your exam goal and get a personalized dashboard.", publicLink: "/signup", authLink: "/dashboard" },
+  { step: "2", icon: BookOpen, title: "Choose Your Course", desc: "Browse courses by subject or goal. Enroll in live batches, 1-on-1 mentoring, or recorded lectures.", publicLink: "/courses", authLink: "/my-courses" },
+  { step: "3", icon: Rocket, title: "Start Learning", desc: "Attend live classes, take tests, ask doubts via AI, and track your progress with analytics.", publicLink: "/signup", authLink: "/dashboard" },
+];
+
+const FEATURE_CARDS = [
+  { icon: BookOpen, title: "Live Classes", desc: "Real-time classes with top educators. Interactive sessions with live Q&A.", img: "featureLiveClass", publicLink: "/courses", authLink: "/my-live-classes" },
+  { icon: ClipboardCheck, title: "Smart Test Engine", desc: "JEE/NEET pattern with negative marking, detailed analysis & rank.", img: "featureTest", publicLink: "/signup", authLink: "/my-tests" },
+  { icon: Bot, title: "AI Doubt Solver", desc: "Upload image, get step-by-step solution instantly. Available 24/7.", img: "featureAiDoubt", publicLink: "/signup", authLink: "/doubts" },
+  { icon: BarChart3, title: "Deep Analytics", desc: "Know your weak topics, chapter heatmaps, and beat the topper.", img: "featureAnalytics", publicLink: "/signup", authLink: "/analytics" },
+  { icon: Swords, title: "Compete Mode", desc: "1v1 quiz battles, climb the India rank, earn XP and badges.", img: "featureCompete", publicLink: "/signup", authLink: "/compete" },
+  { icon: Smartphone, title: "Mobile App", desc: "Study anywhere with offline access. Download lectures on the go.", img: "featureMobile", publicLink: "/signup", authLink: "/dashboard" },
+];
+
+const FEATURE_IMGS: Record<string, string> = {
+  featureLiveClass, featureTest, featureAiDoubt, featureAnalytics, featureCompete, featureMobile,
+};
+
 const LandingPage = () => {
-  const { country } = useAppStore();
+  const { country, user } = useAppStore();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   return (
@@ -177,7 +197,10 @@ const LandingPage = () => {
                 <Link to="/signup" className="inline-flex items-center gap-1.5 rounded-pill bg-gradient-to-r from-primary to-accent px-5 py-2.5 md:px-8 md:py-3.5 text-sm md:text-base font-bold text-primary-foreground shadow-blue hover:opacity-90 transition-all hover:scale-105">
                   Start for Free <ArrowRight className="h-3.5 w-3.5 md:h-4 md:w-4" />
                 </Link>
-                <button className="inline-flex items-center gap-1.5 rounded-pill border border-white/30 px-4 py-2.5 md:px-6 md:py-3.5 text-sm md:text-base font-semibold text-white hover:bg-white/10 transition-colors">
+                <button
+                  onClick={() => toast.info("Demo video coming soon! We're putting the finishing touches on a full platform walkthrough.")}
+                  className="inline-flex items-center gap-1.5 rounded-pill border border-white/30 px-4 py-2.5 md:px-6 md:py-3.5 text-sm md:text-base font-semibold text-white hover:bg-white/10 transition-colors"
+                >
                   <Play className="h-3.5 w-3.5 md:h-4 md:w-4" /> Watch Demo
                 </button>
               </div>
@@ -202,9 +225,15 @@ const LandingPage = () => {
       <section className="border-b border-border bg-card py-4 md:py-5">
         <div className="container mx-auto px-4">
           <p className="text-center text-[10px] md:text-xs font-semibold text-muted-foreground mb-3 md:mb-4 uppercase tracking-wider">Trusted by students from top institutions</p>
-          <div className="flex items-center justify-center gap-5 md:gap-8 flex-wrap opacity-60">
-            {["IIT Delhi", "IIT Bombay", "AIIMS", "NIT Trichy", "BITS Pilani", "VIT"].map(name => (
-              <span key={name} className="text-xs md:text-sm font-bold text-muted-foreground">{name}</span>
+          <div className="flex items-center justify-center gap-2 md:gap-3 flex-wrap">
+            {[
+              "IIT Bombay", "IIT Delhi", "IIT Kanpur", "IIT Kharagpur", "IIT Madras",
+              "IIT Guwahati", "IIT BHU Varanasi", "IIT Gandhinagar", "IIT Roorkee",
+              "BITS Pilani", "IISc Bengaluru", "MIT",
+            ].map(name => (
+              <Link key={name} to="/mentorship" className="rounded-full border border-border bg-muted/50 px-3 py-1 text-[11px] md:text-xs font-semibold text-muted-foreground hover:border-primary/40 hover:bg-primary/5 hover:text-primary transition-colors">
+                {name}
+              </Link>
             ))}
           </div>
         </div>
@@ -241,38 +270,30 @@ const LandingPage = () => {
           {/* Desktop grid */}
           <div className="mt-10 hidden md:grid gap-6 md:grid-cols-3 stagger-children relative">
             <div className="hidden md:block absolute top-20 left-[20%] right-[20%] h-0.5 border-t-2 border-dashed border-primary/30 z-0" />
-            {[
-              { step: "1", icon: User, title: "Sign Up Free", desc: "Create your account in under 30 seconds. Choose your exam goal and get a personalized dashboard." },
-              { step: "2", icon: BookOpen, title: "Choose Your Course", desc: "Browse courses by subject or goal. Enroll in live batches, 1-on-1 mentoring, or recorded lectures." },
-              { step: "3", icon: Rocket, title: "Start Learning", desc: "Attend live classes, take tests, ask doubts via AI, and track your progress with analytics." },
-            ].map((s) => (
-              <div key={s.step} className="relative z-10 flex h-full flex-col items-center text-center rounded-2xl border border-border bg-background p-8 shadow-sm hover-lift">
+            {HOW_IT_WORKS_STEPS.map((s) => (
+              <Link key={s.step} to={user ? s.authLink : s.publicLink} className="relative z-10 flex h-full flex-col items-center text-center rounded-2xl border border-border bg-background p-8 shadow-sm hover-lift hover:border-primary/30 transition-colors">
                 <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent shadow-lg mb-5">
                   <s.icon className="h-7 w-7 text-white" />
                   <span className="absolute -top-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-white text-xs font-black text-primary shadow border-2 border-primary">{s.step}</span>
                 </div>
                 <h3 className="text-lg font-bold font-display text-foreground">{s.title}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{s.desc}</p>
-              </div>
+              </Link>
             ))}
           </div>
 
           {/* Mobile carousel */}
           <div className="mt-8 md:hidden px-3">
             <MobileCarousel>
-              {[
-                { step: "1", icon: User, title: "Sign Up Free", desc: "Create your account in under 30 seconds. Choose your exam goal and get a personalized dashboard." },
-                { step: "2", icon: BookOpen, title: "Choose Your Course", desc: "Browse courses by subject or goal. Enroll in live batches, 1-on-1 mentoring, or recorded lectures." },
-                { step: "3", icon: Rocket, title: "Start Learning", desc: "Attend live classes, take tests, ask doubts via AI, and track your progress with analytics." },
-              ].map((s) => (
-                <div key={s.step} className="flex flex-col items-center text-center rounded-2xl border border-border bg-background p-6 shadow-sm h-full">
+              {HOW_IT_WORKS_STEPS.map((s) => (
+                <Link key={s.step} to={user ? s.authLink : s.publicLink} className="flex flex-col items-center text-center rounded-2xl border border-border bg-background p-6 shadow-sm h-full hover:border-primary/30 transition-colors">
                   <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-accent shadow-lg mb-4">
                     <s.icon className="h-6 w-6 text-white" />
                     <span className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-white text-xs font-black text-primary shadow border-2 border-primary">{s.step}</span>
                   </div>
                   <h3 className="text-base font-bold font-display text-foreground">{s.title}</h3>
                   <p className="mt-2 text-xs text-muted-foreground">{s.desc}</p>
-                </div>
+                </Link>
               ))}
             </MobileCarousel>
           </div>
@@ -291,17 +312,10 @@ const LandingPage = () => {
 
           {/* Desktop grid */}
           <div className="mt-10 hidden sm:grid gap-6 sm:grid-cols-2 lg:grid-cols-3 stagger-children">
-            {[
-              { icon: BookOpen, title: "Live Classes", desc: "Real-time classes with top educators. Interactive sessions with live Q&A.", img: featureLiveClass },
-              { icon: ClipboardCheck, title: "Smart Test Engine", desc: "JEE/NEET pattern with negative marking, detailed analysis & rank.", img: featureTest },
-              { icon: Bot, title: "AI Doubt Solver", desc: "Upload image, get step-by-step solution instantly. Available 24/7.", img: featureAiDoubt },
-              { icon: BarChart3, title: "Deep Analytics", desc: "Know your weak topics, chapter heatmaps, and beat the topper.", img: featureAnalytics },
-              { icon: Swords, title: "Compete Mode", desc: "1v1 quiz battles, climb the India rank, earn XP and badges.", img: featureCompete },
-              { icon: Smartphone, title: "Mobile App", desc: "Study anywhere with offline access. Download lectures on the go.", img: featureMobile },
-            ].map((f) => (
-              <div key={f.title} className="rounded-2xl border border-border bg-card overflow-hidden hover-lift group">
+            {FEATURE_CARDS.map((f) => (
+              <Link key={f.title} to={user ? f.authLink : f.publicLink} className="rounded-2xl border border-border bg-card overflow-hidden hover-lift hover:border-primary/30 transition-colors group">
                 <div className="h-40 bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center p-4 overflow-hidden">
-                  <img src={f.img} alt={f.title} loading="lazy" width={512} height={512} className="h-32 w-32 object-contain group-hover:scale-110 transition-transform duration-300" />
+                  <img src={FEATURE_IMGS[f.img]} alt={f.title} loading="lazy" width={512} height={512} className="h-32 w-32 object-contain group-hover:scale-110 transition-transform duration-300" />
                 </div>
                 <div className="p-5">
                   <div className="flex items-center gap-2 mb-2">
@@ -310,24 +324,17 @@ const LandingPage = () => {
                   </div>
                   <p className="text-sm text-muted-foreground">{f.desc}</p>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
 
           {/* Mobile carousel */}
           <div className="mt-8 sm:hidden px-3">
             <MobileCarousel>
-              {[
-                { icon: BookOpen, title: "Live Classes", desc: "Real-time classes with top educators. Interactive sessions with live Q&A.", img: featureLiveClass },
-                { icon: ClipboardCheck, title: "Smart Test Engine", desc: "JEE/NEET pattern with negative marking, detailed analysis & rank.", img: featureTest },
-                { icon: Bot, title: "AI Doubt Solver", desc: "Upload image, get step-by-step solution instantly. Available 24/7.", img: featureAiDoubt },
-                { icon: BarChart3, title: "Deep Analytics", desc: "Know your weak topics, chapter heatmaps, and beat the topper.", img: featureAnalytics },
-                { icon: Swords, title: "Compete Mode", desc: "1v1 quiz battles, climb the India rank, earn XP and badges.", img: featureCompete },
-                { icon: Smartphone, title: "Mobile App", desc: "Study anywhere with offline access. Download lectures on the go.", img: featureMobile },
-              ].map((f) => (
-                <div key={f.title} className="rounded-2xl border border-border bg-card overflow-hidden group h-full">
+              {FEATURE_CARDS.map((f) => (
+                <Link key={f.title} to={user ? f.authLink : f.publicLink} className="rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/30 transition-colors group h-full">
                   <div className="h-32 bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center p-3 overflow-hidden">
-                    <img src={f.img} alt={f.title} loading="lazy" width={512} height={512} className="h-24 w-24 object-contain" />
+                    <img src={FEATURE_IMGS[f.img]} alt={f.title} loading="lazy" width={512} height={512} className="h-24 w-24 object-contain" />
                   </div>
                   <div className="p-4">
                     <div className="flex items-center gap-2 mb-1.5">
@@ -336,7 +343,7 @@ const LandingPage = () => {
                     </div>
                     <p className="text-xs text-muted-foreground">{f.desc}</p>
                   </div>
-                </div>
+                </Link>
               ))}
             </MobileCarousel>
           </div>
