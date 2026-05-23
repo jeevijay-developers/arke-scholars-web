@@ -277,7 +277,7 @@ function parseDocument(
 
   function finalizeQuestion(a: Accum): void {
     try {
-      const stemHtml = a.stemParas.join("<br/>").trim()
+      let stemHtml = a.stemParas.join("<br/>").trim()
         .replace(/^<strong>\s*\d+\s*\.\s*<\/strong>\s*/i, "")
         .replace(/^\d+\s*\.\s+/, "");
 
@@ -314,6 +314,38 @@ function parseDocument(
             allCells[2] ?? "",
             allCells[3] ?? "",
           ];
+        }
+
+        // ── Fallback: options inline inside stem, separated by <br/> ──────────
+        // Word docs commonly put the question + 4 options in a single paragraph
+        // with line breaks between them. In that case neither the paragraph-
+        // option detector nor the table extractor fires. Split by <br/> and
+        // peel off any segment that starts with "(1)".."(4)".
+        if (!option_1 && !option_2 && !option_3 && !option_4) {
+          const segments = stemHtml.split(/<br\s*\/?>/i);
+          const stemKept: string[] = [];
+          const found: Record<number, string> = {};
+          for (const seg of segments) {
+            const stripped = seg.replace(/<[^>]+>/g, "").trim();
+            const m = /^\(([1-4])\)\s*(.*)$/s.exec(stripped);
+            if (m) {
+              const idx = parseInt(m[1], 10);
+              // Strip leading "(N)" + surrounding tags from the HTML segment
+              const cleanedHtml = seg
+                .replace(/^\s*(?:<[^>]+>\s*)*\(\s*[1-4]\s*\)\s*(?:<\/[^>]+>\s*)*/, "")
+                .trim();
+              found[idx] = cleanedHtml || m[2].trim();
+            } else if (stripped) {
+              stemKept.push(seg);
+            }
+          }
+          if (Object.keys(found).length >= 2) {
+            option_1 = found[1] ?? "";
+            option_2 = found[2] ?? "";
+            option_3 = found[3] ?? "";
+            option_4 = found[4] ?? "";
+            stemHtml = stemKept.join("<br/>").trim();
+          }
         }
       }
 

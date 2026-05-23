@@ -65,7 +65,7 @@ const LatexRenderer = ({ html, className = "" }: Props) => {
   const segments = segmentize(html);
 
   return (
-    <div className={`latex-content leading-relaxed [&_img]:max-h-40 [&_img]:w-auto [&_img]:inline-block [&_img]:align-middle ${className}`}>
+    <div className={`latex-content leading-relaxed [&_img]:max-h-72 [&_img]:w-auto [&_img]:inline-block [&_img]:align-middle ${className}`}>
       {segments.map((seg, idx) => {
         if (seg.type === "html") {
           return (
