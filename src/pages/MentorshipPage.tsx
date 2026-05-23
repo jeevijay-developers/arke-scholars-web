@@ -210,7 +210,21 @@ const steps = [
 const MentorshipPage = () => {
   return (
     <div className="bg-background">
-      <SEO title="Personal Mentorship for JEE & NEET" description="Get paired with an IIT or AIIMS mentor for 1-on-1 guidance, study planning, and rank-focused strategy. JEE, NEET & Board mentorship on ARKE Scholars." />
+      <SEO
+        title="1-on-1 IIT Mentorship for JEE & NEET Aspirants"
+        description="Get personal mentorship from IIT toppers for JEE & NEET. Weekly sessions, custom study plans, and dedicated doubt mentors. 28 IIT mentors across Bombay, Delhi, Kanpur."
+        canonical="/mentorship"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "Service",
+          "name": "1-on-1 IIT Mentorship for JEE",
+          "description": "Weekly personal mentoring sessions with IIT toppers for JEE Main, JEE Advanced and NEET aspirants",
+          "provider": { "@type": "Organization", "name": "ARKE Scholars", "url": "https://arke.pro" },
+          "serviceType": "Educational Mentoring",
+          "areaServed": ["IN", "AE"],
+          "offers": { "@type": "Offer", "url": "https://arke.pro/pricing", "priceCurrency": "INR", "availability": "https://schema.org/InStock" }
+        }}
+      />
       <style>{`
         .no-scrollbar::-webkit-scrollbar {
           display: none;

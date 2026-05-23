@@ -70,7 +70,37 @@ const TestsLandingPage = () => {
 
   return (
     <div className="bg-background">
-      <SEO title="Mock Tests & Previous Year Papers" description="Attempt JEE, NEET & Board mock tests with real exam patterns and instant analytics. Chapter tests, full-length mocks, and PYQ series on ARKE Scholars." />
+      <SEO
+        title="JEE & NEET Mock Tests Online — Free Test Series"
+        description="Attempt JEE Main, JEE Advanced & NEET mock tests with real exam simulation. 10,000+ questions, All-India rank predictor, topic-wise analysis. Start free."
+        canonical="/tests"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Are JEE mock tests on ARKE Scholars free?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Yes. The Explorer plan gives access to free mock tests with full analytics. Upgrade to Pro for the complete series." }
+            },
+            {
+              "@type": "Question",
+              "name": "How many mock tests does ARKE Scholars have for NEET?",
+              "acceptedAnswer": { "@type": "Answer", "text": "ARKE Scholars Pro plan includes the full NEET test series with full-length mocks, subject-wise tests, and chapter-level quizzes — 500+ tests total." }
+            },
+            {
+              "@type": "Question",
+              "name": "Do JEE mock tests follow the latest NTA pattern?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Yes. All JEE Main and JEE Advanced mock tests follow the latest NTA exam pattern including the mixed-format MCQ and numerical structure." }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I get an All-India Rank predictor test for free?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Yes. Sign up for the free Explorer plan to attempt the AIR predictor mock test and see your estimated rank." }
+            }
+          ]
+        }}
+      />
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-to-br from-[hsl(var(--navy))] via-[hsl(var(--navy2))] to-[hsl(222,47%,15%)] py-20 md:py-28">
         <div className="absolute inset-0 opacity-30" style={{ background: "radial-gradient(circle at 30% 50%, hsl(24 95% 53% / 0.25) 0%, transparent 60%)" }} />

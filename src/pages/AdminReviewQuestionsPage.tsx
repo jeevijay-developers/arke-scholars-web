@@ -515,8 +515,8 @@ const AdminReviewQuestionsPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const { questions: initialQuestions = [], paperCode = "", subject = "Physics" } =
-    (location.state as { questions: ParsedQuestion[]; paperId: string; paperCode: string; subject?: string }) ?? {};
+  const { questions: initialQuestions = [], paperCode = "", subject = "Physics", durationMinutes = 180, courseId = null } =
+    (location.state as { questions: ParsedQuestion[]; paperId: string; paperCode: string; subject?: string; durationMinutes?: number; courseId?: string | null }) ?? {};
 
   const [questions, setQuestions] = useState<ParsedQuestion[]>(initialQuestions);
   const [approvals, setApprovals] = useState<Record<number, ApprovalStatus>>(() =>
@@ -560,7 +560,7 @@ const AdminReviewQuestionsPage = () => {
           test_type: "mock",
           exam_pattern: "jee-main",
           subjects: [subject],
-          duration_minutes: 180,
+          duration_minutes: durationMinutes,
           correct_marks: 4,
           wrong_marks: -1,
           total_questions: included.length,
@@ -568,6 +568,7 @@ const AdminReviewQuestionsPage = () => {
           visibility: "public",
           is_published: false, // draft — admin reviews / publishes from /admin/tests
           created_by: user.id,
+          course_id: courseId ?? null,
         })
         .select("id, slug")
         .single();

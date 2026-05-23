@@ -100,7 +100,11 @@ const EducatorsPage = () => {
 
   return (
     <div className="bg-background">
-      <SEO title="Teach on ARKE Scholars" description="Join India's fastest-growing EdTech platform as an educator. Teach JEE, NEET, or Board students online. Apply to become an ARKE Scholars educator today." />
+      <SEO
+        title="Expert JEE & NEET Educators Online"
+        description="Learn from 200+ expert educators including IIT and AIIMS alumni. Physics, Chemistry, Maths & Biology specialists for JEE, NEET and Board exams. Apply to teach on ARKE Scholars."
+        canonical="/educators"
+      />
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-to-br from-[hsl(var(--navy))] via-[hsl(var(--navy2))] to-[hsl(222,47%,15%)] py-20 md:py-28">
         <div className="absolute inset-0 opacity-30" style={{ background: "radial-gradient(circle at 30% 50%, hsl(24 95% 53% / 0.25) 0%, transparent 60%)" }} />

@@ -22,6 +22,17 @@ type TestQuestion = {
 };
 
 type QStatus = "not-visited" | "answered" | "not-answered" | "marked" | "answered-marked";
+
+function extractInlineOptions(html: string): { stem: string; options: { id: number; text: string }[] } | null {
+  const matches = [...html.matchAll(/\(([1-4])\)\s+([^<(]*)/g)];
+  if (matches.length < 2) return null;
+  const firstIdx = html.search(/\([1-4]\)\s/);
+  if (firstIdx < 0) return null;
+  const stem = html.slice(0, firstIdx).replace(/<br\s*\/?>\s*$/i, "").trim();
+  const options = matches.map((m) => ({ id: parseInt(m[1], 10), text: m[2].trim() }));
+  return { stem, options };
+}
+
 type AnswerState = { selected?: number | null; multiSelected?: number[]; value?: string; mapping?: Record<string, string> };
 
 const TestTakingPage = () => {
@@ -71,7 +82,14 @@ const TestTakingPage = () => {
         .select("id, position, subject, topic, question_text, question_image_url, question_type, options, marks_correct, marks_wrong")
         .eq("test_id", t.id)
         .order("position");
-      setQuestions((qs ?? []) as unknown as TestQuestion[]);
+      setQuestions(((qs ?? []) as unknown as TestQuestion[]).map(q => {
+        const opts = q.options as unknown as unknown[];
+        if ((!opts || opts.length === 0) && q.question_type !== "integer" && q.question_type !== "match_column") {
+          const extracted = extractInlineOptions(q.question_text);
+          if (extracted) return { ...q, question_text: extracted.stem, options: extracted.options };
+        }
+        return q;
+      }));
 
       const { data: existing } = await supabase
         .from("test_attempts")
@@ -328,7 +346,8 @@ const TestTakingPage = () => {
     );
   }
 
-  const mins = Math.floor(secondsLeft / 60);
+  const hrs = Math.floor(secondsLeft / 3600);
+  const mins = Math.floor((secondsLeft % 3600) / 60);
   const secs = secondsLeft % 60;
   const lowTime = secondsLeft < 300;
 
@@ -343,7 +362,7 @@ const TestTakingPage = () => {
           </p>
         </div>
         <div className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-bold ${lowTime ? "bg-destructive text-destructive-foreground" : "bg-primary/10 text-primary"}`}>
-          <Clock className="h-4 w-4" /> {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
+          <Clock className="h-4 w-4" /> {String(hrs).padStart(2, "0")}:{String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
         </div>
       </header>
 

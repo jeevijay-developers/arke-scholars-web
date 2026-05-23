@@ -31,7 +31,26 @@ const AboutPage = () => {
 
   return (
     <div className="bg-background">
-      <SEO title="About ARKE Scholars" description="Built in Kota, India's coaching capital — ARKE Scholars helps students crack JEE, NEET & Boards with mentors, live classes, and AI-powered doubt solving." />
+      <SEO
+        title="About ARKE Scholars — India's Next-Gen EdTech Platform"
+        description="ARKE Scholars was founded in 2024 in India to help students crack JEE, NEET & Board exams. 50,000+ students, 200+ educators, live classes & AI doubt solving. India & UAE."
+        canonical="/about"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "EducationalOrganization",
+          "name": "ARKE Scholars",
+          "alternateName": "Arke",
+          "url": "https://arke.pro",
+          "logo": "https://arke.pro/logo.png",
+          "foundingDate": "2024",
+          "description": "ARKE Scholars is India's next-generation learning platform for JEE, NEET, and Board exams, with operations in India and UAE.",
+          "areaServed": [
+            { "@type": "Country", "name": "India" },
+            { "@type": "Country", "name": "United Arab Emirates" }
+          ],
+          "knowsAbout": ["JEE Main", "JEE Advanced", "NEET", "CBSE Boards", "IB Curriculum", "IGCSE"]
+        }}
+      />
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-background to-accent/10 py-12 md:py-20">
         <div className="container mx-auto px-4 text-center">

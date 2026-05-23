@@ -195,13 +195,58 @@ const CourseDetailPage = () => {
     <div className="bg-background pb-16">
       {course && (
         <SEO
-          title={`${course.name} – ${course.subject} Course`}
+          title={`${course.name} – ${course.subject} for ${(course as { target_exam?: string }).target_exam ?? "JEE, NEET & Boards"}`}
           description={
             course.description
               ? course.description.slice(0, 155)
               : `Master ${course.subject} for ${(course as { target_exam?: string }).target_exam ?? "JEE, NEET & Boards"} with ARKE Scholars. Video lectures, chapter tests & PDF notes by expert educators.`
           }
           canonical={`/courses/${slug}`}
+          ogImage={course.thumbnail_url ?? undefined}
+          jsonLd={[
+            {
+              "@context": "https://schema.org",
+              "@type": "Course",
+              "name": course.name,
+              "description": course.description ?? `${course.subject} course for ${(course as { target_exam?: string }).target_exam ?? "JEE, NEET & Boards"}`,
+              "url": `https://arke.pro/courses/${slug}`,
+              "image": course.thumbnail_url ?? "https://arke.pro/og-default.png",
+              "provider": { "@type": "Organization", "name": "ARKE Scholars", "url": "https://arke.pro" },
+              "instructor": course.educator_name ? { "@type": "Person", "name": course.educator_name } : undefined,
+              "educationalLevel": "HighSchool",
+              "about": course.subject,
+              "teaches": (course as { target_exam?: string }).target_exam ?? "JEE, NEET & Boards",
+              "courseMode": "online",
+              "inLanguage": "en",
+              "offers": {
+                "@type": "Offer",
+                "price": String(course.price ?? 0),
+                "priceCurrency": "INR",
+                "availability": "https://schema.org/InStock",
+                "url": `https://arke.pro/courses/${slug}`
+              },
+              ...(course.rating && course.total_enrolled && course.total_enrolled > 0
+                ? {
+                    "aggregateRating": {
+                      "@type": "AggregateRating",
+                      "ratingValue": String(Number(course.rating).toFixed(1)),
+                      "ratingCount": String(course.total_enrolled),
+                      "bestRating": "5",
+                      "worstRating": "1"
+                    }
+                  }
+                : {})
+            },
+            {
+              "@context": "https://schema.org",
+              "@type": "BreadcrumbList",
+              "itemListElement": [
+                { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://arke.pro" },
+                { "@type": "ListItem", "position": 2, "name": "Courses", "item": "https://arke.pro/courses" },
+                { "@type": "ListItem", "position": 3, "name": course.name, "item": `https://arke.pro/courses/${slug}` }
+              ]
+            }
+          ]}
         />
       )}
       {/* Hero */}

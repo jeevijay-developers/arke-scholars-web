@@ -1,7 +1,7 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  FileText, Upload, Loader2, BookOpen, Tag,
+  FileText, Upload, Loader2, BookOpen, Tag, Clock,
   AlertTriangle, CheckCircle2, ImageIcon, ChevronDown, ChevronUp, X,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -79,7 +79,16 @@ const AdminUploadQuestionsPage = () => {
 
   const [paperName, setPaperName] = useState("");
   const [subject, setSubject] = useState<string>(SUBJECTS[0]);
+  const [durationMinutes, setDurationMinutes] = useState<number>(180);
+  const [courseId, setCourseId] = useState<string | null>(null);
+  const [courses, setCourses] = useState<{ id: string; name: string }[]>([]);
   const [file, setFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    supabase.from("courses").select("id, name").order("name").then(({ data }) => {
+      setCourses(data ?? []);
+    });
+  }, []);
 
   const [status, setStatus] = useState<Status>("idle");
   const [paperId, setPaperId] = useState<string | null>(null);
@@ -185,7 +194,7 @@ const AdminUploadQuestionsPage = () => {
     // No DB write here — the review page is the single writer (creates the `tests` row
     // and `test_questions` rows on Save All). This avoids the prior duplicate-insert bug.
     navigate(`/admin/review-questions/${paperId}`, {
-      state: { questions: parseResult.questions, paperId, paperCode: paperName, subject },
+      state: { questions: parseResult.questions, paperId, paperCode: paperName, subject, durationMinutes, courseId },
     });
   };
 
@@ -411,6 +420,39 @@ const AdminUploadQuestionsPage = () => {
             className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50"
           >
             {SUBJECTS.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+
+        <div>
+          <label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-foreground">
+            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+            Exam Duration (minutes)
+          </label>
+          <input
+            type="number"
+            min={1}
+            value={durationMinutes}
+            onChange={(e) => setDurationMinutes(Math.max(1, Number(e.target.value)))}
+            disabled={busy}
+            className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-foreground">
+            <BookOpen className="h-3.5 w-3.5 text-muted-foreground" />
+            Associate with Course
+          </label>
+          <select
+            value={courseId ?? ""}
+            onChange={(e) => setCourseId(e.target.value || null)}
+            disabled={busy}
+            className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50"
+          >
+            <option value="">Standalone (Free / no course)</option>
+            {courses.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
           </select>
         </div>
 

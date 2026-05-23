@@ -1,14 +1,32 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
 User-agent: *
 Allow: /
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /my-courses
+Disallow: /my-tests
+Disallow: /my-live-classes
+Disallow: /teacher/
+Disallow: /mentor/
+Disallow: /login
+Disallow: /signup
+Disallow: /auth/
+Disallow: /forgot-password
+Disallow: /access-denied
+Disallow: /compete
+Disallow: /battle/
+Disallow: /doubts
+Disallow: /analytics
+Disallow: /profile
+Disallow: /notifications
+Disallow: /settings
+Disallow: /mentor-chat
+Disallow: /verify-email
+Disallow: /explore-courses
+
+Sitemap: https://arke.pro/sitemap.xml
+
+User-agent: AhrefsBot
+Crawl-delay: 10
+
+User-agent: SemrushBot
+Crawl-delay: 10

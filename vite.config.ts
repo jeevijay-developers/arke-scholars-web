@@ -115,5 +115,20 @@ export default defineConfig(({ mode }) => {
         "@tanstack/react-query", "@tanstack/query-core",
       ],
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            "react-vendor": ["react", "react-dom"],
+            "router": ["react-router-dom"],
+            "supabase": ["@supabase/supabase-js"],
+            "query": ["@tanstack/react-query"],
+            "agora": ["agora-rtc-sdk-ng"],
+            "math": ["katex", "mathlive"],
+            "charts": ["recharts"],
+          },
+        },
+      },
+    },
   };
 });

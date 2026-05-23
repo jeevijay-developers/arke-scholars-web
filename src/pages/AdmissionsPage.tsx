@@ -61,7 +61,11 @@ const documents = [
 const AdmissionsPage = () => {
   return (
     <div className="bg-background">
-      <SEO title="College Admissions Guidance" description="Expert help with IIT, NIT & AIIMS admissions. Application strategy, counselling, and rank-to-college mapping for JEE and NEET qualifiers." />
+      <SEO
+        title="Apply for ARKE Scholars — JEE & NEET Scholarship Test"
+        description="Apply for the ARKE Scholars Scholarship Test and get up to 100% off on Elite JEE & NEET plans. Bronze, Silver, Gold & Platinum tiers available."
+        canonical="/admissions"
+      />
       <style>{`
         .no-scrollbar::-webkit-scrollbar {
           display: none;

@@ -46,7 +46,11 @@ const benefits = [
 const AssociationPage = () => {
   return (
     <div className="bg-background">
-      <SEO title="Institutional Partnerships" description="Partner with ARKE Scholars to bring JEE and NEET preparation to your school. Explore association programs for institutions in India and UAE." />
+      <SEO
+        title="School Partnerships with ARKE Scholars"
+        description="Partner your school with ARKE Scholars to bring JEE and NEET preparation to your students. Explore association programs for institutions in India and UAE."
+        canonical="/association"
+      />
       <style>{`
         .no-scrollbar::-webkit-scrollbar {
           display: none;

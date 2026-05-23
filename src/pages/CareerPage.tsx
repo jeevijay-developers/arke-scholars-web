@@ -216,7 +216,11 @@ const CareerPage = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
-      <SEO title="Careers at ARKE Scholars" description="Join the team building India's most ambitious EdTech platform. Open roles in education, technology, design, and operations at ARKE Scholars. Apply now." />
+      <SEO
+        title="Careers at ARKE Scholars | EdTech Jobs India & UAE"
+        description="Join the team building India's most ambitious EdTech platform. Open roles in education, technology, design, and operations at ARKE Scholars. Apply now."
+        canonical="/career"
+      />
       {/* SECTION 1 — Hero / Apply */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 -z-10 bg-gradient-to-br from-primary/10 via-background to-secondary/10" />

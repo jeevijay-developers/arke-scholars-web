@@ -84,7 +84,23 @@ const LiveClassesLandingPage = () => {
 
   return (
     <div className="bg-background">
-      <SEO title="Live Online Classes for JEE & NEET" description="Join live classes for JEE, NEET & Boards by top educators. Ask doubts in real-time, attend from India or UAE, and rewatch recordings anytime." />
+      <SEO
+        title="Live Online Classes for JEE & NEET"
+        description="Attend live HD classes with India's top educators for JEE Main, Advanced & NEET. Interactive sessions, recordings available, batch sizes under 50. India & UAE."
+        canonical="/live-classes"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "Event",
+          "name": "ARKE Scholars Live JEE & NEET Classes",
+          "description": "Daily live classes for JEE Main, JEE Advanced and NEET by expert educators. Interactive HD sessions with real-time doubt solving.",
+          "eventStatus": "https://schema.org/EventScheduled",
+          "eventAttendanceMode": "https://schema.org/OnlineEventAttendanceMode",
+          "location": { "@type": "VirtualLocation", "url": "https://arke.pro/live-classes" },
+          "organizer": { "@type": "Organization", "name": "ARKE Scholars", "url": "https://arke.pro" },
+          "offers": { "@type": "Offer", "url": "https://arke.pro/pricing", "price": "999", "priceCurrency": "INR", "availability": "https://schema.org/InStock" },
+          "inLanguage": "en"
+        }}
+      />
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-to-br from-[hsl(var(--navy))] via-[hsl(var(--navy2))] to-[hsl(222,47%,15%)] py-20 md:py-28">
         <div className="absolute inset-0 opacity-30" style={{ background: "radial-gradient(circle at 70% 50%, hsl(24 95% 53% / 0.25) 0%, transparent 60%)" }} />

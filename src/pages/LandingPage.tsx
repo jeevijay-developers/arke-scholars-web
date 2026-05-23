@@ -107,7 +107,51 @@ const LandingPage = () => {
     <div className="min-h-screen bg-background">
       <SEO
         title="JEE, NEET & Board Exam Prep Online"
-        description="Prepare for JEE Main, JEE Advanced, NEET & Board exams with ARKE Scholars. Live classes, AI doubt solving, 500+ mock tests & personal mentorship. India & UAE students welcome."
+        description="Crack JEE Main, JEE Advanced, NEET & CBSE Boards with ARKE Scholars. Live classes from IIT educators, AI doubt solving, 500+ mock tests & 1-on-1 mentorship. India & UAE."
+        canonical="/"
+        jsonLd={[
+          {
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": "ARKE Scholars",
+            "alternateName": "Arke",
+            "url": "https://arke.pro",
+            "logo": "https://arke.pro/logo.png",
+            "description": "India's next-gen learning platform for JEE, NEET, and Board exams",
+            "foundingDate": "2024",
+            "areaServed": ["IN", "AE"],
+            "sameAs": [
+              "https://www.instagram.com/arkescholars",
+              "https://www.youtube.com/@arkescholars",
+              "https://www.linkedin.com/company/arkescholars"
+            ]
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            "name": "ARKE Scholars",
+            "url": "https://arke.pro",
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": {
+                "@type": "EntryPoint",
+                "urlTemplate": "https://arke.pro/courses?q={search_term_string}"
+              },
+              "query-input": "required name=search_term_string"
+            }
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "EducationalOrganization",
+            "name": "ARKE Scholars",
+            "url": "https://arke.pro",
+            "description": "Online coaching for JEE Main, JEE Advanced, NEET and CBSE Board exams",
+            "areaServed": [
+              { "@type": "Country", "name": "India" },
+              { "@type": "Country", "name": "United Arab Emirates" }
+            ]
+          }
+        ]}
       />
 
       {/* Hero */}
@@ -122,8 +166,8 @@ const LandingPage = () => {
                 <Rocket className="h-3 w-3 md:h-4 md:w-4" /> {country === 'india' ? "India's Rising EdTech Platform" : "UAE's Trusted EdTech Platform"}
               </span>
               <h1 className="mt-4 md:mt-6 font-display">
-                <span className="block text-3xl font-black text-white md:text-5xl lg:text-6xl">Start Your Journey,</span>
-                <span className="block text-3xl font-black md:text-5xl lg:text-6xl gradient-text">Reach Your Goals</span>
+                <span className="block text-3xl font-black text-white md:text-5xl lg:text-6xl">JEE, NEET & Board Exam</span>
+                <span className="block text-3xl font-black md:text-5xl lg:text-6xl gradient-text">Prep That Actually Works</span>
               </h1>
               <p className="mt-3 text-base font-semibold text-white/90">Schooling · Olympiads · Competitive Exams</p>
               <p className="mt-2 max-w-md text-sm md:text-base text-white/70 leading-relaxed">
@@ -145,7 +189,7 @@ const LandingPage = () => {
             </div>
             <div className="relative hidden md:block animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
               <div className="absolute inset-0 rounded-full opacity-30" style={{ background: 'radial-gradient(circle, hsl(24 95% 53% / 0.3) 0%, transparent 70%)' }} />
-              <img src={heroIllustration} alt="Student studying with laptop and books" width={1024} height={1024} className="mx-auto w-96 drop-shadow-2xl animate-float relative z-10" />
+              <img src={heroIllustration} alt="Student studying with laptop and books" width={1024} height={1024} fetchPriority="high" loading="eager" className="mx-auto w-96 drop-shadow-2xl animate-float relative z-10" />
               <Sparkles className="absolute -top-4 right-8 h-6 w-6 text-accent animate-pulse" />
               <Sparkles className="absolute bottom-12 -left-4 h-5 w-5 text-primary animate-pulse" />
               <Sparkles className="absolute top-1/3 -right-2 h-4 w-4 text-secondary animate-pulse" />

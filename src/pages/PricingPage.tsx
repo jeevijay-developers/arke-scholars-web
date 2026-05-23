@@ -103,7 +103,23 @@ const PricingPage = () => {
 
   return (
     <div className="bg-background">
-      <SEO title="Pricing Plans" description="Choose a plan that fits your preparation — from free access to full mentorship bundles. Affordable JEE, NEET & Board prep plans for students in India and UAE." />
+      <SEO
+        title="Affordable JEE & NEET Online Coaching Plans"
+        description="Explore ARKE Scholars pricing plans — from free to Elite mentorship. JEE/NEET prep from ₹999/month. 7-day money-back guarantee. Compare Explorer, Pro & Elite."
+        canonical="/pricing"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "Product",
+          "name": "ARKE Scholars Pro Plan",
+          "description": "Unlimited live classes, full test series, AI doubt solver, and performance analytics for JEE, NEET & Board exams",
+          "url": "https://arke.pro/pricing",
+          "brand": { "@type": "Brand", "name": "ARKE Scholars" },
+          "offers": [
+            { "@type": "Offer", "name": "Pro Monthly", "price": "999", "priceCurrency": "INR", "availability": "https://schema.org/InStock" },
+            { "@type": "Offer", "name": "Pro Yearly", "price": "9590", "priceCurrency": "INR", "availability": "https://schema.org/InStock" }
+          ]
+        }}
+      />
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-background to-accent/10 py-16 md:py-24">
         <div className="container mx-auto px-4 text-center">
@@ -111,7 +127,7 @@ const PricingPage = () => {
             <IndianRupee className="h-3.5 w-3.5" /> Transparent pricing · No hidden fees
           </span>
           <h1 className="mt-6 text-4xl font-black font-display text-foreground md:text-6xl">
-            Simple plans for <span className="gradient-text">every aspirant</span>
+            Affordable Plans for <span className="gradient-text">JEE, NEET & Boards</span>
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground md:text-lg">
             Start free, upgrade only when you're ready. Every plan is built to help you crack JEE, NEET, and Board exams without breaking the bank.
