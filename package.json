@@ -7,7 +7,7 @@
     "dev": "vite",
     "prebuild": "node scripts/generate-routes.mjs",
     "build": "vite build",
-    "postbuild": "react-snap",
+    "postbuild": "node scripts/postbuild.mjs",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
