@@ -64,7 +64,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 const SUBJECTS = ["Physics", "Chemistry", "Biology", "Mathematics", "Science"]; // local: includes Science
-const CLASS_LEVELS = ["Class 6", "Class 7", "Class 8", "Class 9", "Class 10", "Class 11", "Class 12", "Dropper"];
+const CLASS_LEVELS = ["Class 6", "Class 7", "Class 8", "Class 9", "Class 10", "Class 11", "Class 12", "12th pass"];
 
 interface Props {
   trigger: React.ReactNode;

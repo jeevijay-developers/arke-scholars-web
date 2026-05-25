@@ -89,7 +89,7 @@ const MENTORS: { name: string; college: string; img: string }[] = [
   { name: "Anand Kumar",              college: "IIT Kharagpur",   img: "/arke/anand kumar iit kanpur.jpeg" },
   { name: "Shlok Mishra",             college: "IIT Kanpur",      img: "/arke/Shlok Mishra-IIT Kanpur.jpg" },
   { name: "Swastik Singhal",          college: "IIT Kanpur",      img: "/arke/swastik singhal iit kanpur.jpeg" },
-  { name: "Shubham Bihani",           college: "IIT Roorkee · IIM Bangalore", img: "/arke/Shubham Bihani IIT rookee IIM Banglore.jpeg" },
+  { name: "Shubham Bihani",           college: "IIT Roorkee · IIM Bengaluru", img: "/arke/Shubham Bihani IIT rookee IIM Banglore.jpeg" },
   { name: "Lucky Agrawal",            college: "IIT Kanpur",      img: "/arke/lucky agarwal.jpeg" },
   { name: "Yash Jain",                college: "IIT Bombay",      img: "/arke/yash jain.jpeg" },
   { name: "Amit Bhartiya",            college: "IIT Bombay",      img: "/arke/amit bhartiya.jpeg" },
@@ -108,8 +108,11 @@ const COLLEGE_ORDER = [
   "IIT Gandhinagar",
   "IIT Roorkee",
   "BITS Pilani",
-  "IISC Bengaluru"
+  "IISC Bengaluru",
+  "IIM Bengaluru",
 ];
+
+const toSlug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
 // Colour palette per college — header accent + badge
 const COLLEGE_THEME: Record<string, { header: string; badge: string }> = {
@@ -123,7 +126,8 @@ const COLLEGE_THEME: Record<string, { header: string; badge: string }> = {
   "IIT Gandhinagar":  { header: "text-indigo-600 dark:text-indigo-400",badge: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400" },
   "IIT Roorkee":      { header: "text-red-600 dark:text-red-400",      badge: "bg-red-500/10 text-red-600 dark:text-red-400" },
   "BITS Pilani":      { header: "text-fuchsia-600 dark:text-fuchsia-400", badge: "bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400" },
-  "IISC Bengaluru": { header: "text-teal-600 dark:text-teal-400",    badge: "bg-teal-500/10 text-teal-600 dark:text-teal-400" },
+  "IISC Bengaluru":  { header: "text-teal-600 dark:text-teal-400",    badge: "bg-teal-500/10 text-teal-600 dark:text-teal-400" },
+  "IIM Bengaluru":   { header: "text-amber-600 dark:text-amber-400",  badge: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
 };
 
 function getTheme(college: string) {
@@ -133,17 +137,20 @@ function getTheme(college: string) {
   return { header: "text-foreground", badge: "bg-muted text-muted-foreground" };
 }
 
-// Group mentors by college, preserving COLLEGE_ORDER, names sorted A-Z within each group
+// Group mentors by college, preserving COLLEGE_ORDER, names sorted A-Z within each group.
+// A mentor whose college string contains multiple keys (e.g. "IIT Roorkee · IIM Bengaluru")
+// appears in each matching section.
 function groupMentors(mentors: typeof MENTORS) {
   const map = new Map<string, typeof MENTORS>();
   for (const m of mentors) {
-    const key = COLLEGE_ORDER.find((c) => m.college.startsWith(c)) ?? m.college;
-    if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push(m);
+    const keys = COLLEGE_ORDER.filter((c) => m.college.includes(c));
+    const effectiveKeys = keys.length > 0 ? keys : [m.college];
+    for (const key of effectiveKeys) {
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(m);
+    }
   }
-  // Sort each group A-Z by name
   for (const group of map.values()) group.sort((a, b) => a.name.localeCompare(b.name));
-  // Return in COLLEGE_ORDER sequence
   return COLLEGE_ORDER.flatMap((c) => (map.has(c) ? [{ college: c, members: map.get(c)! }] : []));
 }
 
@@ -235,12 +242,12 @@ const MentorshipPage = () => {
         }
       `}</style>
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[hsl(var(--navy))] via-[hsl(var(--navy2))] to-[hsl(222,47%,15%)] py-20 md:py-28">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[hsl(var(--navy))] via-[hsl(var(--navy2))] to-[hsl(222,47%,15%)] min-h-screen flex items-center">
         <div
           className="absolute inset-0 opacity-30"
           style={{ background: "radial-gradient(circle at 30% 50%, hsl(24 95% 53% / 0.25) 0%, transparent 60%)" }}
         />
-        <div className="container relative z-10 mx-auto px-4">
+        <div className="container relative z-10 mx-auto px-4 py-20">
           <div className="mx-auto max-w-3xl text-center">
             <span className="inline-flex items-center gap-2 rounded-pill border border-primary/30 bg-primary/10 px-4 py-1.5 text-sm font-semibold text-primary">
               <Sparkles className="h-4 w-4" /> 1:1 Mentorship Program
@@ -253,11 +260,27 @@ const MentorshipPage = () => {
               comes straight from IITians currently studying at IIT Delhi, Bombay, Kharagpur and other premier IITs.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
-              {iitBadges.map((b) => (
-                <span key={b} className="rounded-pill border border-white/20 bg-white/10 px-3 py-1 text-xs font-bold text-white/90">
-                  {b}
-                </span>
-              ))}
+              {iitBadges.map((b) => {
+                const sectionSlug = COLLEGE_ORDER.includes(b) ? `#${toSlug(b)}` : "/signup";
+                const isAnchor = COLLEGE_ORDER.includes(b);
+                return isAnchor ? (
+                  <a
+                    key={b}
+                    href={sectionSlug}
+                    className="rounded-pill border border-white/20 bg-white/10 px-3 py-1 text-xs font-bold text-white/90 hover:bg-white/20 hover:text-white transition-colors cursor-pointer"
+                  >
+                    {b}
+                  </a>
+                ) : (
+                  <Link
+                    key={b}
+                    to={sectionSlug}
+                    className="rounded-pill border border-white/20 bg-white/10 px-3 py-1 text-xs font-bold text-white/90 hover:bg-white/20 hover:text-white transition-colors"
+                  >
+                    {b}
+                  </Link>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -279,7 +302,7 @@ const MentorshipPage = () => {
             {groupMentors(MENTORS).map(({ college, members }) => {
               const theme = getTheme(college);
               return (
-                <div key={college}>
+                <div key={college} id={toSlug(college)}>
                   {/* College header */}
                   <div className="mb-6 flex items-center gap-4">
                     <h3 className={`font-display text-2xl font-black ${theme.header}`}>

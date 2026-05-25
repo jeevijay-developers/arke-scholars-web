@@ -26,6 +26,7 @@ interface AppState {
   notifications: AppNotification[];
   unreadCount: number;
   country: 'india' | 'dubai';
+  favouriteIds: Set<string>;
   setUser: (user: AppUser | null) => void;
   setCurrentGoal: (goal: string) => void;
   setNotifications: (n: AppNotification[]) => void;
@@ -34,6 +35,8 @@ interface AppState {
   markAllRead: () => void;
   archiveNotification: (id: string) => void;
   setCountry: (country: 'india' | 'dubai') => void;
+  setFavouriteIds: (ids: Set<string>) => void;
+  toggleFavouriteId: (courseId: string) => void;
 }
 
 const savedCountry = (typeof window !== 'undefined' ? localStorage.getItem('arke-country') : null) as 'india' | 'dubai' | null;
@@ -55,6 +58,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   notifications: [],
   unreadCount: 0,
   country: savedCountry || 'india',
+  favouriteIds: new Set<string>(),
   setUser: (user) => {
     if (typeof window !== 'undefined') {
       if (user) localStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
@@ -87,5 +91,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   setCountry: (country) => {
     localStorage.setItem('arke-country', country);
     set({ country });
+  },
+  setFavouriteIds: (ids) => set({ favouriteIds: ids }),
+  toggleFavouriteId: (courseId) => {
+    const next = new Set(get().favouriteIds);
+    if (next.has(courseId)) next.delete(courseId);
+    else next.add(courseId);
+    set({ favouriteIds: next });
   },
 }));

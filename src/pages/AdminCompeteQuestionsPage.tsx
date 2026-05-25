@@ -42,7 +42,7 @@ type EditingQ = Omit<Q, "id"> & {
 
 const SUBJECTS: string[] = [...SUBJECTS_COMPETE];
 const DIFFICULTIES = ["easy", "medium", "hard"];
-const CLASS_LEVELS = ["6","7","8", "9", "10", "11", "12", "Dropper"];
+const CLASS_LEVELS = ["6","7","8", "9", "10", "11", "12", "12th pass"];
 const PAGE_SIZE = 20;
 
 const BLANK_EDITING: EditingQ = {

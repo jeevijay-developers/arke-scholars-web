@@ -35,9 +35,11 @@ Deno.serve(async (req) => {
   }
 
   let lessonId: string
+  let quality: string
   try {
     const body = await req.json()
     lessonId = String(body.lessonId ?? '')
+    quality = String(body.quality ?? 'auto')
   } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
       status: 400,
@@ -95,7 +97,16 @@ Deno.serve(async (req) => {
   }
 
   // video_url is stored as the S3 key, e.g. "arke/{lessonId}.mp4"
-  const videoUrl = `${S3_BASE}/${lesson.video_url}`
+  // Quality variants follow the naming convention: "arke/{lessonId}_720p.mp4"
+  const VALID_QUALITIES = ['240p', '360p', '720p', '1080p']
+  let videoPath = lesson.video_url
+  if (quality && VALID_QUALITIES.includes(quality)) {
+    const dotIdx = lesson.video_url.lastIndexOf('.')
+    const base = dotIdx !== -1 ? lesson.video_url.slice(0, dotIdx) : lesson.video_url
+    const ext  = dotIdx !== -1 ? lesson.video_url.slice(dotIdx)    : '.mp4'
+    videoPath = `${base}_${quality}${ext}`
+  }
+  const videoUrl = `${S3_BASE}/${videoPath}`
 
   return new Response(JSON.stringify({ videoUrl }), {
     status: 200,

@@ -3,10 +3,12 @@ import { Flame, Heart, Globe, Menu, X, Phone } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { useEffect, useState } from "react";
 import arkeLogo from "@/assets/arke-logo.png";
+import { useFavourites } from "@/hooks/useFavourites";
 
 const PublicLayout = () => {
   const location = useLocation();
   const { user } = useAppStore();
+  const { count: favCount } = useFavourites();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const initials = user?.full_name
     ? user.full_name.split(" ").filter(Boolean).slice(0, 2).map((n) => n[0]?.toUpperCase()).join("")
@@ -155,6 +157,20 @@ const PublicLayout = () => {
             <Link to="/contact" className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" aria-label="Contact us">
               <Phone className="h-4 w-4" />
             </Link>
+            {user && (
+              <Link
+                to="/favourite-courses"
+                className="relative flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-muted transition-colors"
+                aria-label="Favourite courses"
+              >
+                <Heart className="h-4 w-4" />
+                {favCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white">
+                    {favCount}
+                  </span>
+                )}
+              </Link>
+            )}
             {user ? (
               <Link
                 to="/dashboard"

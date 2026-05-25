@@ -50,7 +50,7 @@ const LoginPage = () => {
       navigate(redirectTo, { replace: true });
       return;
     }
-    navigate("/dashboard", { replace: true });
+    navigate("/my-courses", { replace: true });
   }, [loading, session, user, roleReady, isStaff, isTeacher, navigate, redirectTo]);
 
   const [submitting, setSubmitting] = useState(false);

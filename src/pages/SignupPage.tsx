@@ -50,7 +50,7 @@ const SignupPage = () => {
   const SENIOR_CLASSES = [
     { value: "11", label: "Class 11" },
     { value: "12", label: "Class 12" },
-    { value: "Dropper", label: "12th Pass / Dropper" },
+    { value: "12th pass", label: "12th Pass" },
   ];
   const isFoundation = form.target_exam === "Foundation";
   const classOptions = isFoundation ? FOUNDATION_CLASSES : SENIOR_CLASSES;

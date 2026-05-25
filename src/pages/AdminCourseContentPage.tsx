@@ -188,9 +188,9 @@ const AdminCourseContentPage = () => {
     is_free_preview: false,
     uploadedKey: null as string | null,
   });
-  const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadState, setUploadState] = useState<"idle" | "uploading" | "done" | "error">("idle");
+  const [videoFiles, setVideoFiles] = useState<Partial<Record<string, File>>>({});
+  const [uploadProgresses, setUploadProgresses] = useState<Record<string, number>>({});
+  const [uploadStates, setUploadStates] = useState<Record<string, "idle" | "uploading" | "done" | "error">>({});
   const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
   const [savingLecture, setSavingLecture] = useState(false);
   const [reordering, setReordering] = useState(false);
@@ -229,10 +229,17 @@ const AdminCourseContentPage = () => {
     else { setChapters([]); setLessons([]); setResources([]); setChapterFilter("all"); }
   }, [selectedCourse]);
 
+  const QUALITY_VARIANTS = [
+    { key: "original", label: "Original (1080p)", hint: "Sets the lecture duration automatically" },
+    { key: "720p", label: "720p" },
+    { key: "360p", label: "360p" },
+    { key: "240p", label: "240p" },
+  ] as const;
+
   const resetLectureDialog = () => {
-    setVideoFile(null);
-    setUploadProgress(0);
-    setUploadState("idle");
+    setVideoFiles({});
+    setUploadProgresses({});
+    setUploadStates({});
   };
 
   const openAddLecture = (chapterId: string) => {
@@ -255,44 +262,53 @@ const AdminCourseContentPage = () => {
     setLectureDialogOpen(true);
   };
 
-  const handleVideoFileSelected = (file: File) => {
-    setVideoFile(file);
-    setUploadState("idle");
-    setUploadProgress(0);
-    // Auto-read duration from the video metadata
-    const url = URL.createObjectURL(file);
-    const vid = document.createElement("video");
-    vid.preload = "metadata";
-    vid.onloadedmetadata = () => {
-      URL.revokeObjectURL(url);
-      if (isFinite(vid.duration) && vid.duration > 0) {
-        setLectureForm((f) => ({ ...f, durationMin: Math.max(1, Math.round(vid.duration / 60)) }));
-      }
-    };
-    vid.src = url;
+  const handleVideoFileSelected = (qualityKey: string, file: File) => {
+    setVideoFiles((prev) => ({ ...prev, [qualityKey]: file }));
+    setUploadStates((prev) => ({ ...prev, [qualityKey]: "idle" }));
+    setUploadProgresses((prev) => ({ ...prev, [qualityKey]: 0 }));
+    if (qualityKey === "original") {
+      const url = URL.createObjectURL(file);
+      const vid = document.createElement("video");
+      vid.preload = "metadata";
+      vid.onloadedmetadata = () => {
+        URL.revokeObjectURL(url);
+        if (isFinite(vid.duration) && vid.duration > 0) {
+          setLectureForm((f) => ({ ...f, durationMin: Math.max(1, Math.round(vid.duration / 60)) }));
+        }
+      };
+      vid.src = url;
+    }
   };
 
-  const uploadVideoToS3 = async (lessonId: string, file: File): Promise<string> => {
+  const uploadVideoToS3 = async (lessonId: string, file: File, quality: string = "original"): Promise<string> => {
     const { data, error } = await supabase.functions.invoke("get-upload-url", {
-      body: { lessonId, contentType: file.type || "video/mp4", contentLength: file.size },
+      body: { lessonId, contentType: file.type || "video/mp4", contentLength: file.size, quality },
     });
     if (error || !data?.uploadUrl) throw new Error(error?.message ?? "Failed to get upload URL");
+
+    setUploadStates((prev) => ({ ...prev, [quality]: "uploading" }));
+    setUploadProgresses((prev) => ({ ...prev, [quality]: 0 }));
 
     return new Promise<string>((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable) setUploadProgress(Math.round((e.loaded / e.total) * 100));
+        if (e.lengthComputable)
+          setUploadProgresses((prev) => ({ ...prev, [quality]: Math.round((e.loaded / e.total) * 100) }));
       };
       xhr.onload = () => {
         if (xhr.status >= 200 && xhr.status < 300) {
+          setUploadStates((prev) => ({ ...prev, [quality]: "done" }));
           resolve(data.key as string);
         } else {
+          setUploadStates((prev) => ({ ...prev, [quality]: "error" }));
           reject(new Error(`Upload failed: HTTP ${xhr.status} — ${xhr.responseText}`));
         }
       };
-      xhr.onerror = () => reject(new Error("Upload failed"));
+      xhr.onerror = () => {
+        setUploadStates((prev) => ({ ...prev, [quality]: "error" }));
+        reject(new Error("Upload failed"));
+      };
       xhr.open("PUT", data.uploadUrl);
-      // Set all signed headers returned by the edge function
       Object.entries(data.headers as Record<string, string>).forEach(([k, v]) => {
         xhr.setRequestHeader(k, v);
       });
@@ -324,36 +340,44 @@ const AdminCourseContentPage = () => {
     if (!lectureForm.chapter_id) { toast.error("Pick a chapter"); return; }
     const durationSecs = Math.max(60, Math.round((lectureForm.durationMin || 10) * 60));
 
+    const hasAnyUpload = Object.values(videoFiles).some(Boolean);
+    const lessonId = editingLessonId ?? crypto.randomUUID();
+
     setSavingLecture(true);
     try {
       let videoKey = lectureForm.uploadedKey;
 
-      // Upload new video file if one was selected
-      if (videoFile) {
-        setUploadState("uploading");
-        setUploadProgress(0);
-        const lessonId = editingLessonId ?? crypto.randomUUID();
-        videoKey = await uploadVideoToS3(lessonId, videoFile);
-        setUploadState("done");
-        setLectureForm((f) => ({ ...f, uploadedKey: videoKey }));
+      if (hasAnyUpload) {
+        const uploads = Object.entries(videoFiles)
+          .filter(([, file]) => file != null)
+          .map(async ([quality, file]) => {
+            const key = await uploadVideoToS3(lessonId, file!, quality);
+            return { quality, key };
+          });
+        const results = await Promise.all(uploads);
+        const originalResult = results.find((r) => r.quality === "original");
+        if (originalResult) {
+          videoKey = originalResult.key;
+          setLectureForm((f) => ({ ...f, uploadedKey: videoKey }));
+        }
+      }
 
+      if (hasAnyUpload) {
         if (editingLessonId) {
           const currentLesson = lessons.find((lesson) => lesson.id === editingLessonId);
           const movedToNewChapter = currentLesson?.chapter_id !== lectureForm.chapter_id;
           const nextPosition = movedToNewChapter
             ? Math.max(-1, ...lessons.filter((lesson) => lesson.chapter_id === lectureForm.chapter_id).map((lesson) => lesson.position)) + 1
             : currentLesson?.position ?? 0;
-          const { error } = await supabase
-            .from("lessons")
-            .update({
-              title,
-              video_url: videoKey,
-              duration_seconds: durationSecs,
-              chapter_id: lectureForm.chapter_id,
-              position: nextPosition,
-              is_free_preview: lectureForm.is_free_preview,
-            })
-            .eq("id", editingLessonId);
+          const patch: Record<string, unknown> = {
+            title,
+            duration_seconds: durationSecs,
+            chapter_id: lectureForm.chapter_id,
+            position: nextPosition,
+            is_free_preview: lectureForm.is_free_preview,
+          };
+          if (videoKey !== lectureForm.uploadedKey) patch.video_url = videoKey;
+          const { error } = await supabase.from("lessons").update(patch).eq("id", editingLessonId);
           if (error) throw error;
           toast.success("Lecture updated");
         } else {
@@ -395,7 +419,6 @@ const AdminCourseContentPage = () => {
         toast.success("Lecture updated");
       } else {
         // New lecture with no video yet
-        const lessonId = crypto.randomUUID();
         const positionInChapter = Math.max(-1, ...lessons.filter((l) => l.chapter_id === lectureForm.chapter_id).map((l) => l.position)) + 1;
         const slug = `${slugify(title) || "lesson"}-${Date.now().toString(36)}`;
         const { error } = await supabase.from("lessons").insert({
@@ -414,7 +437,6 @@ const AdminCourseContentPage = () => {
         toast.success("Lecture added (no video yet — edit to upload one)");
       }
     } catch (e) {
-      setUploadState("error");
       const msg = e instanceof Error ? e.message : "Save failed";
       toast.error(msg);
       setSavingLecture(false);
@@ -1046,11 +1068,11 @@ const AdminCourseContentPage = () => {
 
       {/* Add / Edit Lecture Dialog */}
       <Dialog open={lectureDialogOpen} onOpenChange={setLectureDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>{editingLessonId ? "Edit lecture" : "Add lecture"}</DialogTitle>
             <DialogDescription>
-              Upload an MP4 video file. The duration is read automatically from the file.
+              Upload one or more resolution variants. Original sets the duration automatically; other resolutions are optional.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -1063,40 +1085,61 @@ const AdminCourseContentPage = () => {
                 placeholder="e.g. Newton's Laws of Motion"
               />
             </div>
+
+            {/* Multi-resolution upload slots */}
             <div>
-              <Label htmlFor="lec-video">Video file (MP4)</Label>
-              <Input
-                id="lec-video"
-                type="file"
-                accept="video/mp4,video/*"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleVideoFileSelected(f);
-                }}
-              />
-              {videoFile && uploadState === "idle" && (
-                <p className="mt-1 text-xs text-muted-foreground">{videoFile.name} · {(videoFile.size / 1024 / 1024).toFixed(1)} MB</p>
-              )}
-              {uploadState === "uploading" && (
-                <div className="mt-2 space-y-1">
-                  <Progress value={uploadProgress} className="h-2" />
-                  <p className="text-xs text-muted-foreground">Uploading… {uploadProgress}%</p>
-                </div>
-              )}
-              {uploadState === "done" && (
-                <p className="mt-1 flex items-center gap-1 text-xs text-green-600">
-                  <CheckCircle2 className="h-3.5 w-3.5" /> Upload complete
-                </p>
-              )}
-              {uploadState === "error" && (
-                <p className="mt-1 text-xs text-destructive">Upload failed — try again.</p>
-              )}
-              {!videoFile && lectureForm.uploadedKey && (
-                <p className="mt-1 flex items-center gap-1 text-xs text-green-600">
-                  <CheckCircle2 className="h-3.5 w-3.5" /> Video already uploaded
-                </p>
-              )}
+              <Label className="mb-2 block">Video files (MP4)</Label>
+              <div className="space-y-2">
+                {QUALITY_VARIANTS.map(({ key: qKey, label, hint }) => {
+                  const file = videoFiles[qKey];
+                  const state = uploadStates[qKey] ?? "idle";
+                  const progress = uploadProgresses[qKey] ?? 0;
+                  const isOriginalAlreadyUploaded = qKey === "original" && !file && lectureForm.uploadedKey;
+                  return (
+                    <div key={qKey} className="rounded-lg border border-border bg-muted/20 p-3">
+                      <div className="flex items-center gap-3">
+                        <div className="min-w-[110px]">
+                          <p className="text-xs font-semibold text-foreground">{label}</p>
+                          {hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
+                        </div>
+                        <Input
+                          type="file"
+                          accept="video/mp4,video/*"
+                          className="h-8 cursor-pointer text-xs"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) handleVideoFileSelected(qKey, f);
+                          }}
+                        />
+                      </div>
+                      {file && state === "idle" && (
+                        <p className="mt-1.5 text-[11px] text-muted-foreground">{file.name} · {(file.size / 1024 / 1024).toFixed(1)} MB</p>
+                      )}
+                      {state === "uploading" && (
+                        <div className="mt-1.5 space-y-0.5">
+                          <Progress value={progress} className="h-1.5" />
+                          <p className="text-[11px] text-muted-foreground">Uploading… {progress}%</p>
+                        </div>
+                      )}
+                      {state === "done" && (
+                        <p className="mt-1.5 flex items-center gap-1 text-[11px] text-green-600">
+                          <CheckCircle2 className="h-3 w-3" /> Upload complete
+                        </p>
+                      )}
+                      {state === "error" && (
+                        <p className="mt-1.5 text-[11px] text-destructive">Upload failed — try again.</p>
+                      )}
+                      {isOriginalAlreadyUploaded && (
+                        <p className="mt-1.5 flex items-center gap-1 text-[11px] text-green-600">
+                          <CheckCircle2 className="h-3 w-3" /> Already uploaded — re-upload to replace
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label htmlFor="lec-dur">Duration (minutes)</Label>
@@ -1136,7 +1179,10 @@ const AdminCourseContentPage = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setLectureDialogOpen(false)}>Cancel</Button>
-            <Button onClick={saveLecture} disabled={savingLecture || uploadState === "uploading"}>
+            <Button
+              onClick={saveLecture}
+              disabled={savingLecture || Object.values(uploadStates).some((s) => s === "uploading")}
+            >
               {savingLecture ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               {editingLessonId ? "Save changes" : "Add lecture"}
             </Button>

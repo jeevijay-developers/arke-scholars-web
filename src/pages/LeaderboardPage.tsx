@@ -30,6 +30,7 @@ type Row = Rating & {
 const RANGE_OPTIONS = [
   { value: "all", label: "All Time" },
   { value: "30", label: "Monthly" },
+  { value: "15", label: "Fortnightly" },
   { value: "7", label: "Weekly" },
 ];
 

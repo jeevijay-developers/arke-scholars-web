@@ -2,7 +2,7 @@ import { Loader2, Trophy, Flame, Star, Swords } from "lucide-react";
 import { CompeteRating } from "@/hooks/useCompeteRating";
 import { SUBJECTS_COMPETE as SUBJECTS } from "@/lib/constants";
 
-const CLASS_LEVELS = ["6","7","8", "9", "10", "11", "12", "Dropper"];
+const CLASS_LEVELS = ["6","7","8", "9", "10", "11", "12", "12th pass"];
 
 type Props = {
   rating: CompeteRating;
@@ -67,7 +67,7 @@ const CompeteLobby = ({
                 key={c}
                 onClick={() => onClassLevel(c)}
                 className={`rounded-full px-3 py-1.5 text-xs font-bold transition-colors ${classLevel === c ? "bg-secondary text-secondary-foreground" : "bg-white/10 text-white/80 hover:bg-white/20"}`}
-              >{c === "Dropper" ? "Dropper" : `Class ${c}`}</button>
+              >{c === "12th pass" ? "12th pass" : `Class ${c}`}</button>
             ))}
           </div>
         </div>

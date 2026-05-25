@@ -8,7 +8,7 @@ import { useBattleLeaderboard } from "@/hooks/useBattleLeaderboard";
 import { SUBJECTS_COMPETE } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
-const CLASS_LEVELS = ["", "6", "7", "8", "9", "10", "11", "12", "Dropper"];
+const CLASS_LEVELS = ["", "6", "7", "8", "9", "10", "11", "12", "12th pass"];
 
 const RANK_BADGE: Record<number, string> = {
   1: "🥇",

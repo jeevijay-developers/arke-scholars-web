@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { useCourseDetail } from "@/hooks/useCourseDetail";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useFavourites } from "@/hooks/useFavourites";
 import { CourseReviews } from "@/components/CourseReviews";
 import EnrollmentModal from "@/components/EnrollmentModal";
 
@@ -54,6 +55,7 @@ const CourseDetailPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { course, chapters, pdfs, notes, tests, reviewCount, loading } = useCourseDetail(slug);
+  const { favouriteIds, toggle: toggleFav } = useFavourites();
   const [activeTab, setActiveTab] = useState(0);
   const [expandedChapter, setExpandedChapter] = useState(0);
   const [enrollment, setEnrollment] = useState<EnrollmentInfo | null>(null);
@@ -681,8 +683,16 @@ const CourseDetailPage = () => {
                   Enroll Now →
                 </button>
 
-                <button className="w-full rounded-xl border border-border py-3 text-sm font-semibold text-foreground hover:bg-muted/30 transition-colors flex items-center justify-center gap-2">
-                  <Heart className="h-4 w-4" /> Add to Wishlist
+                <button
+                  onClick={() => toggleFav(course.id)}
+                  className={`w-full rounded-xl border py-3 text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
+                    favouriteIds.has(course.id)
+                      ? "border-rose-500 bg-rose-500/10 text-rose-500 hover:bg-rose-500/20"
+                      : "border-border text-foreground hover:bg-muted/30"
+                  }`}
+                >
+                  <Heart className={`h-4 w-4 ${favouriteIds.has(course.id) ? "fill-rose-500" : ""}`} />
+                  {favouriteIds.has(course.id) ? "Saved to Favourites" : "Add to Favourite"}
                 </button>
               </>
             )}

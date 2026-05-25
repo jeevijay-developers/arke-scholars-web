@@ -45,7 +45,7 @@ const ContactPage = () => {
       });
       if (error) throw error;
       setSubmitted(true);
-      toast({ title: "Message sent!", description: "We'll get back to you within 24 hours." });
+      toast({ title: "Message sent!", description: "We'll reach out to you soon." });
       setForm({ name: "", email: "", phone: "", subject: "", message: "" });
       setTimeout(() => setSubmitted(false), 4000);
     } catch (err) {
@@ -58,17 +58,10 @@ const ContactPage = () => {
   const offices = [
     {
       flag: "🇮🇳",
-      city: "New Delhi, India",
-      address: "Connaught Place, New Delhi 110001",
+      city: "Kota, Rajasthan, India",
+      address: "D 801, Ashirwad Anandnam, Shreenathpuram-A, Kota, Rajasthan – 324009",
       phone: "+91 98765 43210",
       hours: "Mon–Sat · 9:00 AM – 8:00 PM IST",
-    },
-    {
-      flag: "🇦🇪",
-      city: "Dubai, UAE",
-      address: "Business Bay, Dubai",
-      phone: "+971 50 123 4567",
-      hours: "Sun–Thu · 9:00 AM – 7:00 PM GST",
     },
   ];
 

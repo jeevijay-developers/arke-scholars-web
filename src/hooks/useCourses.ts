@@ -34,7 +34,17 @@ export const useCourses = (targetExam?: string, subject?: string) => {
         .eq("is_published", true)
         .order("created_at", { ascending: false });
 
-      if (targetExam && targetExam !== "All") q = q.eq("target_exam", targetExam);
+      if (targetExam && targetExam !== "All") {
+        // Courses may store a short key ("JEE") while the filter label is
+        // "JEE Main" or "JEE Advanced". Match the exact label AND any
+        // prefix-only variant (first word) so legacy data still surfaces.
+        const prefix = targetExam.split(" ")[0];
+        const filter =
+          prefix !== targetExam
+            ? `target_exam.eq.${targetExam},target_exam.eq.${prefix}`
+            : `target_exam.eq.${targetExam}`;
+        q = q.or(filter);
+      }
       if (subject && subject !== "All") q = q.eq("subject", subject);
 
       const { data } = await q;

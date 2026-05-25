@@ -24,7 +24,7 @@ import { toast } from "sonner";
 import {
   downloadStudentReport,
   fetchStudentReport,
-  monthRange,
+  daysRange,
 } from "@/lib/studentReport";
 
 type StudentRow = {
@@ -34,22 +34,16 @@ type StudentRow = {
   class_level: string | null;
 };
 
-const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
+const RANGE_OPTIONS = [
+  { value: "15",  label: "Last 15 Days" },
+  { value: "30",  label: "Last 30 Days" },
+  { value: "60",  label: "Last 60 Days" },
+  { value: "90",  label: "Last 90 Days" },
+  { value: "365", label: "Last 1 Year" },
 ];
 
-function defaultMonth() {
-  // last completed month
-  const now = new Date();
-  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
-  return { year: d.getUTCFullYear(), month: d.getUTCMonth() };
-}
-
 const AdminStudentReportsPage = () => {
-  const initial = defaultMonth();
-  const [year, setYear] = useState<number>(initial.year);
-  const [month, setMonth] = useState<number>(initial.month);
+  const [timeRange, setTimeRange] = useState<string>("30");
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -82,7 +76,7 @@ const AdminStudentReportsPage = () => {
     })();
   }, []);
 
-  const range = useMemo(() => monthRange(year, month), [year, month]);
+  const range = useMemo(() => daysRange(Number(timeRange)), [timeRange]);
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
@@ -92,11 +86,6 @@ const AdminStudentReportsPage = () => {
       (r.target_exam ?? "").toLowerCase().includes(s),
     );
   }, [students, search]);
-
-  const yearOptions = useMemo(() => {
-    const y = new Date().getUTCFullYear();
-    return [y, y - 1, y - 2];
-  }, []);
 
   async function generate(studentId: string) {
     if (!studentId) {
@@ -134,7 +123,7 @@ const AdminStudentReportsPage = () => {
         <CardHeader>
           <CardTitle className="text-lg">Quick generate</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-[2fr_1fr_1fr_auto] md:items-end">
+        <CardContent className="grid gap-4 md:grid-cols-[2fr_1fr_auto] md:items-end">
           <div>
             <Label className="mb-1 block">Student</Label>
             <Select value={selectedId} onValueChange={setSelectedId}>
@@ -152,23 +141,12 @@ const AdminStudentReportsPage = () => {
             </Select>
           </div>
           <div>
-            <Label className="mb-1 block">Month</Label>
-            <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>
+            <Label className="mb-1 block">Time Range</Label>
+            <Select value={timeRange} onValueChange={setTimeRange}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {MONTHS.map((m, i) => (
-                  <SelectItem key={m} value={String(i)}>{m}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label className="mb-1 block">Year</Label>
-            <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {yearOptions.map((y) => (
-                  <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                {RANGE_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

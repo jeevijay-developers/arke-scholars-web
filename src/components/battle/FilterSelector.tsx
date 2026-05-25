@@ -13,7 +13,7 @@ import {
 import { Loader2, Swords } from "lucide-react";
 import type { BattleFilters } from "@/hooks/useBattleMatchmaking";
 
-const CLASS_LEVELS = ["6", "7", "8", "9", "10", "11", "12", "Dropper"];
+const CLASS_LEVELS = ["6", "7", "8", "9", "10", "11", "12", "12th pass"];
 const DEFAULT_EXAMS = ["JEE Main", "JEE Advanced", "NEET", "BITSAT", "KCET", "MHT-CET"];
 
 type Props = {

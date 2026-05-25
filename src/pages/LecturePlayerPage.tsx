@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Play, Pause, Loader2, CheckCircle2, ChevronDown } from "lucide-react";
+import { ArrowLeft, Play, Pause, Loader2, CheckCircle2, ChevronDown, Settings } from "lucide-react";
 import SEO from "@/components/SEO";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -28,6 +28,10 @@ const LecturePlayerPage = () => {
   const [videoLoading, setVideoLoading] = useState(false);
   const [watermarkPos, setWatermarkPos] = useState({ x: 10, y: 10 });
   const [hidden, setHidden] = useState(false);
+  const [quality, setQuality] = useState<string>("auto");
+  const [qualityOpen, setQualityOpen] = useState(false);
+
+  const QUALITY_OPTIONS = ["auto", "240p", "360p", "720p", "1080p"] as const;
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const lastSavedRef = useRef<number>(0);
@@ -89,15 +93,14 @@ const LecturePlayerPage = () => {
       .then(({ data }) => setNotes(data?.content ?? ""));
   }, [user, activeLesson]);
 
-  const fetchPresignedUrl = useCallback(async (lessonId: string) => {
+  const fetchPresignedUrl = useCallback(async (lessonId: string, q = "auto") => {
     setVideoLoading(true);
     setPresignedUrl(null);
     try {
       const { data, error } = await supabase.functions.invoke("get-video-url", {
-        body: { lessonId },
+        body: { lessonId, quality: q === "auto" ? undefined : q },
       });
       if (error) throw error;
-      console.log("Video URL:", data.videoUrl);
       setPresignedUrl(data.videoUrl);
     } catch (err) {
       console.error("Failed to get video URL", err);
@@ -109,9 +112,38 @@ const LecturePlayerPage = () => {
 
   useEffect(() => {
     if (activeLesson?.id && accessChecked) {
-      fetchPresignedUrl(activeLesson.id);
+      setQuality("auto");
+      fetchPresignedUrl(activeLesson.id, "auto");
     }
   }, [activeLesson?.id, accessChecked, fetchPresignedUrl]);
+
+  const handleQualityChange = useCallback(async (newQuality: string) => {
+    setQualityOpen(false);
+    if (newQuality === quality) return;
+    const savedTime = videoRef.current?.currentTime ?? 0;
+    setQuality(newQuality);
+    if (!activeLesson) return;
+    setVideoLoading(true);
+    setPresignedUrl(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("get-video-url", {
+        body: { lessonId: activeLesson.id, quality: newQuality === "auto" ? undefined : newQuality },
+      });
+      if (error) throw error;
+      setPresignedUrl(data.videoUrl);
+      // Restore playback position after the new source loads
+      const restore = () => {
+        const v = videoRef.current;
+        if (v && savedTime > 0) v.currentTime = savedTime;
+      };
+      videoRef.current?.addEventListener("loadedmetadata", restore, { once: true });
+    } catch (err) {
+      console.error("Failed to switch quality", err);
+      toast.error("Could not load this resolution");
+    } finally {
+      setVideoLoading(false);
+    }
+  }, [quality, activeLesson]);
 
   const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement>) => {
     const v = e.currentTarget;
@@ -121,6 +153,14 @@ const LecturePlayerPage = () => {
       errorMessage: v.error?.message,
     });
   };
+
+  // Close quality dropdown on outside click
+  useEffect(() => {
+    if (!qualityOpen) return;
+    const close = () => setQualityOpen(false);
+    document.addEventListener("click", close, { capture: true });
+    return () => document.removeEventListener("click", close, { capture: true });
+  }, [qualityOpen]);
 
   // Move watermark to a new random position every 6 seconds
   useEffect(() => {
@@ -309,6 +349,36 @@ const LecturePlayerPage = () => {
                       <p className="text-white/60 text-sm font-medium select-none">Return to tab to continue watching</p>
                     </div>
                   )}
+
+                  {/* Quality selector — top-right corner */}
+                  <div className="absolute top-3 right-3 z-30">
+                    <button
+                      onClick={() => setQualityOpen((o) => !o)}
+                      className="flex items-center gap-1 rounded-lg bg-black/60 px-2 py-1 text-xs font-bold text-white hover:bg-black/80 transition-colors backdrop-blur-sm"
+                      aria-label="Change video quality"
+                    >
+                      <Settings className="h-3.5 w-3.5" />
+                      {quality === "auto" ? "Auto" : quality}
+                    </button>
+                    {qualityOpen && (
+                      <div className="absolute right-0 top-full mt-1 min-w-[110px] rounded-xl border border-white/20 bg-black/90 backdrop-blur-md overflow-hidden shadow-xl">
+                        {QUALITY_OPTIONS.map((q) => (
+                          <button
+                            key={q}
+                            onClick={() => handleQualityChange(q)}
+                            className={`flex w-full items-center justify-between px-3 py-2 text-xs font-semibold transition-colors ${
+                              q === quality
+                                ? "bg-primary text-primary-foreground"
+                                : "text-white/80 hover:bg-white/10"
+                            }`}
+                          >
+                            {q === "auto" ? "Auto" : q}
+                            {q === quality && <span className="h-1.5 w-1.5 rounded-full bg-primary-foreground" />}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
                   {/* Moving email watermark — burns user identity into any screen recording */}
                   <div

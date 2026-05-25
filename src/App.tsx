@@ -32,6 +32,7 @@ import LeaderboardPage from "./pages/LeaderboardPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import CoursesPage from "./pages/CoursesPage";
 import MyCoursesPage from "./pages/MyCoursesPage";
+import FavouriteCoursesPage from "./pages/FavouriteCoursesPage";
 import CourseDetailPage from "./pages/CourseDetailPage";
 import LecturePlayerPage from "./pages/LecturePlayerPage";
 import ProfilePage from "./pages/ProfilePage";
@@ -188,6 +189,7 @@ const App = () => (
                 <Route path="/leaderboard" element={<LeaderboardPage />} />
                 <Route path="/analytics" element={<AnalyticsPage />} />
                 <Route path="/my-courses" element={<MyCoursesPage />} />
+                <Route path="/favourite-courses" element={<FavouriteCoursesPage />} />
                 <Route path="/explore-courses" element={<StorePage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />

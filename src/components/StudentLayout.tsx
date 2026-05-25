@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, BookOpen, Video, ClipboardCheck, MessageCircle, Swords, BarChart3, Trophy, User, Settings, Search, Users, Menu, X } from "lucide-react";
+import { Home, BookOpen, Video, ClipboardCheck, MessageCircle, Swords, BarChart3, Trophy, User, Settings, Search, Users, Menu, X, Heart } from "lucide-react";
 import LogoutButton from "@/components/LogoutButton";
 import { memo, useCallback, useMemo, useState } from "react";
 import arkeLogo from "@/assets/arke-logo.png";
@@ -23,6 +23,7 @@ type StudentNavItem = {
 const buildNavItems = (doubtCount: number, liveCount: number, hasLive: boolean): StudentNavItem[] => [
   { label: "Home", icon: Home, path: "/dashboard" },
   { label: "My Learning", icon: BookOpen, path: "/my-courses" },
+  { label: "Favourites", icon: Heart, path: "/favourite-courses" },
   { label: "Live Classes", icon: Video, path: "/my-live-classes", live: hasLive, badge: liveCount || undefined },
   { label: "Tests", icon: ClipboardCheck, path: "/my-tests" },
   { label: "Doubts", icon: MessageCircle, path: "/doubts", badge: doubtCount || undefined },

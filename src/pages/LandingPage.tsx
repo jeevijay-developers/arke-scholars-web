@@ -361,11 +361,11 @@ const LandingPage = () => {
           {/* Desktop grid */}
           <div className="mt-10 hidden md:grid gap-6 md:grid-cols-3 stagger-children">
             {[
-              { icon: User, title: "1-on-1 Private Classes", desc: "Personal attention with custom pace and flexible scheduling. Ideal for focused mentoring on weak areas.", features: ["Dedicated mentor", "Custom schedule", "Personalized plan", "Flexible timing"], gradient: "from-primary to-primary-dark" },
-              { icon: Users, title: "Live Batch Classes", desc: "Interactive group sessions with real-time doubt solving and peer learning. Join batches of 30-50 students.", features: ["Live interaction", "Real-time doubts", "Peer learning", "Recorded replays"], gradient: "from-secondary to-secondary-dark" },
-              { icon: Video, title: "Recorded Lectures", desc: "Learn at your own pace, rewatch anytime. Complete chapter-wise organized course library access.", features: ["Self-paced", "Rewatch anytime", "Chapter-wise", "Offline access"], gradient: "from-accent to-primary" },
+              { icon: User, title: "1-on-1 Private Classes", desc: "Personal attention with custom pace and flexible scheduling. Ideal for focused mentoring on weak areas.", features: ["Dedicated mentor", "Custom schedule", "Personalized plan", "Flexible timing"], gradient: "from-primary to-primary-dark", authLink: "/my-classes", publicLink: "/login" },
+              { icon: Users, title: "Live Batch Classes", desc: "Interactive group sessions with real-time doubt solving and peer learning. Join batches of 30-50 students.", features: ["Live interaction", "Real-time doubts", "Peer learning", "Recorded replays"], gradient: "from-secondary to-secondary-dark", authLink: "/my-courses", publicLink: "/login" },
+              { icon: Video, title: "Recorded Lectures", desc: "Learn at your own pace, rewatch anytime. Complete chapter-wise organized course library access.", features: ["Self-paced", "Rewatch anytime", "Chapter-wise", "Offline access"], gradient: "from-accent to-primary", authLink: "/my-courses", publicLink: "/login" },
             ].map((f) => (
-              <div key={f.title} className="rounded-2xl border border-border bg-background overflow-hidden hover-lift group">
+              <Link key={f.title} to={user ? f.authLink : f.publicLink} className="rounded-2xl border border-border bg-background overflow-hidden hover-lift hover:border-primary/30 transition-colors group">
                 <div className={`bg-gradient-to-br ${f.gradient} p-6 text-center`}>
                   <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 backdrop-blur mb-3">
                     <f.icon className="h-7 w-7 text-white" />
@@ -381,11 +381,11 @@ const LandingPage = () => {
                       </li>
                     ))}
                   </ul>
-                  <Link to="/courses" className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline">
+                  <span className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-primary">
                     Learn More <ChevronRight className="h-3 w-3" />
-                  </Link>
+                  </span>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
 
@@ -393,11 +393,11 @@ const LandingPage = () => {
           <div className="mt-8 md:hidden px-3">
             <MobileCarousel>
               {[
-                { icon: User, title: "1-on-1 Private Classes", desc: "Personal attention with custom pace and flexible scheduling. Ideal for focused mentoring on weak areas.", features: ["Dedicated mentor", "Custom schedule", "Personalized plan", "Flexible timing"], gradient: "from-primary to-primary-dark" },
-                { icon: Users, title: "Live Batch Classes", desc: "Interactive group sessions with real-time doubt solving and peer learning. Join batches of 30-50 students.", features: ["Live interaction", "Real-time doubts", "Peer learning", "Recorded replays"], gradient: "from-secondary to-secondary-dark" },
-                { icon: Video, title: "Recorded Lectures", desc: "Learn at your own pace, rewatch anytime. Complete chapter-wise organized course library access.", features: ["Self-paced", "Rewatch anytime", "Chapter-wise", "Offline access"], gradient: "from-accent to-primary" },
+                { icon: User, title: "1-on-1 Private Classes", desc: "Personal attention with custom pace and flexible scheduling. Ideal for focused mentoring on weak areas.", features: ["Dedicated mentor", "Custom schedule", "Personalized plan", "Flexible timing"], gradient: "from-primary to-primary-dark", authLink: "/student/mentor-chat", publicLink: "/login" },
+                { icon: Users, title: "Live Batch Classes", desc: "Interactive group sessions with real-time doubt solving and peer learning. Join batches of 30-50 students.", features: ["Live interaction", "Real-time doubts", "Peer learning", "Recorded replays"], gradient: "from-secondary to-secondary-dark", authLink: "/student/courses", publicLink: "/login" },
+                { icon: Video, title: "Recorded Lectures", desc: "Learn at your own pace, rewatch anytime. Complete chapter-wise organized course library access.", features: ["Self-paced", "Rewatch anytime", "Chapter-wise", "Offline access"], gradient: "from-accent to-primary", authLink: "/student/courses", publicLink: "/login" },
               ].map((f) => (
-                <div key={f.title} className="rounded-2xl border border-border bg-background overflow-hidden h-full">
+                <Link key={f.title} to={user ? f.authLink : f.publicLink} className="rounded-2xl border border-border bg-background overflow-hidden hover:border-primary/30 transition-colors h-full">
                   <div className={`bg-gradient-to-br ${f.gradient} p-4 text-center`}>
                     <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-white/20 backdrop-blur mb-2">
                       <f.icon className="h-5 w-5 text-white" />
@@ -413,11 +413,11 @@ const LandingPage = () => {
                         </li>
                       ))}
                     </ul>
-                    <Link to="/courses" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline">
+                    <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary">
                       Learn More <ChevronRight className="h-3 w-3" />
-                    </Link>
+                    </span>
                   </div>
-                </div>
+                </Link>
               ))}
             </MobileCarousel>
           </div>

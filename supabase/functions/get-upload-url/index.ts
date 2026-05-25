@@ -97,11 +97,13 @@ Deno.serve(async (req) => {
   let lessonId: string
   let contentType: string
   let contentLength: number
+  let quality: string
   try {
     const body = await req.json()
     lessonId      = String(body.lessonId ?? '')
     contentType   = String(body.contentType ?? 'video/mp4')
     contentLength = Number(body.contentLength ?? 0)
+    quality       = String(body.quality ?? 'original')
   } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
       status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -121,7 +123,10 @@ Deno.serve(async (req) => {
   const amzDate   = now.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z')
   const dateStamp = amzDate.slice(0, 8)
 
-  const key       = `arke/${lessonId}.mp4`
+  const VALID_QUALITIES = ['720p', '360p', '240p']
+  const key = VALID_QUALITIES.includes(quality)
+    ? `arke/${lessonId}_${quality}.mp4`
+    : `arke/${lessonId}.mp4`
   const uploadUrl = `${S3_ENDPOINT}/${key}`
   const host      = 's3.ap-tokyo.megas4.com'
 

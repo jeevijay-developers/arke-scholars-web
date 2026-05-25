@@ -11,6 +11,13 @@ export const monthRange = (year: number, monthIndex: number): MonthRange => {
   return { start, end, label };
 };
 
+export const daysRange = (days: number): MonthRange => {
+  const end = new Date();
+  const start = new Date(end.getTime() - days * 24 * 60 * 60 * 1000);
+  const label = days === 365 ? "Last 1 Year" : `Last ${days} Days`;
+  return { start, end, label };
+};
+
 export type StudentReportData = {
   student: {
     name: string;
@@ -504,12 +511,13 @@ function drawLineChart(
 function buildParentNote(d: StudentReportData): string {
   const parts: string[] = [];
   const first = d.student.name.split(" ")[0] || "Your child";
+  const inPeriod = `in the period "${d.period}"`;
   if (d.tests.attempts > 0) {
     parts.push(
-      `${first} attempted ${d.tests.attempts} test${d.tests.attempts === 1 ? "" : "s"} this month with an average score of ${d.tests.avgScorePct}% and accuracy of ${d.tests.avgAccuracyPct}%.`,
+      `${first} attempted ${d.tests.attempts} test${d.tests.attempts === 1 ? "" : "s"} ${inPeriod} with an average score of ${d.tests.avgScorePct}% and accuracy of ${d.tests.avgAccuracyPct}%.`,
     );
   } else {
-    parts.push(`${first} did not attempt any tests this month — encourage practice tests to build momentum.`);
+    parts.push(`${first} did not attempt any tests ${inPeriod} — encourage practice tests to build momentum.`);
   }
   if (d.attendance.registered > 0) {
     parts.push(
@@ -517,7 +525,7 @@ function buildParentNote(d: StudentReportData): string {
     );
   }
   if (d.engagement.activeDays > 0) {
-    parts.push(`Studied on ${d.engagement.activeDays} day${d.engagement.activeDays === 1 ? "" : "s"} this month.`);
+    parts.push(`Studied on ${d.engagement.activeDays} day${d.engagement.activeDays === 1 ? "" : "s"} during this period.`);
   }
   if (d.engagement.doubtsAsked > 0) {
     parts.push(
