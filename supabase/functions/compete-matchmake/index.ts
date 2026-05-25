@@ -47,11 +47,49 @@ Deno.serve(async (req) => {
     }
 
     if (action === "poll") {
-      const { data: q } = await sb.from("compete_queue").select("match_id, status").eq("user_id", user.id).maybeSingle();
-      if (q?.match_id) {
+      const { data: q } = await sb.from("compete_queue").select("*").eq("user_id", user.id).maybeSingle();
+      if (!q) return jsonResponse({ status: "waiting" });
+
+      // Already matched by the opponent's "find" call
+      if (q.match_id) {
         await sb.from("compete_queue").delete().eq("user_id", user.id);
         return jsonResponse({ status: "matched", match_id: q.match_id });
       }
+
+      // Still waiting — re-attempt matching so simultaneous "find" race conditions resolve within one poll cycle
+      const qSubject = q.subject || "Physics";
+      const qExam = q.target_exam || "JEE Main";
+      const qClass = q.class_level || "11";
+      const qTopics: string[] = Array.isArray(q.topics) ? q.topics : [];
+      const waitingCutoff = new Date(Date.now() - 20000).toISOString();
+
+      const { data: same } = await sb.from("compete_queue").select("*").eq("status", "waiting").eq("subject", qSubject).eq("target_exam", qExam).eq("class_level", qClass).neq("user_id", user.id).gte("rating", q.rating - 200).lte("rating", q.rating + 200).order("created_at", { ascending: true }).limit(5);
+      const { data: any } = await sb.from("compete_queue").select("*").eq("status", "waiting").eq("subject", qSubject).eq("target_exam", qExam).neq("user_id", user.id).lte("created_at", waitingCutoff).gte("rating", q.rating - 200).lte("rating", q.rating + 200).order("created_at", { ascending: true }).limit(5);
+      const candidates = [...(same ?? []), ...(any ?? []).filter((c: any) => !(same ?? []).some((s: any) => s.user_id === c.user_id))];
+      const opponent = candidates[0] ?? null;
+
+      if (opponent) {
+        const { data: claimed } = await sb.from("compete_queue").update({ status: "matched" }).eq("user_id", opponent.user_id).eq("status", "waiting").select("*").maybeSingle();
+        if (claimed) {
+          const [oppProfile, pollProfile] = await Promise.all([getProfileMini(sb, opponent.user_id), getProfileMini(sb, user.id)]);
+          const questionIds = await pickQuestionIds(sb, qSubject, qTopics, qClass, qExam, 10);
+          const { data: match } = await sb.from("compete_matches").insert({
+            player1_id: user.id, player2_id: opponent.user_id,
+            player1_name: pollProfile.full_name, player2_name: oppProfile.full_name,
+            player1_avatar: pollProfile.avatar_url, player2_avatar: oppProfile.avatar_url,
+            player1_rating_before: q.rating, player2_rating_before: opponent.rating,
+            subject: qSubject, topic: qTopics.length > 0 ? qTopics.join(", ") : "Any",
+            question_ids: questionIds, total_questions: questionIds.length,
+            status: "active", started_at: new Date().toISOString(),
+            countdown_until: new Date(Date.now() + 5000).toISOString(),
+            current_question_started_at: new Date(Date.now() + 5000).toISOString(),
+          }).select("*").single();
+          await sb.from("compete_queue").update({ match_id: match!.id }).eq("user_id", opponent.user_id);
+          await sb.from("compete_queue").delete().eq("user_id", user.id);
+          return jsonResponse({ status: "matched", match_id: match!.id });
+        }
+      }
+
       return jsonResponse({ status: "waiting" });
     }
 
@@ -100,8 +138,8 @@ Deno.serve(async (req) => {
 
     const candidates = [
       ...(sameLevelCandidates ?? []),
-      ...(anyLevelCandidates ?? []).filter((c) =>
-        !(sameLevelCandidates ?? []).some((s) => s.user_id === c.user_id)
+      ...(anyLevelCandidates ?? []).filter((c: any) =>
+        !(sameLevelCandidates ?? []).some((s: any) => s.user_id === c.user_id)
       ),
     ];
 

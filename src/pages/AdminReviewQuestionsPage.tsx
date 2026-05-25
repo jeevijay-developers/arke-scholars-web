@@ -39,6 +39,10 @@ interface ParsedQuestion {
   option_2: string;
   option_3: string;
   option_4: string;
+  option_1_image?: string | null;
+  option_2_image?: string | null;
+  option_3_image?: string | null;
+  option_4_image?: string | null;
   correct_options: number[];
   correct_integer: number | null;
   match_col1: MatchEntry[] | null;
@@ -478,9 +482,10 @@ function buildTestQuestionRow(q: ParsedQuestion, position: number, subject: stri
   let correct_answer: unknown = null;
 
   if (q.type === "scq" || q.type === "mcq") {
+    const optImages = [q.option_1_image, q.option_2_image, q.option_3_image, q.option_4_image];
     options = [q.option_1, q.option_2, q.option_3, q.option_4]
-      .map((text, idx) => ({ id: idx + 1, text }))
-      .filter((o) => (o.text ?? "").trim().length > 0);
+      .map((text, idx) => ({ id: idx + 1, text, image: optImages[idx] ?? null }))
+      .filter((o) => (o.text ?? "").trim().length > 0 || o.image);
     correct_answer = q.correct_options ?? [];
   } else if (q.type === "integer") {
     options = [];

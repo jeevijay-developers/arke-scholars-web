@@ -11,6 +11,8 @@ export type CompeteMatch = {
   player2_avatar: string | null;
   player1_score: number;
   player2_score: number;
+  player1_answer_count: number;
+  player2_answer_count: number;
   player1_rating_before: number | null;
   player2_rating_before: number | null;
   player1_rating_after: number | null;
@@ -55,6 +57,7 @@ export const useCompeteMatch = (matchId: string | null) => {
   const [answers, setAnswers] = useState<CompeteAnswer[]>([]);
   const [loading, setLoading] = useState(true);
   const loadedQuestionsFor = useRef<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (!matchId) return;
@@ -105,11 +108,34 @@ export const useCompeteMatch = (matchId: string | null) => {
       })
       .subscribe();
 
+    // Polling fallback: refetch match every 5s while active.
+    // Catches any missed realtime events (status → "finished", answer counts).
+    pollRef.current = setInterval(async () => {
+      const { data: m } = await supabase
+        .from("compete_matches")
+        .select("*")
+        .eq("id", matchId)
+        .maybeSingle();
+      if (m) setMatch(m as unknown as CompeteMatch);
+    }, 5000);
+
     return () => {
       cancelled = true;
       supabase.removeChannel(channel);
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
     };
   }, [matchId]);
+
+  // Stop polling once the match finishes
+  useEffect(() => {
+    if (match?.status === "finished" && pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  }, [match?.status]);
 
   return { match, questions, answers, loading };
 };

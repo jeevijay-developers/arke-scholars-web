@@ -23,7 +23,6 @@ const CompeteMatchView = ({ match, questions, answers, onQuit }: Props) => {
   // Each player progresses independently — track my own question index locally
   const [myQIndex, setMyQIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
-  const [submitting, setSubmitting] = useState(false);
   const [confirmQuit, setConfirmQuit] = useState(false);
   const [timeLeft, setTimeLeft] = useState(QUESTION_TIME_MS);
   const [waitingForOpponent, setWaitingForOpponent] = useState(false);
@@ -84,45 +83,36 @@ const CompeteMatchView = ({ match, questions, answers, onQuit }: Props) => {
   const oppName = isP1 ? (match.player2_name || (match.is_bot ? "Bot" : "Opponent")) : match.player1_name;
   const oppAvatar = isP1 ? match.player2_avatar : match.player1_avatar;
 
-  // Count opponent's answered questions (for their progress indicator)
-  const oppAnswerCount = answers.filter((a) => a.user_id !== myId && a.user_id !== "00000000-0000-0000-0000-000000000000").length
-    || answers.filter((a) => a.user_id === "00000000-0000-0000-0000-000000000000").length;
+  // Opponent progress comes from the match object (atomically incremented per answer,
+  // delivered reliably via compete_matches realtime UPDATE — not from compete_match_answers
+  // INSERT events which can be dropped by complex cross-table RLS checks).
+  const oppAnswerCount = isP1 ? (match.player2_answer_count ?? 0) : (match.player1_answer_count ?? 0);
 
-  const submitAnswer = async (idx: number | null) => {
-    if (submittedRef.current.has(myQIndex) || submitting) return;
-    submittedRef.current.add(myQIndex);
-    setSubmitting(true);
-    setSelected(idx);
+  const submitAnswer = (idx: number | null) => {
+    if (submittedRef.current.has(myQIndex)) return;
+
+    const currentQIndex = myQIndex;
     const elapsed = Math.min(QUESTION_TIME_MS, Date.now() - questionStartRef.current);
+    submittedRef.current.add(currentQIndex);
 
-    try {
-      const { error } = await supabase.functions.invoke("compete-submit-answer", {
-        body: { match_id: match.id, question_index: myQIndex, selected_index: idx, time_taken_ms: elapsed },
-      });
-      if (error) {
-        submittedRef.current.delete(myQIndex);
-        toast.error("Submit failed: " + error.message);
-        setSubmitting(false);
-        return;
-      }
-    } catch (e: any) {
-      submittedRef.current.delete(myQIndex);
-      toast.error(e?.message || "Network error");
-      setSubmitting(false);
-      return;
-    }
-
-    setSubmitting(false);
-
-    // Advance to next question immediately (don't wait for opponent)
-    const nextIndex = myQIndex + 1;
+    // Advance immediately — don't block on network
+    const nextIndex = currentQIndex + 1;
     if (nextIndex < totalQ) {
       setMyQIndex(nextIndex);
     } else {
-      // I finished all questions — wait for opponent + match.status to become "finished"
       setMyQIndex(totalQ);
       setWaitingForOpponent(true);
     }
+
+    // Fire to server in background
+    supabase.functions
+      .invoke("compete-submit-answer", {
+        body: { match_id: match.id, question_index: currentQIndex, selected_index: idx, time_taken_ms: elapsed },
+      })
+      .then(({ error }) => {
+        if (error) toast.error("Answer not recorded: " + error.message);
+      })
+      .catch((e: any) => toast.error(e?.message || "Network error"));
   };
 
   const timerPct = (timeLeft / QUESTION_TIME_MS) * 100;
@@ -136,7 +126,7 @@ const CompeteMatchView = ({ match, questions, answers, onQuit }: Props) => {
           <PlayerCard name={myName ?? "You"} avatar={myAvatar} score={myScore} highlight isMe />
           <div className="text-center">
             <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">Question</p>
-            <p className="text-xl font-black text-white">{totalQ}<span className="text-white/40">/{totalQ}</span></p>
+            <p data-testid="question-counter" className="text-xl font-black text-white">{totalQ}<span className="text-white/40">/{totalQ}</span></p>
           </div>
           <PlayerCard name={oppName ?? "Opponent"} avatar={oppAvatar} score={oppScore} progress={oppAnswerCount} total={totalQ} />
         </div>
@@ -192,6 +182,7 @@ const CompeteMatchView = ({ match, questions, answers, onQuit }: Props) => {
   }
 
   const myAnsweredThisQ = submittedRef.current.has(myQIndex);
+  const locked = myAnsweredThisQ;
 
   return (
     <div className="space-y-4 animate-fade-in-up">
@@ -200,7 +191,7 @@ const CompeteMatchView = ({ match, questions, answers, onQuit }: Props) => {
         <PlayerCard name={myName ?? "You"} avatar={myAvatar} score={myScore} highlight isMe />
         <div className="text-center">
           <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">Question</p>
-          <p className="text-xl font-black text-white">{myQIndex + 1}<span className="text-white/40">/{totalQ}</span></p>
+          <p data-testid="question-counter" className="text-xl font-black text-white">{myQIndex + 1}<span className="text-white/40">/{totalQ}</span></p>
         </div>
         <PlayerCard name={oppName ?? "Opponent"} avatar={oppAvatar} score={oppScore} progress={oppAnswerCount} total={totalQ} />
       </div>
@@ -227,12 +218,11 @@ const CompeteMatchView = ({ match, questions, answers, onQuit }: Props) => {
       <div className="max-w-xl mx-auto grid gap-2">
         {(question.options as string[]).map((opt, i) => {
           const isSelected = selected === i;
-          const locked = myAnsweredThisQ || submitting;
           return (
             <button
               key={i}
               disabled={locked}
-              onClick={() => submitAnswer(i)}
+              onClick={() => !locked && submitAnswer(i)}
               className={`w-full rounded-xl border-2 px-4 py-3 text-left text-sm font-semibold transition-all ${
                 isSelected
                   ? "border-primary bg-primary/20 text-white"

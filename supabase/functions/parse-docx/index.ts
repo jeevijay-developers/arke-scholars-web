@@ -24,6 +24,10 @@ interface ParsedQuestion {
   option_2: string;
   option_3: string;
   option_4: string;
+  option_1_image: string | null;
+  option_2_image: string | null;
+  option_3_image: string | null;
+  option_4_image: string | null;
   correct_options: number[];
   correct_integer: number | null;
   match_col1: MatchEntry[] | null;
@@ -263,6 +267,8 @@ function parseDocument(
     stemParas: string[];
     stemRids: string[];
     optCells: string[][];     // HTML per cell
+    optImages: Record<number, string>; // per-option image URL (1-indexed)
+    currentOpt: number | null;         // which option (1-4) is currently active
     matchRows: string[][];    // plain text per cell (for parsing key/value)
     matchRowsHtml: string[][];// HTML per cell (for display)
     answerText: string;
@@ -423,6 +429,10 @@ function parseDocument(
         option_2,
         option_3,
         option_4,
+        option_1_image: a.optImages[1] ?? null,
+        option_2_image: a.optImages[2] ?? null,
+        option_3_image: a.optImages[3] ?? null,
+        option_4_image: a.optImages[4] ?? null,
         correct_options,
         correct_integer,
         match_col1,
@@ -485,6 +495,8 @@ function parseDocument(
           stemParas: [stemHtmlClean],
           stemRids: paraImageRids(block.xml),
           optCells: [],
+          optImages: {},
+          currentOpt: null,
           matchRows: [],
           matchRowsHtml: [],
           answerText: "",
@@ -497,6 +509,24 @@ function parseDocument(
       }
 
       if (!accum) { skipped++; continue; }
+
+      // Image-only paragraphs after a table-based options block: assign to options in order
+      if (accum.optionsDone && !accum.inSolution) {
+        const rawText2 = paraText(block.xml).trim();
+        const hasDrawing2 = block.xml.includes("<w:drawing>") || block.xml.includes("<w:pict>");
+        if (hasDrawing2 && rawText2.length === 0 && !/^answer\s*:/i.test(text)) {
+          const nextOptSlot = (Object.keys(accum.optImages).length + 1);
+          if (nextOptSlot <= 4) {
+            const rids2 = paraImageRids(block.xml);
+            const rid2 = rids2[0];
+            const img2 = rid2 ? ridToImage.get(rid2) : undefined;
+            if (img2?.url && !accum.optImages[nextOptSlot]) {
+              accum.optImages[nextOptSlot] = img2.url;
+            }
+          }
+          continue;
+        }
+      }
 
       // Answer line
       if (/^answer\s*:/i.test(text)) {
@@ -518,13 +548,47 @@ function parseDocument(
       // Default: stem continuation or inline option paragraph
       if (!accum.optionsDone) {
         const rawText = paraText(block.xml).trim();
+        const rids = paraImageRids(block.xml);
+        const hasDrawing = block.xml.includes("<w:drawing>") || block.xml.includes("<w:pict>");
+        // A paragraph is "image only" if it has a drawing and no meaningful text
+        const isImageOnly = hasDrawing && rawText.length === 0;
+
+        // Image-only paragraph: attach to current option if one is active, else stem
+        if (isImageOnly) {
+          const rid = rids[0];
+          const img = ridToImage.get(rid);
+          if (img?.url) {
+            if (accum.currentOpt !== null) {
+              // Assign to active option (first image wins)
+              if (!accum.optImages[accum.currentOpt]) {
+                accum.optImages[accum.currentOpt] = img.url;
+              }
+            } else {
+              // Stem image — add via buildParaHtml so it renders in stem
+              const h = buildParaHtml(block.xml, ridToImage);
+              if (h) accum.stemParas.push(h);
+              accum.stemRids.push(...rids);
+            }
+          }
+          continue;
+        }
+
         const h = buildParaHtml(block.xml, ridToImage);
         // Option paragraph on its own line: starts with (1), (2), (3), or (4)
-        if (/^\([1-4]\)\s/.test(rawText) && h) {
+        const optMatch = /^\([1-4]\)\s/.test(rawText);
+        if (optMatch && h) {
+          const optNum = parseInt(rawText[1], 10);
+          accum.currentOpt = optNum;
           accum.optCells.push([h]);
         } else if (h) {
-          accum.stemParas.push(h);
-          accum.stemRids.push(...paraImageRids(block.xml));
+          if (accum.currentOpt !== null) {
+            // Text continuation of the current option — append to its last cell
+            const last = accum.optCells[accum.optCells.length - 1];
+            if (last) last.push(h);
+          } else {
+            accum.stemParas.push(h);
+            accum.stemRids.push(...rids);
+          }
         }
       }
     } else {

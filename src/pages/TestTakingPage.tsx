@@ -16,7 +16,7 @@ type TestQuestion = {
   question_text: string;
   question_image_url: string | null;
   question_type: string;
-  options: { id: number; text: string }[];
+  options: { id: number; text: string; image?: string | null }[];
   marks_correct: number;
   marks_wrong: number;
 };
@@ -437,11 +437,12 @@ const TestTakingPage = () => {
 
             {/* SCQ / MCQ / Assertion-Reasoning options */}
             {q.question_type !== "integer" && q.question_type !== "match_column" && (() => {
-              const opts = q.options as { id: number; text: string }[];
+              const opts = q.options as { id: number; text: string; image?: string | null }[];
               if (!opts?.length) return null;
               const isMcq = q.question_type === "mcq";
+              const hasAnyImage = opts.some((o) => o.image);
               return (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className={`grid gap-2 ${hasAnyImage ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-2"}`}>
                   {opts.map((opt, idx) => {
                     const isSelected = isMcq
                       ? (answers[q.id]?.multiSelected ?? []).includes(opt.id)
@@ -450,10 +451,21 @@ const TestTakingPage = () => {
                       <button
                         key={opt.id}
                         onClick={() => handleSelect(opt.id)}
-                        className={`w-full text-left rounded-xl border-2 px-4 py-3 text-sm transition-all ${isSelected ? "border-primary bg-primary/5 text-foreground" : "border-border hover:border-muted-foreground/40 text-foreground"}`}
+                        className={`w-full text-left rounded-xl border-2 transition-all ${hasAnyImage ? "p-3" : "px-4 py-3"} text-sm ${isSelected ? "border-primary bg-primary/5 text-foreground" : "border-border hover:border-muted-foreground/40 text-foreground"}`}
                       >
-                        <span className="font-bold mr-2">{String.fromCharCode(65 + idx)}.</span>
-                        <MathRenderer content={opt.text} inline />
+                        <div className="flex items-start gap-2">
+                          <span className="font-bold shrink-0">{String.fromCharCode(65 + idx)}.</span>
+                          <div className="flex-1 min-w-0">
+                            {opt.text && <MathRenderer content={opt.text} inline />}
+                            {opt.image && (
+                              <img
+                                src={opt.image}
+                                alt={`Option ${String.fromCharCode(65 + idx)}`}
+                                className="mt-2 max-h-40 w-auto rounded-lg object-contain"
+                              />
+                            )}
+                          </div>
+                        </div>
                       </button>
                     );
                   })}

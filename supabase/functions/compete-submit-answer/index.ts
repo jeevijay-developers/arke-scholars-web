@@ -29,6 +29,7 @@ Deno.serve(async (req) => {
     const { data: existing } = await sb.from("compete_match_answers")
       .select("id").eq("match_id", matchId).eq("user_id", user.id).eq("question_index", questionIndex).maybeSingle();
 
+    const isP1 = user.id === match.player1_id;
     let isCorrect = false;
     let points = 0;
 
@@ -50,12 +51,13 @@ Deno.serve(async (req) => {
         points,
       });
 
-      // Atomic score increment
-      const isP1 = user.id === match.player1_id;
+      // Atomic score + answer count increment
       if (isP1) {
         await sb.rpc("increment_player1_score", { match_id: matchId, delta: points });
+        await sb.rpc("increment_player1_answers", { match_id: matchId });
       } else {
         await sb.rpc("increment_player2_score", { match_id: matchId, delta: points });
+        await sb.rpc("increment_player2_answers", { match_id: matchId });
       }
     }
 
@@ -82,36 +84,27 @@ Deno.serve(async (req) => {
           points: botPoints,
         });
         await sb.rpc("increment_player2_score", { match_id: matchId, delta: botPoints });
+        await sb.rpc("increment_player2_answers", { match_id: matchId });
       }
     }
 
     const totalQ = match.question_ids.length;
 
-    // Check if this player has now answered all questions
-    const { count: myAnswerCount } = await sb.from("compete_match_answers")
-      .select("id", { count: "exact", head: true })
-      .eq("match_id", matchId)
-      .eq("user_id", user.id);
+    // Re-fetch match to get the atomically-incremented answer counts.
+    // Using match-level counts (rather than counting compete_match_answers) avoids
+    // a race condition where concurrent fire-and-forget calls haven't all committed
+    // their INSERTs yet when this COUNT query runs.
+    const { data: snapshot } = await sb.from("compete_matches")
+      .select("player1_answer_count, player2_answer_count, player1_score, player2_score, status")
+      .eq("id", matchId)
+      .single();
 
-    // Check if both players have answered all questions → finalize
-    const opponentId = match.is_bot ? BOT_ID : (user.id === match.player1_id ? match.player2_id : match.player1_id);
-
-    let canFinalize = false;
-    if ((myAnswerCount ?? 0) >= totalQ) {
-      if (!opponentId) {
-        // Solo match (shouldn't happen normally)
-        canFinalize = true;
-      } else {
-        const { count: oppAnswerCount } = await sb.from("compete_match_answers")
-          .select("id", { count: "exact", head: true })
-          .eq("match_id", matchId)
-          .eq("user_id", opponentId);
-        canFinalize = (oppAnswerCount ?? 0) >= totalQ;
-      }
-    }
+    const myCount = isP1 ? (snapshot?.player1_answer_count ?? 0) : (snapshot?.player2_answer_count ?? 0);
+    const oppCount = isP1 ? (snapshot?.player2_answer_count ?? 0) : (snapshot?.player1_answer_count ?? 0);
+    const canFinalize = (myCount >= totalQ) && (oppCount >= totalQ);
 
     if (canFinalize) {
-      // Re-fetch for fresh scores before finalizing
+      // Re-fetch full match for fresh scores before finalizing
       const { data: finalMatch } = await sb.from("compete_matches").select("*").eq("id", matchId).single();
       if (finalMatch && finalMatch.status === "active") {
         const p1 = Number(finalMatch.player1_score);
