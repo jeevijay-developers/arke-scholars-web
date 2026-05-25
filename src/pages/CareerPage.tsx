@@ -66,7 +66,7 @@ const teamPillars = [
   {
     icon: Laptop,
     title: "Product & Engineering",
-    desc: "A small, fast team building delightful learning experiences for India and Dubai.",
+    desc: "A small, fast team building delightful learning experiences for students across India.",
     stat: "12+",
     statLabel: "Builders",
   },
@@ -110,8 +110,8 @@ const benefits = [
   },
   {
     icon: Globe2,
-    title: "India + Dubai Reach",
-    desc: "Teach students across India and the GCC. Build a national reputation, not just a local one.",
+    title: "National Reach",
+    desc: "Teach students from Kota to Kanyakumari. Build a national reputation, not just a local one.",
   },
   {
     icon: Laptop,
@@ -217,7 +217,7 @@ const CareerPage = () => {
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       <SEO
-        title="Careers at ARKE Scholars | EdTech Jobs India & UAE"
+        title="Careers at ARKE Scholars | EdTech Jobs in India"
         description="Join the team building India's most ambitious EdTech platform. Open roles in education, technology, design, and operations at ARKE Scholars. Apply now."
         canonical="/career"
       />
@@ -288,7 +288,7 @@ const CareerPage = () => {
               What is <span className="text-primary">ARKE</span>?
             </h2>
             <p className="mt-3 sm:mt-4 text-sm sm:text-lg text-muted-foreground max-w-2xl mx-auto px-2">
-              Born in <span className="font-semibold text-foreground">Kota — India's coaching capital</span> — ARKE is a next-generation learning platform for India and Dubai,
+              Born in <span className="font-semibold text-foreground">Kota — India's coaching capital</span> — ARKE is a next-generation learning platform for India,
               powered by master mentors who've shaped thousands of toppers. Built to make world-class education accessible, engaging, and outcome-driven for every learner.
             </p>
           </div>

@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, Mail, Eye, EyeOff, Check, Sparkles, Globe, Loader2 } from "lucide-react";
-import { useAppStore } from "@/store/useAppStore";
+import { ArrowLeft, Mail, Eye, EyeOff, Check, Sparkles, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import logoLight from "@/assets/arke-logo-light.png";
@@ -58,7 +57,6 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { country, setCountry } = useAppStore();
 
   const handleEmailLogin = async () => {
     if (!email || !password) {
@@ -118,7 +116,7 @@ const LoginPage = () => {
           </div>
 
           <p className="mt-12 text-sm text-white/85">Join 50,000+ students already learning</p>
-          <p className="mt-4 text-xs text-white/70">Trusted by students from India & Dubai</p>
+          <p className="mt-4 text-xs text-white/70">Trusted by students across India</p>
 
           <Sparkles className="mt-8 h-6 w-6 text-accent animate-pulse" />
         </div>
@@ -130,20 +128,6 @@ const LoginPage = () => {
           <Link to="/" className="inline-flex items-center gap-1.5 mb-4 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="h-4 w-4" /> Back to home
           </Link>
-          {/* Country Toggle */}
-          <div className="flex items-center gap-2 mb-6 rounded-xl border border-border p-2">
-            <Globe className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Region:</span>
-            <div className="flex rounded-lg bg-background p-0.5 ml-auto">
-              <button onClick={() => setCountry('india')} className={`rounded-md px-3 py-1 text-xs font-semibold transition-colors ${country === 'india' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}>
-                🇮🇳 India
-              </button>
-              <button onClick={() => setCountry('dubai')} className={`rounded-md px-3 py-1 text-xs font-semibold transition-colors ${country === 'dubai' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}>
-                🇦🇪 Dubai
-              </button>
-            </div>
-          </div>
-
           <h2 className="text-2xl font-black font-display text-foreground">Welcome Back</h2>
           <p className="mt-1 text-sm text-muted-foreground">Log in to continue your preparation</p>
 

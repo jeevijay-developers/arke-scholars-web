@@ -75,7 +75,7 @@ const ContactPage = () => {
     <div className="bg-background">
       <SEO
         title="Contact ARKE Scholars | JEE & NEET Help & Support"
-        description="Get in touch with the ARKE Scholars team for admissions, technical support, or partnership enquiries. India & UAE support available."
+        description="Get in touch with the ARKE Scholars team for admissions, technical support, or partnership enquiries."
         canonical="/contact"
       />
       {/* Hero */}

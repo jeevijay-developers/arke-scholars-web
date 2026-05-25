@@ -15,7 +15,7 @@ import featureTest from "@/assets/feature-test.png";
 
 const faqs = [
   { q: "What exams does Arke cover?", a: "Arke covers JEE Main, JEE Advanced, NEET, and Board Exams (CBSE & State Boards) for classes 11 and 12. We also offer foundation courses for class 9 and 10." },
-  { q: "Can I attend classes from Dubai?", a: "Absolutely! Our live classes run on IST but recordings are available 24/7. Students from UAE, Oman, and other GCC countries study with us regularly." },
+  { q: "Can I study from outside my city?", a: "Absolutely! Our live classes run on IST but recordings are available 24/7. Students from any city or state across India study with us regularly." },
   { q: "How does the AI Doubt Solver work?", a: "Simply upload a photo of your question or type it out. Our AI analyzes the problem and gives you a step-by-step solution with explanations within seconds." },
   { q: "Is there a free trial?", a: "Yes! Our Explorer plan is completely free — you get access to 5 live classes, basic test series, and community doubt solving. No credit card required." },
   { q: "What if I miss a live class?", a: "No worries! All live classes are recorded and available in your dashboard within 2 hours. You can rewatch them as many times as you want." },
@@ -120,14 +120,14 @@ const FEATURE_IMGS: Record<string, string> = {
 };
 
 const LandingPage = () => {
-  const { country, user } = useAppStore();
+  const { user } = useAppStore();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   return (
     <div className="min-h-screen bg-background">
       <SEO
         title="JEE, NEET & Board Exam Prep Online"
-        description="Crack JEE Main, JEE Advanced, NEET & CBSE Boards with ARKE Scholars. Live classes from IIT educators, AI doubt solving, 500+ mock tests & 1-on-1 mentorship. India & UAE."
+        description="Crack JEE Main, JEE Advanced, NEET & CBSE Boards with ARKE Scholars. Live classes from IIT educators, AI doubt solving, 500+ mock tests & 1-on-1 mentorship."
         canonical="/"
         jsonLd={[
           {
@@ -137,9 +137,9 @@ const LandingPage = () => {
             "alternateName": ["Arke", "Arke Scholars", "Arke Pro", "Arke EdTech", "arke.pro"],
             "url": "https://arke.pro",
             "logo": "https://arke.pro/logo.png",
-            "description": "ARKE Scholars (arke.pro) is India's next-gen EdTech platform for JEE Main, JEE Advanced, NEET, and CBSE Board exam preparation, serving students in India and UAE.",
+            "description": "ARKE Scholars (arke.pro) is India's next-gen EdTech platform for JEE Main, JEE Advanced, NEET, and CBSE Board exam preparation.",
             "foundingDate": "2024",
-            "areaServed": ["IN", "AE"],
+            "areaServed": ["IN"],
             "sameAs": [
               "https://www.instagram.com/arkescholars",
               "https://www.youtube.com/@arkescholars",
@@ -167,8 +167,7 @@ const LandingPage = () => {
             "url": "https://arke.pro",
             "description": "Online coaching for JEE Main, JEE Advanced, NEET and CBSE Board exams",
             "areaServed": [
-              { "@type": "Country", "name": "India" },
-              { "@type": "Country", "name": "United Arab Emirates" }
+              { "@type": "Country", "name": "India" }
             ]
           }
         ]}
@@ -183,7 +182,7 @@ const LandingPage = () => {
           <div className="grid items-center gap-8 md:gap-12 md:grid-cols-2">
             <div className="animate-fade-in-up">
               <span className="inline-flex items-center gap-1.5 rounded-pill border border-primary/30 bg-primary/10 px-3 py-1 text-xs md:text-sm font-semibold text-primary">
-                <Rocket className="h-3 w-3 md:h-4 md:w-4" /> {country === 'india' ? "India's Rising EdTech Platform" : "UAE's Trusted EdTech Platform"}
+                <Rocket className="h-3 w-3 md:h-4 md:w-4" /> India's Rising EdTech Platform
               </span>
               <h1 className="mt-4 md:mt-6 font-display">
                 <span className="block text-3xl font-black text-white md:text-5xl lg:text-6xl">JEE, NEET & Board Exam</span>
@@ -437,7 +436,7 @@ const LandingPage = () => {
               Career with <span className="gradient-text">Arke</span>
             </h2>
             <p className="mt-3 text-sm md:text-base text-white/80 md:text-lg">
-              Join India & Dubai's fastest-growing edtech platform. Teach thousands, earn well, work flexibly.
+              Join India's fastest-growing edtech platform. Teach thousands, earn well, work flexibly.
             </p>
           </div>
 
@@ -446,7 +445,7 @@ const LandingPage = () => {
             {[
               { icon: Clock, title: "Flexible Hours", desc: "Teach from anywhere on a schedule that fits your life. Live, recorded, or 1-on-1." },
               { icon: IndianRupee, title: "Competitive Pay", desc: "Industry-leading compensation with bonus on student outcomes and reviews." },
-              { icon: Users, title: "Reach 50,000+ Students", desc: "Inspire learners across India and Dubai. Build your personal brand with us." },
+              { icon: Users, title: "Reach 50,000+ Students", desc: "Inspire learners across India. Build your personal brand with us." },
             ].map((p) => (
               <div key={p.title} className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-6 hover-lift">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent mb-4">
@@ -464,7 +463,7 @@ const LandingPage = () => {
               {[
                 { icon: Clock, title: "Flexible Hours", desc: "Teach from anywhere on a schedule that fits your life. Live, recorded, or 1-on-1." },
                 { icon: IndianRupee, title: "Competitive Pay", desc: "Industry-leading compensation with bonus on student outcomes and reviews." },
-                { icon: Users, title: "Reach 50,000+ Students", desc: "Inspire learners across India and Dubai. Build your personal brand with us." },
+                { icon: Users, title: "Reach 50,000+ Students", desc: "Inspire learners across India. Build your personal brand with us." },
               ].map((p) => (
                 <div key={p.title} className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-5 h-full">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent mb-3">
@@ -548,88 +547,6 @@ const LandingPage = () => {
                     <span className="rounded-full bg-secondary/10 px-2.5 py-0.5 text-[10px] font-bold text-secondary">{s.result}</span>
                     <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold text-primary">{s.tag}</span>
                   </div>
-                </div>
-              ))}
-            </MobileCarousel>
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing */}
-      <section id="pricing" className="py-12 md:py-24 bg-card">
-        <div className="container mx-auto px-4">
-          <div className="text-center animate-fade-in-up">
-            <h2 className="text-2xl md:text-3xl lg:text-4xl font-black font-display text-foreground">Simple Pricing</h2>
-            <p className="mt-2 text-sm md:text-base text-muted-foreground">Choose a plan that fits your goals</p>
-          </div>
-
-          {/* Desktop grid */}
-          <div className="mt-10 hidden md:grid gap-6 md:grid-cols-3 stagger-children">
-            {[
-              { name: "Explorer", price: "Free", desc: "Get started", features: ["5 free live classes", "Basic test series", "Community doubts"], cta: "Start Free", popular: false },
-              { name: "JEE Pro", price: country === 'india' ? "₹999" : "AED 149", desc: "/month", features: ["Unlimited live classes", "Full test series", "AI doubt solver", "Analytics"], cta: "Get Pro", popular: true },
-              { name: "Elite", price: country === 'india' ? "₹3,999" : "AED 599", desc: "/month", features: ["Everything in Pro", "1-on-1 mentoring", "Personal study plan", "Priority support"], cta: "Go Elite", popular: false },
-            ].map((p) => (
-              <div key={p.name} className={`relative rounded-2xl border p-8 hover-lift overflow-visible ${p.popular ? 'border-primary bg-background shadow-blue' : 'border-border bg-background shadow-sm'}`}>
-                {p.popular && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-pill bg-gradient-to-r from-primary to-accent px-4 py-1 text-xs font-bold text-primary-foreground z-10">
-                    Most Popular
-                  </span>
-                )}
-                <h3 className="text-lg font-bold font-display text-foreground">{p.name}</h3>
-                <div className="mt-4">
-                  <span className="text-4xl font-black font-display text-foreground">{p.price}</span>
-                  <span className="text-muted-foreground">{p.desc}</span>
-                </div>
-                <ul className="mt-6 space-y-3">
-                  {p.features.map((f) => (
-                    <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground z-10">
-                      <Check className="h-4 w-4 text-secondary" /> {f}
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  to="/signup"
-                  className={`mt-8 block rounded-pill py-3 text-center text-sm font-bold transition-colors ${p.popular ? 'bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90' : 'border border-border text-foreground hover:bg-primary/5'}`}
-                >
-                  {p.cta}
-                </Link>
-              </div>
-            ))}
-          </div>
-
-          {/* Mobile carousel */}
-          <div className="mt-8 md:hidden px-3">
-            <MobileCarousel>
-              {[
-                { name: "Explorer", price: "Free", desc: "Get started", features: ["5 free live classes", "Basic test series", "Community doubts"], cta: "Start Free", popular: false },
-                { name: "JEE Pro", price: country === 'india' ? "₹999" : "AED 149", desc: "/month", features: ["Unlimited live classes", "Full test series", "AI doubt solver", "Analytics"], cta: "Get Pro", popular: true },
-                { name: "Elite", price: country === 'india' ? "₹3,999" : "AED 599", desc: "/month", features: ["Everything in Pro", "1-on-1 mentoring", "Personal study plan", "Priority support"], cta: "Go Elite", popular: false },
-              ].map((p) => (
-                <div key={p.name} className={`relative rounded-2xl border p-5 h-full overflow-visible ${p.popular ? 'border-primary bg-background shadow-blue' : 'border-border bg-background shadow-sm'}`}>
-                  {p.popular && (
-                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-pill bg-gradient-to-r from-primary to-accent px-3 py-0.5 text-[10px] font-bold text-primary-foreground whitespace-nowrap z-10">
-                      Most Popular
-                    </span>
-                  )}
-                  <h3 className="text-base font-bold font-display text-foreground">{p.name}</h3>
-                  <div className="mt-3">
-                    <span className="text-3xl font-black font-display text-foreground">{p.price}</span>
-                    <span className="text-sm text-muted-foreground">{p.desc}</span>
-                  </div>
-                  <ul className="mt-4 space-y-2">
-                    {p.features.map((f) => (
-                      <li key={f} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <Check className="h-3.5 w-3.5 text-secondary shrink-0" /> {f}
-                      </li>
-                    ))}
-                  </ul>
-                  <Link
-                    to="/signup"
-                    className={`mt-5 block rounded-pill py-2 text-center text-xs font-bold transition-colors ${p.popular ? 'bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90' : 'border border-border text-foreground hover:bg-primary/5'}`}
-                  >
-                    {p.cta}
-                  </Link>
                 </div>
               ))}
             </MobileCarousel>

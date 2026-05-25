@@ -228,7 +228,7 @@ const MentorshipPage = () => {
           "description": "Weekly personal mentoring sessions with IIT toppers for JEE Main, JEE Advanced and NEET aspirants",
           "provider": { "@type": "Organization", "name": "ARKE Scholars", "url": "https://arke.pro" },
           "serviceType": "Educational Mentoring",
-          "areaServed": ["IN", "AE"],
+          "areaServed": ["IN"],
           "offers": { "@type": "Offer", "url": "https://arke.pro/pricing", "priceCurrency": "INR", "availability": "https://schema.org/InStock" }
         }}
       />

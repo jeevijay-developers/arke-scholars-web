@@ -9,7 +9,7 @@ const PrivacyPolicyPage = () => {
       content: [
         "Account information: name, email, phone number, date of birth, and target exam.",
         "Learning data: courses enrolled, lessons watched, tests attempted, scores, and progress.",
-        "Payment information: processed securely via PCI-compliant gateways (Razorpay in India, Stripe in UAE). We do not store full card details.",
+        "Payment information: processed securely via PCI-compliant gateways (Razorpay). We do not store full card details.",
         "Device & usage data: device type, browser, IP address, and pages visited — used to improve performance and security.",
       ],
     },
@@ -21,7 +21,7 @@ const PrivacyPolicyPage = () => {
         "Send important updates about your account, classes, and exam schedules.",
         "Provide customer support and resolve issues.",
         "Improve our platform through aggregated analytics.",
-        "Comply with legal obligations in India and UAE.",
+        "Comply with legal obligations in India.",
       ],
     },
     {
@@ -31,7 +31,7 @@ const PrivacyPolicyPage = () => {
         "All data is encrypted in transit (TLS 1.3) and at rest (AES-256).",
         "Access is restricted on a need-to-know basis with multi-factor authentication for staff.",
         "Regular third-party security audits and vulnerability assessments.",
-        "Servers hosted in compliance with Indian and UAE data residency requirements.",
+        "Servers hosted in compliance with Indian data residency requirements.",
       ],
     },
     {
@@ -51,7 +51,7 @@ const PrivacyPolicyPage = () => {
       content: [
         "Essential cookies: required for login, security, and core functionality.",
         "Analytics cookies: help us understand how the platform is used (anonymized).",
-        "Preference cookies: remember your region (India/Dubai), theme, and language.",
+        "Preference cookies: remember your theme and language preferences.",
         "You can disable non-essential cookies via your browser settings.",
       ],
     },
@@ -61,7 +61,7 @@ const PrivacyPolicyPage = () => {
       content: [
         "We never sell your personal data to third parties.",
         "Trusted service providers (payment processors, email providers, video infrastructure) only receive the minimum data needed to perform their service.",
-        "Legal disclosures: we may share data when required by law in India or UAE.",
+        "Legal disclosures: we may share data when required by law in India.",
         "Business transfers: in the event of a merger or acquisition, your data continues to be protected under this policy.",
       ],
     },
@@ -89,9 +89,9 @@ const PrivacyPolicyPage = () => {
         <div className="container mx-auto px-4 max-w-4xl">
           <div className="rounded-2xl border border-border bg-card p-6 mb-8">
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Arke ("we", "our", "us") operates educational services across India and the United Arab Emirates.
+              Arke ("we", "our", "us") operates educational services across India.
               We are committed to protecting your privacy and complying with applicable data protection laws,
-              including India's Digital Personal Data Protection Act (DPDPA) 2023 and the UAE Personal Data Protection Law.
+              including India's Digital Personal Data Protection Act (DPDPA) 2023.
             </p>
           </div>
 

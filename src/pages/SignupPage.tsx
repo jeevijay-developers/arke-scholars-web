@@ -183,7 +183,6 @@ const SignupPage = () => {
               <div className="mt-1 flex gap-2">
                 <select value={form.countryCode} onChange={(e) => update("countryCode", e.target.value)} className="rounded-lg border border-border bg-card px-3 py-2.5 text-sm font-medium text-foreground">
                   <option value="+91">IN +91</option>
-                  <option value="+971">AE +971</option>
                 </select>
                 <input value={form.phone} onChange={(e) => update("phone", e.target.value)} type="tel" placeholder="Phone number" className="flex-1 rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary outline-none" />
               </div>

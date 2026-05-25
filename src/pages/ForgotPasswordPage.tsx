@@ -58,7 +58,7 @@ const ForgotPasswordPage = () => {
           </div>
 
           <p className="mt-12 text-sm text-white/85">Join 50,000+ students already learning</p>
-          <p className="mt-4 text-xs text-white/70">Trusted by students from India & Dubai</p>
+          <p className="mt-4 text-xs text-white/70">Trusted by students across India</p>
 
           <Sparkles className="mt-8 h-6 w-6 text-accent animate-pulse" />
         </div>

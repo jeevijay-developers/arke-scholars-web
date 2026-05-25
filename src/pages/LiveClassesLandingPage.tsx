@@ -86,7 +86,7 @@ const LiveClassesLandingPage = () => {
     <div className="bg-background">
       <SEO
         title="Live Online Classes for JEE & NEET"
-        description="Attend live HD classes with India's top educators for JEE Main, Advanced & NEET. Interactive sessions, recordings available, batch sizes under 50. India & UAE."
+        description="Attend live HD classes with India's top educators for JEE Main, Advanced & NEET. Interactive sessions, recordings available, batch sizes under 50."
         canonical="/live-classes"
         jsonLd={{
           "@context": "https://schema.org",
@@ -113,7 +113,7 @@ const LiveClassesLandingPage = () => {
             Learn live from <span className="gradient-text">India's best educators</span>
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-base text-white/80 md:text-lg">
-            Sit in interactive live classes, ask doubts in real-time, and learn from IIT & AIIMS alumni — from anywhere in India or Dubai.
+            Sit in interactive live classes, ask doubts in real-time, and learn from IIT & AIIMS alumni — from anywhere in India.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link

@@ -19,7 +19,7 @@ const TermsOfServicePage = () => {
       icon: CreditCard,
       title: "Payments & Subscriptions",
       content:
-        "Subscription fees are billed in advance based on your selected plan and region (INR for India, AED for UAE). All prices are inclusive of applicable taxes. Auto-renewal applies unless cancelled at least 48 hours before the next billing cycle from your account settings.",
+        "Subscription fees are billed in advance based on your selected plan (INR). All prices are inclusive of applicable taxes. Auto-renewal applies unless cancelled at least 48 hours before the next billing cycle from your account settings.",
     },
     {
       icon: RefreshCcw,
@@ -64,8 +64,7 @@ const TermsOfServicePage = () => {
             <p className="text-sm text-muted-foreground leading-relaxed">
               These Terms of Service ("Terms") govern your access to and use of Arke's website,
               mobile application, and services (collectively, the "Platform"). By using Arke,
-              you enter into a binding agreement with Arke EdTech Pvt. Ltd. (India) and Arke
-              Education FZ-LLC (UAE), depending on your region.
+              you enter into a binding agreement with Arke EdTech Pvt. Ltd. (India).
             </p>
           </div>
 
@@ -107,9 +106,7 @@ const TermsOfServicePage = () => {
             <div className="rounded-2xl border border-border bg-card p-8">
               <h2 className="text-xl font-black font-display mb-3">9. Governing Law</h2>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                For users in India, these Terms are governed by the laws of India and disputes
-                fall under the exclusive jurisdiction of courts in New Delhi. For users in the
-                UAE, these Terms are governed by UAE law with jurisdiction in Dubai courts.
+                These Terms are governed by the laws of India and disputes fall under the exclusive jurisdiction of courts in New Delhi.
               </p>
             </div>
 

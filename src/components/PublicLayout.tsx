@@ -220,7 +220,7 @@ const PublicLayout = () => {
                 </div>
                 <span className="text-lg font-black font-display gradient-text">ARKE</span>
               </div>
-              <p className="text-sm text-white/60">Empowering students across India & Dubai to achieve their dream exam results.</p>
+              <p className="text-sm text-white/60">Empowering students across India to achieve their dream exam results.</p>
             </div>
             <div>
               <h4 className="text-sm font-bold mb-3 text-white">Explore</h4>
@@ -246,7 +246,6 @@ const PublicLayout = () => {
               <h4 className="text-sm font-bold mb-3 text-white">Reach Us</h4>
               <div className="space-y-2 text-sm text-white/60">
                 <p>🇮🇳 New Delhi, India</p>
-                <p>🇦🇪 Dubai, UAE</p>
                 <p>support@arke.pro</p>
               </div>
             </div>

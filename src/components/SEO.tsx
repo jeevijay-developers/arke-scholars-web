@@ -39,9 +39,8 @@ export default function SEO({
       {noindex && <meta name="robots" content="noindex, nofollow" />}
       <link rel="canonical" href={url} />
 
-      {/* Hreflang for India and UAE markets */}
+      {/* Hreflang for India market */}
       <link rel="alternate" hrefLang="en-IN" href={url} />
-      <link rel="alternate" hrefLang="en-AE" href={url} />
       <link rel="alternate" hrefLang="x-default" href={url} />
 
       {/* Open Graph */}
@@ -54,7 +53,6 @@ export default function SEO({
       <meta property="og:image:width" content="1200" />
       <meta property="og:image:height" content="630" />
       <meta property="og:locale" content="en_IN" />
-      <meta property="og:locale:alternate" content="en_AE" />
 
       {/* Twitter */}
       <meta name="twitter:card" content="summary_large_image" />

@@ -20,7 +20,7 @@ const partnerTypes = [
   {
     icon: Building2,
     title: "Schools & Coaching Centers",
-    description: "We partner with K-12 schools and coaching centers across India and Dubai to bring Arke programs to their students.",
+    description: "We partner with K-12 schools and coaching centers across India to bring Arke programs to their students.",
   },
   {
     icon: Globe2,
@@ -48,7 +48,7 @@ const AssociationPage = () => {
     <div className="bg-background">
       <SEO
         title="School Partnerships with ARKE Scholars"
-        description="Partner your school with ARKE Scholars to bring JEE and NEET preparation to your students. Explore association programs for institutions in India and UAE."
+        description="Partner your school with ARKE Scholars to bring JEE and NEET preparation to your students. Explore association programs for institutions across India."
         canonical="/association"
       />
       <style>{`

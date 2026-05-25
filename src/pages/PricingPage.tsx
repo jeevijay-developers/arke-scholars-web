@@ -1,21 +1,18 @@
 import { Link } from "react-router-dom";
 import { Check, X, Sparkles, Crown, Rocket, Shield, Zap, HelpCircle, ChevronDown, IndianRupee } from "lucide-react";
 import SEO from "@/components/SEO";
-import { useAppStore } from "@/store/useAppStore";
 import { useState } from "react";
 
 const PricingPage = () => {
-  const { country } = useAppStore();
   const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-  const currency = country === "india" ? "₹" : "AED ";
   const yearlyDiscount = 0.8; // 20% off
 
   const formatPrice = (monthly: number) => {
     if (monthly === 0) return "Free";
     const price = billing === "yearly" ? Math.round(monthly * 12 * yearlyDiscount) : monthly;
-    return `${currency}${price.toLocaleString(country === "india" ? "en-IN" : "en-AE")}`;
+    return `₹${price.toLocaleString("en-IN")}`;
   };
 
   const plans = [
@@ -41,7 +38,7 @@ const PricingPage = () => {
       name: "Pro",
       tagline: "Best for serious aspirants",
       icon: Rocket,
-      monthly: country === "india" ? 999 : 149,
+      monthly: 999,
       gradient: "from-primary to-accent",
       popular: true,
       cta: "Get Pro",
@@ -59,7 +56,7 @@ const PricingPage = () => {
       name: "Elite",
       tagline: "Personalised, top-tier coaching",
       icon: Crown,
-      monthly: country === "india" ? 3999 : 599,
+      monthly: 3999,
       gradient: "from-accent to-primary-dark",
       popular: false,
       cta: "Go Elite",
@@ -96,7 +93,7 @@ const PricingPage = () => {
     { q: "Can I switch between plans?", a: "Yes! You can upgrade or downgrade any time from your dashboard. Pro-rated billing applies on upgrades." },
     { q: "Is the yearly plan really 20% cheaper?", a: "Yes. Choosing yearly billing saves you 20% compared to paying monthly — a great deal if you're committed for the long haul." },
     { q: "Do you offer scholarships?", a: "Absolutely. We run a monthly scholarship test giving up to 100% off Elite plans for top performers and need-based students." },
-    { q: "What payment methods do you accept?", a: country === "india" ? "UPI, debit/credit cards, net banking, and EMI options on UPI/cards via Razorpay." : "All major credit/debit cards and Apple/Google Pay via Stripe." },
+    { q: "What payment methods do you accept?", a: "UPI, debit/credit cards, net banking, and EMI options on UPI/cards via Razorpay." },
     { q: "Can my parents pay for me?", a: "Yes, anyone can pay using your account. We also send GST-compliant invoices for parents and employer reimbursements." },
     { q: "Is there a refund policy?", a: "Yes — every paid plan comes with a 7-day no-questions-asked refund window from the date of purchase." },
   ];

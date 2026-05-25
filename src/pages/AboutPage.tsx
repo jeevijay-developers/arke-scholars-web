@@ -7,19 +7,19 @@ const AboutPage = () => {
     { icon: Heart, title: "Student First", desc: "Every decision starts with what helps the learner — clarity, outcomes, and confidence." },
     { icon: Target, title: "Outcome Obsessed", desc: "We measure ourselves by results: ranks, scores, admits — not vanity metrics." },
     { icon: Sparkles, title: "Craft & Quality", desc: "Polished products, careful curriculum, calm interfaces. Details matter." },
-    { icon: Globe, title: "Borderless Learning", desc: "Built for India and Dubai from day one — same quality, local context." },
+    { icon: Globe, title: "Borderless Learning", desc: "Built for every ambitious student in India — same quality, wherever you are." },
   ];
 
   const stats = [
     { value: "50K+", label: "Students Learning" },
     { value: "120+", label: "Master Educators" },
-    { value: "2", label: "Countries Served" },
+    { value: "28+", label: "States Reached" },
     { value: "98%", label: "Satisfaction Rate" },
   ];
 
   const milestones = [
     { year: "2024", title: "Arke Founded", desc: "Started in Kota with a mission to rebuild test-prep around clarity." },
-    { year: "2025", title: "Dubai Expansion", desc: "Launched UAE operations to serve NRI students preparing for Indian exams." },
+    { year: "2025", title: "National Expansion", desc: "Expanded operations pan-India, serving students from Tier 1 cities to remote districts." },
     { year: "2026", title: "AI-Native Platform", desc: "Rolled out AI Doubt Solver and personalized study planners across all subjects." },
   ];
 
@@ -33,7 +33,7 @@ const AboutPage = () => {
     <div className="bg-background">
       <SEO
         title="About ARKE Scholars — India's Next-Gen EdTech Platform"
-        description="ARKE Scholars was founded in 2024 in India to help students crack JEE, NEET & Board exams. 50,000+ students, 200+ educators, live classes & AI doubt solving. India & UAE."
+        description="ARKE Scholars was founded in 2024 in India to help students crack JEE, NEET & Board exams. 50,000+ students, 200+ educators, live classes & AI doubt solving."
         canonical="/about"
         jsonLd={{
           "@context": "https://schema.org",
@@ -43,10 +43,9 @@ const AboutPage = () => {
           "url": "https://arke.pro",
           "logo": "https://arke.pro/logo.png",
           "foundingDate": "2024",
-          "description": "ARKE Scholars is India's next-generation learning platform for JEE, NEET, and Board exams, with operations in India and UAE.",
+          "description": "ARKE Scholars is India's next-generation learning platform for JEE, NEET, and Board exams.",
           "areaServed": [
-            { "@type": "Country", "name": "India" },
-            { "@type": "Country", "name": "United Arab Emirates" }
+            { "@type": "Country", "name": "India" }
           ],
           "knowsAbout": ["JEE Main", "JEE Advanced", "NEET", "CBSE Boards", "IB Curriculum", "IGCSE"]
         }}
@@ -97,7 +96,7 @@ const AboutPage = () => {
               connection.
             </p>
             <p className="text-sm md:text-base text-muted-foreground leading-relaxed">
-              Whether you're a Class 8 student in Kota or a JEE aspirant in Dubai, you deserve
+              Whether you're a Class 8 student in Kota or a JEE aspirant in a small town, you deserve
               the same shot at your dream rank.
             </p>
           </div>
@@ -170,7 +169,7 @@ const AboutPage = () => {
               Want to build the future of learning with us?
             </h2>
             <p className="mb-6 md:mb-8 text-sm md:text-base text-primary-foreground/80">
-              We're hiring educators, engineers, and creators across India and Dubai.
+              We're hiring educators, engineers, and creators across India.
             </p>
             <Link
               to="/career"

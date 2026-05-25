@@ -33,7 +33,6 @@ function loadRazorpayScript(): Promise<boolean> {
 
 const EnrollmentModal = ({ open, onClose, courseId, courseName, coursePrice, onEnrolled }: EnrollmentModalProps) => {
   const { user } = useAuth();
-  const country = useAppStore((s) => s.country);
   const [step, setStep] = useState<"checkout" | "loading" | "success" | "error">("checkout");
   const [errorMsg, setErrorMsg] = useState("");
   const [isStaff, setIsStaff] = useState(false);
@@ -58,11 +57,9 @@ const EnrollmentModal = ({ open, onClose, courseId, courseName, coursePrice, onE
 
   if (!open) return null;
 
-  const currency = country === "dubai" ? "AED" : "INR";
-  const displayAmount = country === "dubai"
-    ? `AED ${Math.round(coursePrice / 22).toLocaleString()}`
-    : `₹${coursePrice.toLocaleString()}`;
-  const amountForGateway = country === "dubai" ? Math.round(coursePrice / 22) : coursePrice;
+  const currency = "INR";
+  const displayAmount = `₹${coursePrice.toLocaleString()}`;
+  const amountForGateway = coursePrice;
 
   const close = () => {
     setStep("checkout");
@@ -213,20 +210,13 @@ const EnrollmentModal = ({ open, onClose, courseId, courseName, coursePrice, onE
               <span className="text-xl font-black text-foreground">{displayAmount}</span>
             </div>
 
-            {country !== "dubai" ? (
-              <button
-                onClick={handlePayWithRazorpay}
-                className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
-              >
-                <CreditCard className="h-4 w-4" />
-                Pay with Razorpay (UPI / Card / Netbanking)
-              </button>
-            ) : (
-              <div className="rounded-xl border border-dashed border-border p-4 text-center">
-                <p className="text-sm font-semibold text-foreground">Stripe (Dubai)</p>
-                <p className="text-xs text-muted-foreground mt-1">Card payments for AED coming soon.</p>
-              </div>
-            )}
+            <button
+              onClick={handlePayWithRazorpay}
+              className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+            >
+              <CreditCard className="h-4 w-4" />
+              Pay with Razorpay (UPI / Card / Netbanking)
+            </button>
 
             {isStaff && (
               <button

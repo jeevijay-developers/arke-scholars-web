@@ -47,7 +47,7 @@ const tiers = [
 const eligibility = [
   "Currently in Class 6 to Class 12",
   "Preparing for Schooling, Olympiads or Competitive Exams",
-  "Resident of India or UAE",
+  "Resident of India",
   "Committed to a structured learning plan",
 ];
 
