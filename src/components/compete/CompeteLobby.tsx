@@ -79,7 +79,13 @@ const CompeteLobby = ({
             {exams.map((e) => (
               <button
                 key={e}
-                onClick={() => onTargetExam(e)}
+                onClick={() => {
+                  onTargetExam(e);
+                  if (subject === "Biology" && e !== "NEET") {
+                    onSubject("");
+                    onTopicsChange([]);
+                  }
+                }}
                 className={`rounded-full px-3 py-1.5 text-xs font-bold transition-colors ${targetExam === e ? "bg-secondary text-secondary-foreground" : "bg-white/10 text-white/80 hover:bg-white/20"}`}
               >{e}</button>
             ))}
@@ -90,7 +96,7 @@ const CompeteLobby = ({
         <div>
           <p className="text-[11px] font-bold uppercase tracking-wider text-white/50 mb-1.5">Subject</p>
           <div className="flex flex-wrap gap-2">
-            {SUBJECTS.map((s) => (
+            {SUBJECTS.filter((s) => s !== "Biology" || targetExam === "NEET").map((s) => (
               <button
                 key={s}
                 onClick={() => { onSubject(s); onTopicsChange([]); }}

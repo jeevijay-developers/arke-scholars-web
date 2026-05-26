@@ -125,7 +125,7 @@ const StudentMobileNav = memo(() => {
     { icon: ClipboardCheck, label: "Tests", path: "/my-tests" },
   ];
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-border bg-card py-2 lg:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-border bg-card py-2 lg:hidden">
       {items.map((item) => {
         const active = pathname === item.path;
         return (
@@ -195,7 +195,7 @@ const StudentLayout = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className={`flex min-h-screen bg-background ${drawerOpen ? "overflow-hidden" : ""}`}>
       {/* Desktop sidebar */}
       <StudentSidebar
         fullName={fullName}
@@ -210,14 +210,14 @@ const StudentLayout = () => {
       {/* Mobile drawer backdrop */}
       {drawerOpen && (
         <div
-          className="fixed inset-0 z-50 bg-black/40 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
           onClick={() => setDrawerOpen(false)}
         />
       )}
 
       {/* Mobile slide-out drawer */}
       <aside
-        className={`fixed top-0 left-0 z-50 h-full w-72 bg-card border-r border-border flex flex-col transition-transform duration-300 lg:hidden ${drawerOpen ? "translate-x-0" : "-translate-x-full"}`}
+        className={`fixed top-0 left-0 z-50 h-screen w-72 bg-card border-r border-border flex flex-col overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden transition-transform duration-300 lg:hidden ${drawerOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="bg-white rounded-lg py-1.5 px-3 flex items-center justify-center">
@@ -228,7 +228,7 @@ const StudentLayout = () => {
           </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <nav className="flex-1 px-3 py-3 space-y-1">
           <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Main</p>
           {navItems.map(renderDrawerItem)}
           <p className="px-3 pt-3 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Explore</p>

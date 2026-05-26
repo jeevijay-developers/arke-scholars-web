@@ -91,9 +91,9 @@ const AdminSidebar = memo(({ email, initials, avatarUrl, isSuperAdmin, onLogout,
       )}
 
       <aside
-        className={`fixed lg:sticky left-0 top-0 h-screen w-[240px] flex-col overflow-y-auto scrollbar-hide transition-transform duration-300 lg:transition-none ${
-          isOpen ? "translate-x-0 z-40" : "-translate-x-full lg:translate-x-0"
-        } hidden lg:flex`}
+        className={`fixed lg:sticky left-0 top-0 h-screen w-[240px] flex flex-col overflow-y-auto scrollbar-hide transition-transform duration-300 lg:transition-none ${
+          isOpen ? "translate-x-0 z-50" : "-translate-x-full lg:translate-x-0"
+        } lg:flex`}
         style={{ backgroundColor: "hsl(222, 47%, 11%)" }}
       >
       <div className="p-4 flex justify-center">
