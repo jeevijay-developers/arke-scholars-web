@@ -167,6 +167,7 @@ const AdminSidebar = memo(({ email, initials, avatarUrl, isSuperAdmin, onLogout,
         />
       </div>
     </aside>
+    </>
   );
 });
 AdminSidebar.displayName = "AdminSidebar";
@@ -210,7 +211,7 @@ const AdminHeader = memo(
 );
 AdminHeader.displayName = "AdminHeader";
 
-const AdminLayout = () => {
+export default function AdminLayout() {
   const navigate = useNavigate();
   const { user, signOut, isSuperAdmin } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -256,5 +257,3 @@ const AdminLayout = () => {
     </div>
   );
 };
-
-export default AdminLayout;

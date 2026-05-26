@@ -5,6 +5,37 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+type CompeteQueueEntry = {
+  user_id: string;
+  subject: string;
+  target_exam: string;
+  class_level: string;
+  topics: string[];
+  rating: number;
+  status: string;
+  match_id: string | null;
+  created_at: string;
+};
+
+type CompeteRating = {
+  id: string;
+  user_id: string;
+  target_exam: string;
+  rating: number;
+};
+
+type ProfileMini = {
+  full_name: string | null;
+  avatar_url: string | null;
+  target_exam: string | null;
+  class_level: string | null;
+};
+
+type CompeteMatch = {
+  id: string;
+  [key: string]: unknown;
+};
+
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 }
@@ -22,16 +53,16 @@ async function getUser(req: Request) {
   return data.user;
 }
 
-async function getOrCreateRating(sb: ReturnType<typeof admin>, userId: string, exam: string) {
+async function getOrCreateRating(sb: ReturnType<typeof admin>, userId: string, exam: string): Promise<CompeteRating> {
   const { data } = await sb.from("compete_ratings").select("*").eq("user_id", userId).eq("target_exam", exam).maybeSingle();
-  if (data) return data;
+  if (data) return data as CompeteRating;
   const { data: created } = await sb.from("compete_ratings").insert({ user_id: userId, target_exam: exam }).select("*").single();
-  return created!;
+  return created as CompeteRating;
 }
 
-async function getProfileMini(sb: ReturnType<typeof admin>, userId: string) {
+async function getProfileMini(sb: ReturnType<typeof admin>, userId: string): Promise<ProfileMini> {
   const { data } = await sb.from("profiles").select("full_name, avatar_url, target_exam, class_level").eq("user_id", userId).maybeSingle();
-  return data ?? { full_name: "Player", avatar_url: null, target_exam: "general", class_level: null };
+  return (data as ProfileMini) ?? { full_name: "Player", avatar_url: null, target_exam: "general", class_level: null };
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -135,13 +166,13 @@ Deno.serve(async (req: Request) => {
     // if we were claimed by the opponent first, or null if no match could be made.
     // ---------------------------------------------------------------------------
     const attemptClaim = async (
-      opponentRow: Record<string, any>,
+      opponentRow: CompeteQueueEntry,
       p1Subject: string,
       p1Topics: string[],
       p1ClassLevel: string,
       p1TargetExam: string,
       p1Rating: number,
-      p1Profile: { full_name: string | null; avatar_url: string | null },
+      p1Profile: ProfileMini,
     ): Promise<string | null> => {
       // Atomic claim via DB function (SELECT FOR UPDATE, consistent UUID ordering)
       const { data: claimed } = await sb.rpc("try_claim_opponent", {
@@ -188,9 +219,10 @@ Deno.serve(async (req: Request) => {
         current_question_started_at: new Date(Date.now() + 5000).toISOString(),
       }).select("*").single();
       // Set match_id on the opponent's queue entry so their next poll finds it
-      await sb.from("compete_queue").update({ match_id: match!.id }).eq("user_id", opponentRow.user_id);
+      const matchId = (match as CompeteMatch)?.id;
+      await sb.from("compete_queue").update({ match_id: matchId }).eq("user_id", opponentRow.user_id);
       // (We were already removed from queue by try_claim_opponent)
-      return match!.id as string;
+      return matchId as string;
     };
 
     // ---------------------------------------------------------------------------
@@ -200,27 +232,29 @@ Deno.serve(async (req: Request) => {
       const { data: q } = await sb.from("compete_queue").select("*").eq("user_id", user.id).maybeSingle();
       if (!q) return jsonResponse({ status: "waiting" });
 
+      const queueEntry = q as CompeteQueueEntry;
+
       // Already matched by the opponent's "find" call
-      if (q.match_id) {
+      if (queueEntry.match_id) {
         await sb.from("compete_queue").delete().eq("user_id", user.id);
-        return jsonResponse({ status: "matched", match_id: q.match_id });
+        return jsonResponse({ status: "matched", match_id: queueEntry.match_id });
       }
 
       // Still waiting — re-attempt matching so simultaneous "find" race conditions resolve within one poll cycle
-      const qSubject = q.subject || "Physics";
-      const qExam = q.target_exam || "JEE Main";
-      const qClass = q.class_level || "11";
-      const qTopics: string[] = Array.isArray(q.topics) ? q.topics : [];
+      const qSubject = queueEntry.subject || "Physics";
+      const qExam = queueEntry.target_exam || "JEE Main";
+      const qClass = queueEntry.class_level || "11";
+      const qTopics: string[] = Array.isArray(queueEntry.topics) ? queueEntry.topics : [];
       const waitingCutoff = new Date(Date.now() - 20000).toISOString();
 
-      const { data: same } = await sb.from("compete_queue").select("*").eq("status", "waiting").eq("subject", qSubject).eq("target_exam", qExam).eq("class_level", qClass).neq("user_id", user.id).gte("rating", q.rating - 200).lte("rating", q.rating + 200).order("created_at", { ascending: true }).limit(5);
-      const { data: any } = await sb.from("compete_queue").select("*").eq("status", "waiting").eq("subject", qSubject).eq("target_exam", qExam).neq("user_id", user.id).lte("created_at", waitingCutoff).gte("rating", q.rating - 200).lte("rating", q.rating + 200).order("created_at", { ascending: true }).limit(5);
-      const candidates = [...(same ?? []), ...(any ?? []).filter((c: any) => !(same ?? []).some((s: any) => s.user_id === c.user_id))];
+      const { data: same } = await sb.from("compete_queue").select("*").eq("status", "waiting").eq("subject", qSubject).eq("target_exam", qExam).eq("class_level", qClass).neq("user_id", user.id).gte("rating", queueEntry.rating - 200).lte("rating", queueEntry.rating + 200).order("created_at", { ascending: true }).limit(5);
+      const { data: anyLevel } = await sb.from("compete_queue").select("*").eq("status", "waiting").eq("subject", qSubject).eq("target_exam", qExam).neq("user_id", user.id).lte("created_at", waitingCutoff).gte("rating", queueEntry.rating - 200).lte("rating", queueEntry.rating + 200).order("created_at", { ascending: true }).limit(5);
+      const candidates = [...(same ?? []), ...(anyLevel ?? []).filter((c: CompeteQueueEntry) => !(same ?? []).some((s: CompeteQueueEntry) => s.user_id === c.user_id))];
       const opponent = candidates[0] ?? null;
 
       if (opponent) {
         const pollProfile = await getProfileMini(sb, user.id);
-        const matchId = await attemptClaim(opponent, qSubject, qTopics, qClass, qExam, q.rating, pollProfile);
+        const matchId = await attemptClaim(opponent, qSubject, qTopics, qClass, qExam, queueEntry.rating, pollProfile);
         if (matchId) return jsonResponse({ status: "matched", match_id: matchId });
       }
 
@@ -274,8 +308,8 @@ Deno.serve(async (req: Request) => {
 
     const candidates = [
       ...(sameLevelCandidates ?? []),
-      ...(anyLevelCandidates ?? []).filter((c: any) =>
-        !(sameLevelCandidates ?? []).some((s: any) => s.user_id === c.user_id)
+      ...(anyLevelCandidates ?? []).filter((c: CompeteQueueEntry) =>
+        !(sameLevelCandidates ?? []).some((s: CompeteQueueEntry) => s.user_id === c.user_id)
       ),
     ];
 
