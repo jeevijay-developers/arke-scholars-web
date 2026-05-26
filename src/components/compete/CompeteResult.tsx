@@ -113,23 +113,39 @@ const CompeteResult = ({ match, questions, answers, onPlayAgain, onLobby }: Prop
 
       {tab === "summary" && (
         <div className="rounded-xl bg-white/5 border border-white/10 p-3 max-w-2xl mx-auto">
-          <p className="text-xs uppercase tracking-wider text-white/50 font-bold mb-2">Question-by-question</p>
-          <div className="grid grid-cols-10 gap-1.5">
-            {Array.from({ length: match.total_questions }).map((_, i) => {
-              const mine = myAnswers.find((a) => a.question_index === i);
-              const opp = oppAnswers.find((a) => a.question_index === i);
-              return (
-                <div key={i} className="space-y-1">
-                  <Pip ok={mine?.is_correct} answered={!!mine} />
-                  <Pip ok={opp?.is_correct} answered={!!opp} small />
-                  <p className="text-[9px] text-center text-white/40">{i + 1}</p>
-                </div>
-              );
-            })}
+          <p className="text-xs uppercase tracking-wider text-white/50 font-bold mb-3">Question-by-question</p>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-white/70 font-bold w-16 shrink-0 text-right">You</span>
+              <div className="flex-1 grid gap-1.5" style={{ gridTemplateColumns: `repeat(${match.total_questions}, minmax(0, 1fr))` }}>
+                {Array.from({ length: match.total_questions }).map((_, i) => {
+                  const mine = myAnswers.find((a) => a.question_index === i);
+                  return <Pip key={i} ok={mine?.is_correct} answered={!!mine} />;
+                })}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-white/70 font-bold w-16 shrink-0 text-right truncate">{oppName}</span>
+              <div className="flex-1 grid gap-1.5" style={{ gridTemplateColumns: `repeat(${match.total_questions}, minmax(0, 1fr))` }}>
+                {Array.from({ length: match.total_questions }).map((_, i) => {
+                  const opp = oppAnswers.find((a) => a.question_index === i);
+                  return <Pip key={i} ok={opp?.is_correct} answered={!!opp} />;
+                })}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-16 shrink-0" />
+              <div className="flex-1 grid gap-1.5" style={{ gridTemplateColumns: `repeat(${match.total_questions}, minmax(0, 1fr))` }}>
+                {Array.from({ length: match.total_questions }).map((_, i) => (
+                  <p key={i} className="text-[9px] text-center text-white/40">{i + 1}</p>
+                ))}
+              </div>
+            </div>
           </div>
           <div className="flex items-center justify-center gap-4 mt-3 text-[10px] text-white/50">
-            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded bg-secondary" /> You</span>
-            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded bg-white/30" /> {oppName}</span>
+            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded bg-secondary" /> Correct</span>
+            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded bg-destructive" /> Incorrect</span>
+            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded bg-white/20" /> Unanswered</span>
           </div>
         </div>
       )}

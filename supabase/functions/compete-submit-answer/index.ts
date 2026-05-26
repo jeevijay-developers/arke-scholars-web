@@ -33,17 +33,6 @@ async function getUser(req: Request) {
   return data.user;
 }
 
-function eloDelta(myRating: number, oppRating: number, score: number, k = 32) {
-  const expected = 1 / (1 + Math.pow(10, (oppRating - myRating) / 400));
-  return Math.round(k * (score - expected));
-}
-
-function determineWinner(p1Score: number, p2Score: number, p1Id: string, p2Id: string | null): string | null {
-  if (p1Score === p2Score) return null;
-  if (p1Score > p2Score) return p1Id;
-  return p2Id ?? "00000000-0000-0000-0000-000000000000";
-}
-
 const QUESTION_TIME_MS = 30_000;
 const BOT_ID = "00000000-0000-0000-0000-000000000000";
 
@@ -138,71 +127,20 @@ Deno.serve(async (req) => {
     // a race condition where concurrent fire-and-forget calls haven't all committed
     // their INSERTs yet when this COUNT query runs.
     const { data: snapshot } = await sb.from("compete_matches")
-      .select("player1_answer_count, player2_answer_count, player1_score, player2_score, status")
+      .select("player1_answer_count, player2_answer_count")
       .eq("id", matchId)
       .single();
 
     const myCount = isP1 ? (snapshot?.player1_answer_count ?? 0) : (snapshot?.player2_answer_count ?? 0);
     const oppCount = isP1 ? (snapshot?.player2_answer_count ?? 0) : (snapshot?.player1_answer_count ?? 0);
-    const canFinalize = (myCount >= totalQ) && (oppCount >= totalQ);
+    const canFinalize = myCount >= totalQ && oppCount >= totalQ;
 
     if (canFinalize) {
-      // Re-fetch full match for fresh scores before finalizing
-      const { data: finalMatch } = await sb.from("compete_matches").select("*").eq("id", matchId).single();
-      if (finalMatch && finalMatch.status === "active") {
-        const p1 = Number(finalMatch.player1_score);
-        const p2 = Number(finalMatch.player2_score);
-        const winnerId = determineWinner(p1, p2, finalMatch.player1_id, finalMatch.player2_id);
-
-        let p1After = finalMatch.player1_rating_before;
-        let p2After = finalMatch.player2_rating_before;
-
-        if (!finalMatch.is_bot && finalMatch.player2_id) {
-          const p1Score = winnerId === null ? 0.5 : (winnerId === finalMatch.player1_id ? 1 : 0);
-          const p2Score = 1 - p1Score;
-          const d1 = eloDelta(finalMatch.player1_rating_before, finalMatch.player2_rating_before, p1Score);
-          const d2 = eloDelta(finalMatch.player2_rating_before, finalMatch.player1_rating_before, p2Score);
-          p1After = finalMatch.player1_rating_before + d1;
-          p2After = finalMatch.player2_rating_before + d2;
-
-          // Filter by target_exam to find the correct rating row for each player.
-          // Without this filter, maybeSingle() silently returns null when a user
-          // has multiple rating rows (one per exam), causing the update to be skipped.
-          const p1Exam = finalMatch.player1_target_exam || "general";
-          const p2Exam = finalMatch.player2_target_exam || "general";
-
-          for (const [uid, exam, after, win, loss, draw] of [
-            [finalMatch.player1_id, p1Exam, p1After, p1Score === 1 ? 1 : 0, p1Score === 0 ? 1 : 0, p1Score === 0.5 ? 1 : 0],
-            [finalMatch.player2_id, p2Exam, p2After, p2Score === 1 ? 1 : 0, p2Score === 0 ? 1 : 0, p2Score === 0.5 ? 1 : 0],
-          ] as const) {
-            const { data: cur } = await sb.from("compete_ratings")
-              .select("*")
-              .eq("user_id", uid as string)
-              .eq("target_exam", exam as string)
-              .maybeSingle();
-            if (cur) {
-              const newStreak = (win as number) === 1 ? cur.current_streak + 1 : 0;
-              await sb.from("compete_ratings").update({
-                rating: after,
-                wins: cur.wins + (win as number),
-                losses: cur.losses + (loss as number),
-                draws: cur.draws + (draw as number),
-                current_streak: newStreak,
-                best_streak: Math.max(cur.best_streak, newStreak),
-                updated_at: new Date().toISOString(),
-              }).eq("id", cur.id);
-            }
-          }
-        }
-
-        await sb.from("compete_matches").update({
-          status: "finished",
-          finished_at: new Date().toISOString(),
-          winner_id: winnerId,
-          player1_rating_after: p1After,
-          player2_rating_after: p2After,
-        }).eq("id", matchId);
-      }
+      // All ELO, streak, and match-status writes happen inside a single Postgres
+      // transaction. FOR UPDATE in finalize_match() serialises concurrent calls —
+      // the second caller waits, then sees status != 'active' and returns early.
+      const { error: finalizeError } = await sb.rpc("finalize_match", { p_match_id: matchId });
+      if (finalizeError) throw finalizeError;
     }
 
     return jsonResponse({ ok: true, is_correct: isCorrect, points });

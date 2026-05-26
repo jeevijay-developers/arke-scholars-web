@@ -223,6 +223,7 @@ const CompetePage = () => {
     setMatchId(null);
     setRoomCode(null);
     setPhase("lobby");
+    refresh();
   };
 
   return (
