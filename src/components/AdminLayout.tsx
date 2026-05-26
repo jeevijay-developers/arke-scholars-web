@@ -22,10 +22,12 @@ import {
   School,
   FileBarChart,
   FileUp,
+  Menu,
+  X,
 } from "lucide-react";
 import LogoutButton from "@/components/LogoutButton";
 import NotificationBell from "@/components/NotificationBell";
-import { memo, useCallback, useMemo } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useAppStore } from "@/store/useAppStore";
 import { toast } from "sonner";
@@ -69,20 +71,33 @@ type SidebarProps = {
   avatarUrl?: string;
   isSuperAdmin: boolean;
   onLogout: () => void;
+  isOpen: boolean;
+  onClose: () => void;
 };
 
-const AdminSidebar = memo(({ email, initials, avatarUrl, isSuperAdmin, onLogout }: SidebarProps) => {
+const AdminSidebar = memo(({ email, initials, avatarUrl, isSuperAdmin, onLogout, isOpen, onClose }: SidebarProps) => {
   const { pathname } = useLocation();
   const panelLabel = isSuperAdmin ? "Super Admin Panel" : "Admin Panel";
   const roleLabel = isSuperAdmin ? "Super Admin" : "Admin";
 
   return (
-    <aside
-      className="hidden lg:flex w-[240px] flex-col sticky top-0 h-screen overflow-y-auto scrollbar-hide"
-      style={{ backgroundColor: "hsl(222, 47%, 11%)" }}
-    >
+    <>
+      {/* Mobile backdrop */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+          onClick={onClose}
+        />
+      )}
+
+      <aside
+        className={`fixed lg:sticky left-0 top-0 h-screen w-[240px] flex-col overflow-y-auto scrollbar-hide transition-transform duration-300 lg:transition-none ${
+          isOpen ? "translate-x-0 z-40" : "-translate-x-full lg:translate-x-0"
+        } hidden lg:flex`}
+        style={{ backgroundColor: "hsl(222, 47%, 11%)" }}
+      >
       <div className="p-4 flex justify-center">
-        <Link to="/" className="flex items-center justify-center w-full bg-white rounded-xl py-2 px-4 hover:opacity-95 transition-opacity">
+        <Link to="/" onClick={onClose} className="flex items-center justify-center w-full bg-white rounded-xl py-2 px-4 hover:opacity-95 transition-opacity">
           <img src={arkeLogo} alt="ARKE Logo" className="h-10 w-auto object-contain" />
         </Link>
         {/* <div className="mt-3 rounded-md bg-primary/20 px-2 py-1 text-center">
@@ -100,6 +115,7 @@ const AdminSidebar = memo(({ email, initials, avatarUrl, isSuperAdmin, onLogout 
             <Link
               key={item.path}
               to={item.path}
+              onClick={onClose}
               className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                 active ? "bg-white/10 text-white" : "text-white/60 hover:bg-white/5 hover:text-white/90"
               }`}
@@ -121,6 +137,7 @@ const AdminSidebar = memo(({ email, initials, avatarUrl, isSuperAdmin, onLogout 
                 <Link
                   key={item.path}
                   to={item.path}
+                  onClick={onClose}
                   className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                     active ? "bg-white/10 text-white" : "text-white/60 hover:bg-white/5 hover:text-white/90"
                   }`}
@@ -155,9 +172,16 @@ const AdminSidebar = memo(({ email, initials, avatarUrl, isSuperAdmin, onLogout 
 AdminSidebar.displayName = "AdminSidebar";
 
 const AdminHeader = memo(
-  ({ initials, avatarUrl, isSuperAdmin, onLogout }: { initials: string; avatarUrl?: string; isSuperAdmin: boolean; onLogout: () => void }) => (
+  ({ initials, avatarUrl, isSuperAdmin, onLogout, onMenuClick }: { initials: string; avatarUrl?: string; isSuperAdmin: boolean; onLogout: () => void; onMenuClick: () => void }) => (
     <header className="sticky top-0 z-40 flex items-center justify-between border-b border-border bg-card px-4 py-3 lg:px-6">
       <div className="flex items-center gap-3">
+        <button
+          onClick={onMenuClick}
+          className="lg:hidden p-1 hover:bg-muted rounded-md transition-colors text-foreground"
+          aria-label="Toggle sidebar"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
         <h1 className="text-sm font-bold text-foreground">
           ARKE {isSuperAdmin ? "Super Admin" : "Admin"} Dashboard
         </h1>
@@ -189,6 +213,7 @@ AdminHeader.displayName = "AdminHeader";
 const AdminLayout = () => {
   const navigate = useNavigate();
   const { user, signOut, isSuperAdmin } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = useCallback(async () => {
     await signOut();
@@ -201,12 +226,28 @@ const AdminLayout = () => {
   const storeUser = useAppStore((s) => s.user);
   const avatarUrl = storeUser?.avatar_url;
 
+  const closeSidebar = useCallback(() => setSidebarOpen(false), []);
+
   return (
     <div className="flex min-h-screen bg-background">
-      <AdminSidebar email={email} initials={initials} avatarUrl={avatarUrl} isSuperAdmin={isSuperAdmin} onLogout={handleLogout} />
+      <AdminSidebar
+        email={email}
+        initials={initials}
+        avatarUrl={avatarUrl}
+        isSuperAdmin={isSuperAdmin}
+        onLogout={handleLogout}
+        isOpen={sidebarOpen}
+        onClose={closeSidebar}
+      />
 
       <div className="flex-1 flex flex-col min-w-0">
-        <AdminHeader initials={initials} avatarUrl={avatarUrl} isSuperAdmin={isSuperAdmin} onLogout={handleLogout} />
+        <AdminHeader
+          initials={initials}
+          avatarUrl={avatarUrl}
+          isSuperAdmin={isSuperAdmin}
+          onLogout={handleLogout}
+          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
+        />
 
         <main className="flex-1 overflow-y-auto scrollbar-hide">
           <Outlet />
