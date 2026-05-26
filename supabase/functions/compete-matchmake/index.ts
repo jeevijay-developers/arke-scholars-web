@@ -1,6 +1,87 @@
-import { admin, corsHeaders, getOrCreateRating, getProfileMini, getUser, jsonResponse, pickQuestionIds, randomBotName } from "../_shared/compete.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
-Deno.serve(async (req) => {
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+}
+
+function admin() {
+  return createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
+}
+
+async function getUser(req: Request) {
+  const auth = req.headers.get("Authorization") ?? "";
+  const token = auth.replace(/^Bearer\s+/i, "");
+  if (!token) return null;
+  const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: `Bearer ${token}` } } });
+  const { data } = await sb.auth.getUser();
+  return data.user;
+}
+
+async function getOrCreateRating(sb: ReturnType<typeof admin>, userId: string, exam: string) {
+  const { data } = await sb.from("compete_ratings").select("*").eq("user_id", userId).eq("target_exam", exam).maybeSingle();
+  if (data) return data;
+  const { data: created } = await sb.from("compete_ratings").insert({ user_id: userId, target_exam: exam }).select("*").single();
+  return created!;
+}
+
+async function getProfileMini(sb: ReturnType<typeof admin>, userId: string) {
+  const { data } = await sb.from("profiles").select("full_name, avatar_url, target_exam, class_level").eq("user_id", userId).maybeSingle();
+  return data ?? { full_name: "Player", avatar_url: null, target_exam: "general", class_level: null };
+}
+
+function shuffle<T>(arr: T[]): T[] {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+async function pickQuestionIds(sb: ReturnType<typeof admin>, subject: string, topics: string[], classLevel: string, targetExam: string, count = 10): Promise<string[]> {
+  const activTopics = topics.filter((t) => t && t !== "Any");
+  const fetchPool = async (topicFilter: string | null, useClassExam: boolean): Promise<string[]> => {
+    let q = sb.from("compete_questions").select("id").eq("is_active", true).eq("subject", subject);
+    if (topicFilter) q = q.eq("topic", topicFilter);
+    if (useClassExam) q = q.eq("class_level", classLevel).eq("target_exam", targetExam);
+    const { data } = await q.limit(60);
+    return (data ?? []).map((r) => r.id as string);
+  };
+  let pool: string[] = [];
+  if (activTopics.length > 0) {
+    const perTopic = Math.ceil(count / activTopics.length);
+    for (const t of activTopics) {
+      let ids = await fetchPool(t, true);
+      if (ids.length === 0) ids = await fetchPool(t, false);
+      pool.push(...shuffle(ids).slice(0, perTopic));
+    }
+  } else {
+    pool = await fetchPool(null, true);
+    if (pool.length < count) pool = await fetchPool(null, false);
+  }
+  pool = shuffle([...new Set(pool)]);
+  if (pool.length < count) {
+    const { data: d3 } = await sb.from("compete_questions").select("id").eq("is_active", true).limit(60);
+    const extra = (d3 ?? []).map((r) => r.id as string).filter((id) => !pool.includes(id));
+    pool.push(...shuffle(extra));
+  }
+  return pool.slice(0, count);
+}
+
+const BOT_NAME_PREFIXES = ["Turbo","Hydro","Nano","Cyber","Quantum","Volt","Servo","Atomic","Plasma","Magnet","Piston","Gear","Rotor","Forge","Diesel","Neon","Crank","Flux","Helix","Kinetic","Lithium","Mecha","Photon","Sonic"];
+const BOT_NAME_SUFFIXES = ["Engine","Drive","Core","Wrench","Bolt","Cog","Forge","Press","Anvil","Reactor","Coil","Turbine","Piston","Sprocket","Hammer","Lathe","Drill","Boiler","Compressor","Motor"];
+function randomBotName(): string {
+  const p = BOT_NAME_PREFIXES[Math.floor(Math.random() * BOT_NAME_PREFIXES.length)];
+  const s = BOT_NAME_SUFFIXES[Math.floor(Math.random() * BOT_NAME_SUFFIXES.length)];
+  const n = Math.floor(Math.random() * 90) + 10;
+  return `${p}${s}-${n}`;
+}
+
+Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
     const user = await getUser(req);
@@ -34,6 +115,8 @@ Deno.serve(async (req) => {
         player2_name: randomBotName(),
         player1_rating_before: rating.rating,
         player2_rating_before: 1000,
+        player1_target_exam: exam,
+        player2_target_exam: "bot",
         subject, topic: topics.length > 0 ? topics.join(", ") : "Any",
         question_ids: questionIds,
         total_questions: questionIds.length,
@@ -83,6 +166,7 @@ Deno.serve(async (req) => {
       // We won the claim — create the match
       const oppProfile = await getProfileMini(sb, opponentRow.user_id);
       const questionIds = await pickQuestionIds(sb, p1Subject, p1Topics, p1ClassLevel, p1TargetExam, 10);
+      const oppExam = opponentRow.target_exam || "general";
       const { data: match } = await sb.from("compete_matches").insert({
         player1_id: user.id,
         player2_id: opponentRow.user_id,
@@ -92,6 +176,8 @@ Deno.serve(async (req) => {
         player2_avatar: oppProfile.avatar_url,
         player1_rating_before: p1Rating,
         player2_rating_before: opponentRow.rating,
+        player1_target_exam: p1TargetExam,
+        player2_target_exam: oppExam,
         subject: p1Subject,
         topic: p1Topics.length > 0 ? p1Topics.join(", ") : "Any",
         question_ids: questionIds,

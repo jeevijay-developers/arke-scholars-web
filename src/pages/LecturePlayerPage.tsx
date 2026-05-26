@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Play, Pause, Loader2, CheckCircle2, ChevronDown, Settings } from "lucide-react";
+import { ArrowLeft, Play, Pause, Loader2, CheckCircle2, ChevronDown, Settings, Video, FileText, BookOpen, X } from "lucide-react";
 import SEO from "@/components/SEO";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useCourseDetail } from "@/hooks/useCourseDetail";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Auto-complete a lesson once the learner has watched this fraction of it.
 const COMPLETION_THRESHOLD = 0.9;
@@ -14,7 +15,7 @@ const LecturePlayerPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { course, chapters, loading } = useCourseDetail(slug);
+  const { course, chapters, pdfs, loading } = useCourseDetail(slug);
 
   const [enrolledId, setEnrolledId] = useState<string | null>(null);
   const [progressMap, setProgressMap] = useState<Record<string, { watched_seconds: number; is_completed: boolean }>>({});
@@ -23,6 +24,8 @@ const LecturePlayerPage = () => {
   const [playing, setPlaying] = useState(false);
   const [notes, setNotes] = useState("");
   const [accessChecked, setAccessChecked] = useState(false);
+  const [activeTab, setActiveTab] = useState<"video" | "pdfs" | "notes">("video");
+  const [selectedPdf, setSelectedPdf] = useState<{ id: string; title: string; file_url: string } | null>(null);
 
   const [presignedUrl, setPresignedUrl] = useState<string | null>(null);
   const [videoLoading, setVideoLoading] = useState(false);
@@ -312,7 +315,7 @@ const LecturePlayerPage = () => {
 
       <div className="flex flex-1 flex-col lg:flex-row">
         <div className="flex-1 flex flex-col">
-          <div className="w-full bg-black flex justify-center">
+          <div className="w-full bg-black flex justify-center" style={{ maxHeight: "550px" }}>
             <div className="relative aspect-video w-full bg-black">
               {videoLoading ? (
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -366,11 +369,10 @@ const LecturePlayerPage = () => {
                           <button
                             key={q}
                             onClick={() => handleQualityChange(q)}
-                            className={`flex w-full items-center justify-between px-3 py-2 text-xs font-semibold transition-colors ${
-                              q === quality
+                            className={`flex w-full items-center justify-between px-3 py-2 text-xs font-semibold transition-colors ${q === quality
                                 ? "bg-primary text-primary-foreground"
                                 : "text-white/80 hover:bg-white/10"
-                            }`}
+                              }`}
                           >
                             {q === "auto" ? "Auto" : q}
                             {q === quality && <span className="h-1.5 w-1.5 rounded-full bg-primary-foreground" />}
@@ -401,24 +403,78 @@ const LecturePlayerPage = () => {
             </div>
           </div>
 
-          <div className="p-4 space-y-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h2 className="text-base font-bold text-white">{activeLesson.title}</h2>
-                <p className="text-xs text-white/50">{Math.round(activeLesson.duration_seconds / 60)} min</p>
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)} className="flex-1 flex flex-col">
+            <TabsList className="w-full grid grid-cols-3 rounded-none border-b border-white/10 bg-transparent">
+              <TabsTrigger value="video" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-white/5 text-white/60 data-[state=active]:text-white data-[state=active]:font-semibold">
+                <Video className="h-4 w-4 mr-2" /> Video
+              </TabsTrigger>
+              <TabsTrigger value="pdfs" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-white/5 text-white/60 data-[state=active]:text-white data-[state=active]:font-semibold">
+                <FileText className="h-4 w-4 mr-2" /> PDFs
+              </TabsTrigger>
+              <TabsTrigger value="notes" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-white/5 text-white/60 data-[state=active]:text-white data-[state=active]:font-semibold">
+                <BookOpen className="h-4 w-4 mr-2" /> Notes
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="video" className="p-4 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="text-base font-bold text-white">{activeLesson.title}</h2>
+                  <p className="text-xs text-white/50">{Math.round(activeLesson.duration_seconds / 60)} min</p>
+                </div>
+                <button
+                  onClick={toggleComplete}
+                  className={`shrink-0 inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold transition-colors ${progressMap[activeLesson.slug]?.is_completed
+                    ? "bg-secondary text-secondary-foreground"
+                    : "bg-white/10 text-white hover:bg-white/20"
+                    }`}
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  {progressMap[activeLesson.slug]?.is_completed ? "Completed" : "Mark as complete"}
+                </button>
               </div>
-              <button
-                onClick={toggleComplete}
-                className={`shrink-0 inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold transition-colors ${progressMap[activeLesson.slug]?.is_completed
-                  ? "bg-secondary text-secondary-foreground"
-                  : "bg-white/10 text-white hover:bg-white/20"
-                  }`}
-              >
-                <CheckCircle2 className="h-4 w-4" />
-                {progressMap[activeLesson.slug]?.is_completed ? "Completed" : "Mark as complete"}
-              </button>
-            </div>
-          </div>
+            </TabsContent>
+
+            <TabsContent value="pdfs" className="flex-1 overflow-y-auto p-4">
+              {pdfs.length === 0 ? (
+                <div className="text-center py-8">
+                  <FileText className="h-8 w-8 text-white/30 mx-auto mb-3" />
+                  <p className="text-sm text-white/50">No PDFs available for this course</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {pdfs.map((pdf) => (
+                    <button
+                      key={pdf.id}
+                      onClick={() => setSelectedPdf({ id: pdf.id, title: pdf.title, file_url: pdf.file_url })}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors group text-left"
+                    >
+                      <FileText className="h-5 w-5 text-primary shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm text-white truncate group-hover:text-primary">{pdf.title}</p>
+                        {pdf.size_bytes && (
+                          <p className="text-xs text-white/50">
+                            {(pdf.size_bytes / (1024 * 1024)).toFixed(2)} MB
+                          </p>
+                        )}
+                      </div>
+                      <Play className="h-4 w-4 text-white/40 group-hover:text-primary shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="notes" className="flex-1 overflow-y-auto p-4 flex flex-col">
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                onBlur={saveNotes}
+                placeholder="Write your notes here... (auto-saves when you click away)"
+                className="flex-1 p-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder:text-white/40 focus:border-primary/50 focus:outline-none resize-none"
+              />
+            </TabsContent>
+          </Tabs>
         </div>
 
         <div className="lg:w-[320px] border-l border-white/10 bg-[hsl(var(--navy2))] overflow-y-auto">
@@ -477,6 +533,105 @@ const LecturePlayerPage = () => {
           ))}
         </div>
       </div>
+
+      {/* Fullscreen PDF Viewer with Security Restrictions */}
+      {selectedPdf && (
+        <div
+          className="fixed inset-0 z-50 bg-black"
+          onKeyDown={(e) => {
+            // Block Ctrl+S (Save), Ctrl+P (Print), Ctrl+Shift+S, Cmd+S (Mac)
+            if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S' || e.key === 'p' || e.key === 'P')) {
+              e.preventDefault();
+              e.stopPropagation();
+            }
+          }}
+          onCopy={(e) => {
+            // Block copy
+            e.preventDefault();
+          }}
+          tabIndex={0}
+        >
+          {/* Header */}
+          <div className="absolute top-0 left-0 right-0 h-16 bg-black/80 border-b border-white/10 flex items-center justify-between px-4 z-50">
+            <h2 className="text-white font-semibold truncate">{selectedPdf.title}</h2>
+            <button
+              onClick={() => setSelectedPdf(null)}
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* PDF Viewer */}
+          <div
+            className="pt-16 w-full h-full bg-black relative"
+            style={{ userSelect: "none" }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              return false;
+            }}
+          >
+            <iframe
+              src={`${selectedPdf.file_url}#toolbar=0&navpanes=0&download=0`}
+              className="w-full h-full"
+              title={selectedPdf.title}
+              style={{
+                border: "none",
+                userSelect: "none",
+                WebkitUserSelect: "none",
+              }}
+            />
+
+            {/* Invisible overlay to prevent right-click and drag (but allows scroll) */}
+            <div
+              className="absolute inset-0 top-0"
+              style={{
+                userSelect: "none",
+                WebkitUserSelect: "none",
+                pointerEvents: "none", // Allow scrolling to pass through
+              }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+            />
+          </div>
+
+          {/* Security CSS */}
+          <style>{`
+            /* Prevent all text selection */
+            * {
+              user-select: none !important;
+              -webkit-user-select: none !important;
+              -moz-user-select: none !important;
+              -ms-user-select: none !important;
+            }
+
+            /* Block printing */
+            @media print {
+              * { display: none !important; }
+              body { display: none !important; }
+            }
+
+            /* Prevent copy selection */
+            ::selection {
+              background: transparent;
+            }
+            ::-moz-selection {
+              background: transparent;
+            }
+
+            /* Iframe restrictions */
+            iframe {
+              user-select: none !important;
+              -webkit-user-select: none !important;
+              pointer-events: auto;
+            }
+          `}</style>
+        </div>
+      )}
     </div>
   );
 };

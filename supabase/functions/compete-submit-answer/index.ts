@@ -1,4 +1,48 @@
-import { admin, corsHeaders, determineWinner, eloDelta, getUser, jsonResponse } from "../_shared/compete.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function admin() {
+  return createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    { auth: { persistSession: false } },
+  );
+}
+
+async function getUser(req: Request) {
+  const auth = req.headers.get("Authorization") ?? "";
+  const token = auth.replace(/^Bearer\s+/i, "");
+  if (!token) return null;
+  const sb = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_ANON_KEY")!,
+    { global: { headers: { Authorization: `Bearer ${token}` } } },
+  );
+  const { data } = await sb.auth.getUser();
+  return data.user;
+}
+
+function eloDelta(myRating: number, oppRating: number, score: number, k = 32) {
+  const expected = 1 / (1 + Math.pow(10, (oppRating - myRating) / 400));
+  return Math.round(k * (score - expected));
+}
+
+function determineWinner(p1Score: number, p2Score: number, p1Id: string, p2Id: string | null): string | null {
+  if (p1Score === p2Score) return null;
+  if (p1Score > p2Score) return p1Id;
+  return p2Id ?? "00000000-0000-0000-0000-000000000000";
+}
 
 const QUESTION_TIME_MS = 30_000;
 const BOT_ID = "00000000-0000-0000-0000-000000000000";
@@ -25,7 +69,6 @@ Deno.serve(async (req) => {
     const qid = match.question_ids[questionIndex];
     if (!qid) return jsonResponse({ error: "Invalid question index" }, 400);
 
-    // Already answered? idempotent
     const { data: existing } = await sb.from("compete_match_answers")
       .select("id").eq("match_id", matchId).eq("user_id", user.id).eq("question_index", questionIndex).maybeSingle();
 
@@ -122,11 +165,21 @@ Deno.serve(async (req) => {
           p1After = finalMatch.player1_rating_before + d1;
           p2After = finalMatch.player2_rating_before + d2;
 
-          for (const [uid, after, win, loss, draw] of [
-            [finalMatch.player1_id, p1After, p1Score === 1 ? 1 : 0, p1Score === 0 ? 1 : 0, p1Score === 0.5 ? 1 : 0],
-            [finalMatch.player2_id, p2After, p2Score === 1 ? 1 : 0, p2Score === 0 ? 1 : 0, p2Score === 0.5 ? 1 : 0],
+          // Filter by target_exam to find the correct rating row for each player.
+          // Without this filter, maybeSingle() silently returns null when a user
+          // has multiple rating rows (one per exam), causing the update to be skipped.
+          const p1Exam = finalMatch.player1_target_exam || "general";
+          const p2Exam = finalMatch.player2_target_exam || "general";
+
+          for (const [uid, exam, after, win, loss, draw] of [
+            [finalMatch.player1_id, p1Exam, p1After, p1Score === 1 ? 1 : 0, p1Score === 0 ? 1 : 0, p1Score === 0.5 ? 1 : 0],
+            [finalMatch.player2_id, p2Exam, p2After, p2Score === 1 ? 1 : 0, p2Score === 0 ? 1 : 0, p2Score === 0.5 ? 1 : 0],
           ] as const) {
-            const { data: cur } = await sb.from("compete_ratings").select("*").eq("user_id", uid as string).maybeSingle();
+            const { data: cur } = await sb.from("compete_ratings")
+              .select("*")
+              .eq("user_id", uid as string)
+              .eq("target_exam", exam as string)
+              .maybeSingle();
             if (cur) {
               const newStreak = (win as number) === 1 ? cur.current_streak + 1 : 0;
               await sb.from("compete_ratings").update({
@@ -136,6 +189,7 @@ Deno.serve(async (req) => {
                 draws: cur.draws + (draw as number),
                 current_streak: newStreak,
                 best_streak: Math.max(cur.best_streak, newStreak),
+                updated_at: new Date().toISOString(),
               }).eq("id", cur.id);
             }
           }
@@ -154,6 +208,6 @@ Deno.serve(async (req) => {
     return jsonResponse({ ok: true, is_correct: isCorrect, points });
   } catch (e) {
     console.error("submit error", e);
-    return jsonResponse({ error: String(e?.message ?? e) }, 500);
+    return jsonResponse({ error: String((e as Error)?.message ?? e) }, 500);
   }
 });

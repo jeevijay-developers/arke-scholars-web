@@ -94,12 +94,17 @@ export const useCourseDetail = (slug: string | undefined) => {
       }));
       setChapters(grouped);
 
-      const { data: pdfData } = await supabase
-        .from("course_pdfs")
-        .select("id, course_id, title, file_url, size_bytes, position")
+      const { data: pdfResourceData } = await supabase
+        .from("course_resources")
+        .select("id, course_id, title, file_url, file_size_bytes, position")
         .eq("course_id", courseData.id)
+        .eq("resource_type", "pdf")
+        .eq("is_published", true)
         .order("position");
-      setPdfs((pdfData ?? []) as CoursePdfRow[]);
+      setPdfs(((pdfResourceData ?? []) as any[]).map(p => ({
+        ...p,
+        size_bytes: p.file_size_bytes
+      })) as CoursePdfRow[]);
 
       const { data: resourceData } = await supabase
         .from("course_resources")

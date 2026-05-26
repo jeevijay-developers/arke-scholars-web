@@ -99,12 +99,11 @@ const MyCoursesPage = () => {
     );
   }
 
-  const continueLearning = enrollments.filter((e) => e.progress_percent < 100).slice(0, 3);
+  const continueLearning = enrollments.filter((e) => e.progress_percent < 100).slice(0, 4);
   const allEnrolled = enrollments;
   const inProgress = enrollments.filter((e) => e.progress_percent > 0 && e.progress_percent < 100);
   const completed = enrollments.filter((e) => e.progress_percent >= 100);
   const avgProgress = Math.round(enrollments.reduce((s, e) => s + e.progress_percent, 0) / Math.max(enrollments.length, 1));
-  const recent = enrollments[0];
 
   return (
     <div className="pb-20 lg:pb-0">
@@ -119,43 +118,6 @@ const MyCoursesPage = () => {
               : `${enrollments.length} enrolled · ${inProgress.length} in progress · ${completed.length} completed`}
           </p>
         </div>
-
-        {/* Resume hero */}
-        {recent && recent.progress_percent < 100 && (
-          <Link
-            to={`/courses/${recent.course.slug}/learn`}
-            className="group relative block w-full overflow-hidden rounded-2xl border border-border bg-card hover-lift animate-fade-in-up sm:max-w-sm lg:max-w-[33%]"
-          >
-            <div className={`relative flex h-40 items-center justify-center bg-gradient-to-br ${subjectGradient[recent.course.subject] ?? "from-primary to-accent"}`}>
-              {(() => { const I = subjectIcon[recent.course.subject] ?? BookOpen; return <I className="h-16 w-16 text-white/30" />; })()}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-              <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
-                <Zap className="h-3 w-3" /> Resume
-              </span>
-              <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-2">
-                <div className="min-w-0 text-white">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-white/80">{recent.course.subject}</p>
-                  <h2 className="truncate font-display text-base font-black">{recent.course.name}</h2>
-                  {recent.last_lesson_title && (
-                    <p className="mt-0.5 truncate text-[11px] text-white/80">Up next: {recent.last_lesson_title}</p>
-                  )}
-                </div>
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-xl transition-transform group-hover:scale-110">
-                  <Play className="h-4 w-4 fill-current" />
-                </div>
-              </div>
-            </div>
-            <div className="px-3 py-2.5">
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="font-bold text-primary">{recent.progress_percent}% complete</span>
-                <span className="text-muted-foreground">{recent.completed_lessons}/{recent.course.total_lessons} lessons</span>
-              </div>
-              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
-                <div className="h-full rounded-full bg-gradient-to-r from-primary to-accent" style={{ width: `${recent.progress_percent}%` }} />
-              </div>
-            </div>
-          </Link>
-        )}
 
         {/* Stats strip */}
         {enrollments.length > 0 && (
@@ -192,36 +154,43 @@ const MyCoursesPage = () => {
         )}
 
         {/* Continue Learning row */}
-        {continueLearning.length > 1 && (
+        {continueLearning.length > 0 && (
           <section className="animate-fade-in-up">
             <SectionHeader title="Continue Learning" />
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {continueLearning.map((e) => {
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 stagger-children">
+              {continueLearning.map((e, idx) => {
                 const Icon = subjectIcon[e.course.subject] ?? BookOpen;
                 const gradient = subjectGradient[e.course.subject] ?? "from-primary to-accent";
                 return (
                   <Link
                     key={e.id}
                     to={`/courses/${e.course.slug}/learn`}
-                    className="group flex gap-3 overflow-hidden rounded-2xl border border-border bg-card p-3 hover-lift"
+                    className="group overflow-hidden rounded-2xl border border-border bg-card hover-lift"
                   >
-                    <div className={`relative flex h-20 w-24 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${gradient}`}>
-                      <Icon className="h-8 w-8 text-white/40" />
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-primary shadow-lg">
-                          <Play className="h-4 w-4 fill-current" />
-                        </div>
+                    <div className={`relative flex h-32 items-center justify-center bg-gradient-to-br ${gradient}`}>
+                      <Icon className="h-12 w-12 text-white/40" />
+                      {idx === 0 && (
+                        <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
+                          <Zap className="h-3 w-3" /> Resume
+                        </span>
+                      )}
+                      <div className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/40 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
+                        {e.progress_percent}%
                       </div>
                     </div>
-                    <div className="min-w-0 flex-1">
+                    <div className="p-4">
                       <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{e.course.subject}</p>
-                      <p className="truncate font-display text-sm font-bold text-foreground group-hover:text-primary transition-colors">{e.course.name}</p>
-                      <div className="mt-2 flex items-center justify-between text-[10px]">
-                        <span className="font-bold text-primary">{e.progress_percent}%</span>
-                        <span className="text-muted-foreground">{e.completed_lessons}/{e.course.total_lessons}</span>
+                      <h3 className="mt-0.5 line-clamp-2 font-display text-sm font-bold text-foreground group-hover:text-primary transition-colors">{e.course.name}</h3>
+                      <p className="mt-1 text-xs text-muted-foreground">{e.course.educator_name}</p>
+                      {e.last_lesson_title && (
+                        <p className="mt-1 truncate text-[10px] text-muted-foreground">Up next: {e.last_lesson_title}</p>
+                      )}
+                      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
+                        <div className="h-full rounded-full bg-gradient-to-r from-primary to-accent transition-all" style={{ width: `${e.progress_percent}%` }} />
                       </div>
-                      <div className="mt-1 h-1 overflow-hidden rounded-full bg-muted">
-                        <div className="h-full rounded-full bg-primary" style={{ width: `${e.progress_percent}%` }} />
+                      <div className="mt-1.5 flex items-center justify-between text-[10px]">
+                        <span className="font-bold text-primary">{e.progress_percent}% complete</span>
+                        <span className="text-muted-foreground">{e.completed_lessons}/{e.course.total_lessons} lessons</span>
                       </div>
                     </div>
                   </Link>
@@ -244,7 +213,7 @@ const MyCoursesPage = () => {
               </Link>
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 stagger-children">
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 stagger-children">
               {allEnrolled.map((e) => {
                 const Icon = subjectIcon[e.course.subject] ?? BookOpen;
                 const gradient = subjectGradient[e.course.subject] ?? "from-primary to-accent";

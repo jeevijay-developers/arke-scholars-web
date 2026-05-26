@@ -116,7 +116,7 @@ const FavouriteCoursesPage = () => {
             </Link>
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 stagger-children">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 stagger-children">
             {visibleCourses.map((c) => {
               const img = c.thumbnail_url || courseImages[c.subject] || coursePhysics;
               return (

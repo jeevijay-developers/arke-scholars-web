@@ -97,17 +97,24 @@ const LiveClassesListPage = () => {
         {upcoming.length === 0 ? (
           <p className="text-xs text-muted-foreground">No upcoming classes scheduled.</p>
         ) : (
-          <div className="space-y-3">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 stagger-children">
             {upcoming.map((c) => (
-              <Link key={c.id} to={`/live-classes/${c.slug}`} className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 hover-lift">
-                <div className={`flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${subjectColors[c.subject] ?? "from-primary to-accent"} text-white shrink-0`}>
-                  <Video className="h-5 w-5" />
+              <Link key={c.id} to={`/live-classes/${c.slug}`} className="rounded-2xl border border-border bg-card overflow-hidden hover-lift">
+                <div className={`h-28 bg-gradient-to-br ${subjectColors[c.subject] ?? "from-primary to-accent"} relative flex items-center justify-center`}>
+                  <Video className="h-10 w-10 text-white/40" />
+                  <div className="absolute top-3 left-3">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-white/20 backdrop-blur-sm px-2 py-0.5 text-[10px] font-bold text-white">
+                      <Calendar className="h-3 w-3" /> Upcoming
+                    </span>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-bold text-foreground truncate">{c.title}</h3>
-                  <p className="text-xs text-muted-foreground">{c.educator_name} · {c.subject}</p>
-                  <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {formatDate(c.starts_at)}</span>
+                <div className="p-4">
+                  <p className="text-[10px] font-bold text-primary uppercase">{c.subject}</p>
+                  <h3 className="text-sm font-bold text-foreground mt-1 line-clamp-2">{c.title}</h3>
+                  <p className="text-xs text-muted-foreground mt-1">{c.educator_name}</p>
+                  <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
+                    <Calendar className="h-3 w-3 shrink-0" />
+                    <span>{formatDate(c.starts_at)}</span>
                   </div>
                 </div>
               </Link>
