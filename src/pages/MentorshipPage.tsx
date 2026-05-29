@@ -25,7 +25,7 @@ const MENTORS: { name: string; college: string; img: string }[] = [
   { name: "Ahil Khan",                college: "IIT Bombay",      img: "/arke/ahil khan.jpeg" },
   { name: "Purushottam Sharma",       college: "IIT Delhi",       img: "/arke/purushottam sharma.jpeg" },
   { name: "Mayank Motwani",           college: "IIT Bombay",      img: "/arke/mayank motwani.jpeg" },
-  { name: "Aayush",                   college: "IIT Kanpur",      img: "/arke/Aayush.png" },
+  { name: "Aayush",                   college: "IIT Kanpur · IIM Ahmedabad",      img: "/arke/Aayush.png" },
   { name: "Monil Lodha",              college: "IIT Kanpur",      img: "/arke/Monil lodha.jpeg" },
   { name: "Heyramb Agrawal",          college: "IIT Kharagpur",   img: "/arke/heyarambh agarwal.jpeg" },
   { name: "Navneet",                  college: "IIT Delhi",       img: "/arke/navneet.jpeg" },
@@ -40,7 +40,7 @@ const MENTORS: { name: string; college: string; img: string }[] = [
   { name: "Adil Khan",                college: "IIT Delhi",       img: "/arke/adil khan.png" },
   { name: "Ankan Sarkar",             college: "IIT Bombay",      img: "/arke/aankan sarkar.jpeg" },
   { name: "Utkarsh Daga",             college: "IIT Bombay",      img: "/arke/utkarsh daga .jpeg" },
-  { name: "Rushi Patel",              college: "IIT Delhi",       img: "/arke/rushi patel.jpeg" },
+  { name: "Rushi Patel",              college: "IIT Delhi · IIM Ahmedabad",       img: "/arke/rushi patel.jpeg" },
   { name: "Akhaj Bansal",             college: "IIT Delhi",       img: "/arke/akhaj bansal.jpeg" },
   { name: "Rohan Garg",              college: "IIT Kanpur",      img: "/arke/rohan garg.jpeg" },
   { name: "Vishwajeet Singh Solanki", college: "IIT Kharagpur",   img: "/arke/vishwajeet singh solanki.jpeg" },
@@ -71,7 +71,7 @@ const MENTORS: { name: string; college: string; img: string }[] = [
   { name: "Ankur Kumar",              college: "IIT Kanpur",      img: "/arke/ankur kumar.jpeg" },
   { name: "Deependra Patel",          college: "IIT Delhi",       img: "/arke/dependra patel.jpeg" },
   { name: "Mitali Ritesh Laddha",     college: "IIT Kharagpur",   img: "/arke/mithali ritesh laddha.jpeg" },
-  { name: "Yash Sanjeev",             college: "IIT Bombay",      img: "/arke/yash sanjeev.jpeg" },
+  { name: "Yash Sanjeev",             college: "IIT Bombay · Calls: IIM Ahmedabad, Bangalore, Calcutta", img: "/arke/yash sanjeev.jpeg" },
   { name: "Aryan Gupta",              college: "IIT Bombay",      img: "/arke/aryan gupta.jpeg" },
   { name: "Sankalp",                  college: "IIT Bombay",      img: "/arke/sankalp.jpeg" },
   { name: "Shreyash",                 college: "IIT Kanpur",      img: "/arke/shryensh.jpeg" },
@@ -282,7 +282,7 @@ function MentorCard({ name, college, img, rank }: { name: string; college: strin
 // ---------------------------------------------------------------------------
 const iitBadges = [
   "IIT (Top 200)", "IIT Delhi", "IIT Bombay", "IIT Kharagpur", "IIT Madras",
-  "IIT Kanpur", "IIT Roorkee", "IIM", "AIIMS Delhi",
+  "IIT Kanpur", "IIT Roorkee", "IIM","MIT",
 ];
 
 const builders = [
@@ -356,7 +356,7 @@ const MentorshipPage = () => {
             </h1>
             <p className="mt-5 text-lg text-white/80">
               Arke is programmed and designed directly under toppers from IIT, IIM and MIT. The mentorship you get here
-              comes straight from IITians currently studying at IIT Delhi, Bombay, Kharagpur and other premier IITs.
+              comes straight from IITians, IIMians & MITians currently studying at premier IITs.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
               {iitBadges.map((b) => {
