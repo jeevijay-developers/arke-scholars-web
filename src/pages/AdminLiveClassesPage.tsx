@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { List, type RowComponentProps } from "react-window";
 import {
   Video,
   Calendar,
@@ -18,6 +17,8 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useConfirm } from "@/components/ConfirmDialog";
+import TablePagination from "@/components/TablePagination";
+import { usePagination } from "@/hooks/usePagination";
 
 type AdminLive = {
   id: string;
@@ -120,7 +121,6 @@ const AdminLiveClassesPage = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [teacherFilter, setTeacherFilter] = useState<string>("all");
-  const [page, setPage] = useState(1);
 
   // Templates dialog
   const [showTemplates, setShowTemplates] = useState(false);
@@ -184,9 +184,6 @@ const AdminLiveClassesPage = () => {
     loadRecordedVideos();
   }, []);
 
-  useEffect(() => {
-    setPage(1);
-  }, [search, statusFilter, teacherFilter]);
 
   const viewRecordedVideo = (video: RecordedVideo) => {
     window.open(video.recording_url, "_blank");
@@ -285,11 +282,7 @@ const AdminLiveClassesPage = () => {
     });
   }, [classes, search, statusFilter, teacherFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const pageRows = useMemo(
-    () => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
-    [filtered, page],
-  );
+  const { paged: paged, page, setPage, totalPages, total, pageSize } = usePagination(filtered, PAGE_SIZE);
 
   const openCreate = () => {
     setEditingId(null);
@@ -516,82 +509,6 @@ const AdminLiveClassesPage = () => {
     load();
   };
 
-  // ---- Virtualized row ----
-  const ROW_HEIGHT = 110;
-  const ClassRow = ({ index, style }: RowComponentProps) => {
-    const cls = pageRows[index];
-    if (!cls) return null;
-    return (
-      <div style={style} className="px-1 pb-3">
-        <div className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 hover:shadow-md transition-shadow h-[98px]">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
-            <Video className="h-5 w-5" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-sm font-bold text-foreground truncate">{cls.title}</h3>
-              <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                  statusColors[cls.status] ?? statusColors.scheduled
-                }`}
-              >
-                {cls.status}
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5 truncate">
-              {cls.educator_name} · {cls.subject}
-              {cls.target_exam ? ` · ${cls.target_exam}` : ""}
-            </p>
-            <div className="flex gap-3 mt-1 text-xs text-muted-foreground items-center flex-wrap">
-              <span className="flex items-center gap-1">
-                <Calendar className="h-3 w-3" /> {new Date(cls.starts_at).toLocaleString()}
-              </span>
-              {cls.status === "cancelled" && cls.cancellation_reason && (
-                <span className="text-destructive truncate max-w-[280px]" title={cls.cancellation_reason}>
-                  Reason: {cls.cancellation_reason}
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1.5 shrink-0">
-            <select
-              value={cls.status}
-              onChange={(e) => handleStatusChange(cls, e.target.value)}
-              className="rounded-md border border-border bg-background px-2 py-1 text-xs outline-none"
-              title="Change status"
-            >
-              <option value="scheduled">Scheduled</option>
-              <option value="live">Live</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-            <button
-              onClick={() => duplicateClass(cls)}
-              className="rounded-md border border-border p-2 text-foreground hover:bg-muted"
-              title="Duplicate class"
-            >
-              <Copy className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => openEdit(cls)}
-              className="rounded-md border border-border p-2 text-foreground hover:bg-muted"
-              title="Edit class"
-            >
-              <Pencil className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => handleDelete(cls.id)}
-              className="rounded-md border border-border p-2 text-destructive hover:bg-destructive/10"
-              title="Delete class"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div className="p-4 lg:p-6 space-y-6">
@@ -664,7 +581,7 @@ const AdminLiveClassesPage = () => {
       {activeTab === "live" ? (
         <>
           {/* Filters */}
-          <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+          <div className="space-y-2">
             <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
               <Search className="h-4 w-4 text-muted-foreground" />
               <input
@@ -674,29 +591,31 @@ const AdminLiveClassesPage = () => {
                 className="flex-1 bg-transparent text-sm outline-none"
               />
             </div>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none"
-            >
-              <option value="all">All statuses</option>
-              <option value="scheduled">Scheduled</option>
-              <option value="live">Live</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-            <select
-              value={teacherFilter}
-              onChange={(e) => setTeacherFilter(e.target.value)}
-              className="rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none"
-            >
-              <option value="all">All teachers</option>
-              {teachers.map((t) => (
-                <option key={t.user_id} value={t.user_id}>
-                  {t.full_name || "Unnamed"}
-                </option>
-              ))}
-            </select>
+            <div className="grid gap-2 grid-cols-2 sm:grid-cols-[1fr_1fr]">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none"
+              >
+                <option value="all">All statuses</option>
+                <option value="scheduled">Scheduled</option>
+                <option value="live">Live</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+              <select
+                value={teacherFilter}
+                onChange={(e) => setTeacherFilter(e.target.value)}
+                className="rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none"
+              >
+                <option value="all">All teachers</option>
+                {teachers.map((t) => (
+                  <option key={t.user_id} value={t.user_id}>
+                    {t.full_name || "Unnamed"}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {loading ? (
@@ -708,44 +627,78 @@ const AdminLiveClassesPage = () => {
               {classes.length === 0 ? "No live classes scheduled yet." : "No classes match the filters."}
             </p>
           ) : (
-            <>
-              <div className="rounded-xl">
-                <List
-                  rowComponent={ClassRow}
-                  rowCount={pageRows.length}
-                  rowHeight={ROW_HEIGHT}
-                  rowProps={{}}
-                  style={{ height: Math.min(pageRows.length, 8) * ROW_HEIGHT + 8 }}
-                />
+            <div className="rounded-xl border border-border bg-card overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/50">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Title</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Educator</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Subject</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Starts At</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground">Status</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paged.map((cls) => (
+                      <tr key={cls.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-3 font-medium text-foreground">{cls.title}</td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground">{cls.educator_name}</td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground">{cls.subject}</td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(cls.starts_at).toLocaleString()}</td>
+                        <td className="px-4 py-3 text-center">
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                              statusColors[cls.status] ?? statusColors.scheduled
+                            }`}
+                          >
+                            {cls.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <select
+                              value={cls.status}
+                              onChange={(e) => handleStatusChange(cls, e.target.value)}
+                              className="rounded-md border border-border bg-background px-2 py-1 text-xs outline-none"
+                              title="Change status"
+                            >
+                              <option value="scheduled">Scheduled</option>
+                              <option value="live">Live</option>
+                              <option value="completed">Completed</option>
+                              <option value="cancelled">Cancelled</option>
+                            </select>
+                            <button
+                              onClick={() => duplicateClass(cls)}
+                              className="rounded-md p-1.5 text-muted-foreground hover:bg-muted transition-colors"
+                              title="Duplicate class"
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => openEdit(cls)}
+                              className="rounded-md p-1.5 text-primary hover:bg-primary/10 transition-colors"
+                              title="Edit class"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(cls.id)}
+                              className="rounded-md p-1.5 text-destructive hover:bg-destructive/10 transition-colors"
+                              title="Delete class"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-
-              {/* Pagination */}
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>
-                  Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of{" "}
-                  {filtered.length}
-                </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                    className="rounded-md border border-border px-2 py-1 disabled:opacity-50"
-                  >
-                    Prev
-                  </button>
-                  <span>
-                    Page {page} / {totalPages}
-                  </span>
-                  <button
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page === totalPages}
-                    className="rounded-md border border-border px-2 py-1 disabled:opacity-50"
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-            </>
+              <TablePagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
+            </div>
           )}
         </>
       ) : (
@@ -759,61 +712,65 @@ const AdminLiveClassesPage = () => {
               No recorded videos yet. Recorded classes will appear here once they are available.
             </p>
           ) : (
-            <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-              {recordedVideos.map((video) => {
-                const url = new URL(video.recording_url);
-                const pathname = url.pathname;
-                const filename = pathname.split("/").pop() || "recording.m3u8";
-                return (
-                  <div key={video.id} className="rounded-xl border border-border bg-card overflow-hidden hover:shadow-md transition-shadow flex flex-col">
-                    {/* Video preview */}
-                    <div className="bg-background aspect-video flex items-center justify-center relative group">
-                      <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
-                        <Video className="h-12 w-12 text-muted-foreground/60" />
-                      </div>
-                      <button
-                        onClick={() => viewRecordedVideo(video)}
-                        className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-background/80"
-                        title="Preview video"
-                      >
-                        <Eye className="h-6 w-6 text-white" />
-                      </button>
-                    </div>
+            <div className="overflow-x-auto -mx-4 sm:-mx-6 lg:-mx-4">
+              <div className="inline-block min-w-full px-4 sm:px-6 lg:px-4">
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 min-w-max sm:min-w-full">
+                  {recordedVideos.map((video) => {
+                    const url = new URL(video.recording_url);
+                    const pathname = url.pathname;
+                    const filename = pathname.split("/").pop() || "recording.m3u8";
+                    return (
+                      <div key={video.id} className="rounded-xl border border-border bg-card overflow-hidden hover:shadow-md transition-shadow flex flex-col w-80 sm:w-auto">
+                        {/* Video preview */}
+                        <div className="bg-background aspect-video flex items-center justify-center relative group">
+                          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+                            <Video className="h-12 w-12 text-muted-foreground/60" />
+                          </div>
+                          <button
+                            onClick={() => viewRecordedVideo(video)}
+                            className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-background/80"
+                            title="Preview video"
+                          >
+                            <Eye className="h-6 w-6 text-white" />
+                          </button>
+                        </div>
 
-                    {/* Video details */}
-                    <div className="p-4 flex-1 flex flex-col">
-                      <h3 className="text-sm font-bold text-foreground truncate">{video.title}</h3>
-                      <p className="text-xs text-muted-foreground mt-1">{video.educator_name} · {video.subject}</p>
-                      <p className="text-xs text-muted-foreground mt-2 truncate">{filename}</p>
+                        {/* Video details */}
+                        <div className="p-4 flex-1 flex flex-col">
+                          <h3 className="text-sm font-bold text-foreground truncate">{video.title}</h3>
+                          <p className="text-xs text-muted-foreground mt-1">{video.educator_name} · {video.subject}</p>
+                          <p className="text-xs text-muted-foreground mt-2 truncate">{filename}</p>
 
-                      {/* Action buttons */}
-                      <div className="flex gap-2 mt-4">
-                        <button
-                          onClick={() => viewRecordedVideo(video)}
-                          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-primary/40 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/10"
-                          title="View video"
-                        >
-                          <Eye className="h-3.5 w-3.5" /> View
-                        </button>
-                        <button
-                          onClick={() => downloadRecordedVideo(video)}
-                          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20"
-                          title="Download video"
-                        >
-                          <Download className="h-3.5 w-3.5" /> Download
-                        </button>
-                        <button
-                          onClick={() => deleteRecordedVideo(video)}
-                          className="rounded-lg border border-border p-2 text-destructive hover:bg-destructive/10"
-                          title="Delete video"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                          {/* Action buttons */}
+                          <div className="flex gap-2 mt-4">
+                            <button
+                              onClick={() => viewRecordedVideo(video)}
+                              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-primary/40 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/10"
+                              title="View video"
+                            >
+                              <Eye className="h-3.5 w-3.5" /> View
+                            </button>
+                            <button
+                              onClick={() => downloadRecordedVideo(video)}
+                              className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/20"
+                              title="Download video"
+                            >
+                              <Download className="h-3.5 w-3.5" /> Download
+                            </button>
+                            <button
+                              onClick={() => deleteRecordedVideo(video)}
+                              className="rounded-lg border border-border p-2 text-destructive hover:bg-destructive/10"
+                              title="Delete video"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           )}
         </>

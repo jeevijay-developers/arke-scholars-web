@@ -181,14 +181,14 @@ const AdminStudentReportsPage = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
+          <div className="rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Class</TableHead>
                   <TableHead>Target exam</TableHead>
-                  <TableHead className="text-right">Action ({MONTHS[month]} {year})</TableHead>
+                  <TableHead className="text-right">Action ({range.label})</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

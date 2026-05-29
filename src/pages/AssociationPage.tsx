@@ -36,7 +36,7 @@ const partnerTypes = [
 
 const benefits = [
   "Co-branded learning programs",
-  "Access to IITian / IIMian / AIIMS mentor network",
+  "Access to IITian / IIMian / MITian mentor network",
   "Custom-built test series & question banks",
   "Live class infrastructure & analytics dashboards",
   "Scholarship & admission support for partner students",
@@ -77,7 +77,7 @@ const AssociationPage = () => {
       </section>
 
       {/* Partner logos */}
-      <section className="py-12 border-y border-border bg-card/50">
+      {/* <section className="py-12 border-y border-border bg-card/50">
         <div className="container mx-auto px-4">
           <p className="text-center text-xs font-bold uppercase tracking-widest text-muted-foreground mb-6">
             Mentors & Curriculum Designers from
@@ -93,7 +93,7 @@ const AssociationPage = () => {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Partner Types */}
       <section className="py-20">

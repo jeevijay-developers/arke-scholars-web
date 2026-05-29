@@ -68,7 +68,8 @@ const CityStateFields = ({
               onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
               disabled={disabled}
               placeholder="City"
-              className={`${inputClassName} pl-9`}
+              className={inputClassName}
+              style={{ paddingLeft: '2.25rem' }}
             />
             {showDropdown && (
               <div className="absolute z-30 w-full mt-1 rounded-lg border border-border bg-card shadow-lg overflow-hidden max-h-48 overflow-y-auto">

@@ -79,6 +79,7 @@ const AdminExamsPage = () => {
         <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
       ) : (
         <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted">
               <tr className="text-left">
@@ -116,6 +117,7 @@ const AdminExamsPage = () => {
               )}
             </tbody>
           </table>
+          </div>
           <TablePagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
         </div>
       )}

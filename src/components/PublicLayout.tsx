@@ -245,7 +245,7 @@ const PublicLayout = () => {
             <div>
               <h4 className="text-sm font-bold mb-3 text-white">Reach Us</h4>
               <div className="space-y-2 text-sm text-white/60">
-                <p>🇮🇳 New Delhi, India</p>
+                <p>🇮🇳 Kota, Rajasthan – 324009</p>
                 <p>support@arke.pro</p>
               </div>
             </div>

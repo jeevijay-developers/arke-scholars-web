@@ -218,6 +218,7 @@ const AdminSchoolsPage = () => {
         <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
       ) : (
         <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted">
               <tr className="text-left">
@@ -251,6 +252,7 @@ const AdminSchoolsPage = () => {
               )}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
@@ -304,9 +306,9 @@ const AdminSchoolsPage = () => {
               city={editing.city ?? ""}
               state={editing.state ?? ""}
               country={editing.country ?? ""}
-              onCityChange={(v) => setEditing({ ...editing, city: v })}
-              onStateChange={(v) => setEditing({ ...editing, state: v })}
-              onCountryChange={(v) => setEditing({ ...editing, country: v })}
+              onCityChange={(v) => setEditing((prev) => prev ? { ...prev, city: v } : prev)}
+              onStateChange={(v) => setEditing((prev) => prev ? { ...prev, state: v } : prev)}
+              onCountryChange={(v) => setEditing((prev) => prev ? { ...prev, country: v } : prev)}
               inputClassName="sch-input"
               labelClassName="text-xs font-bold uppercase tracking-wider text-muted-foreground"
             />
