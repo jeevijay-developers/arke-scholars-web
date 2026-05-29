@@ -352,7 +352,7 @@ const MentorshipPage = () => {
               <Sparkles className="h-4 w-4" /> 1:1 Mentorship Program
             </span>
             <h1 className="mt-6 font-display text-4xl font-black text-white md:text-5xl lg:text-6xl">
-              Mentorship by <span className="gradient-text">IITians, IIMians & MITian Students</span>
+              Mentorship by <span className="gradient-text">IIT, IIM & MIT Students</span>
             </h1>
             <p className="mt-5 text-lg text-white/80">
               Arke is programmed and designed directly under toppers from IIT, IIM and MIT. The mentorship you get here
