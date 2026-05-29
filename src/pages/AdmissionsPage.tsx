@@ -38,14 +38,14 @@ const tiers = [
   {
     icon: Trophy,
     name: "Gold",
-    pct: "100%",
+    pct: "75%",
     color: "from-primary to-accent",
     criteria: ["AST score: 90%+", "Verified topper / olympiad rank", "Full course + premium mentorship"],
   },
 ];
 
 const eligibility = [
-  "Currently in Class 6 to Class 12",
+  "Currently in Class 8 to Class 12",
   "Preparing for Schooling, Olympiads or Competitive Exams",
   "Resident of India",
   "Committed to a structured learning plan",

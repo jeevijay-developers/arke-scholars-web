@@ -41,8 +41,6 @@ const SignupPage = () => {
   });
 
   const FOUNDATION_CLASSES = [
-    { value: "6", label: "Class 6" },
-    { value: "7", label: "Class 7" },
     { value: "8", label: "Class 8" },
     { value: "9", label: "Class 9" },
     { value: "10", label: "Class 10" },
@@ -50,16 +48,22 @@ const SignupPage = () => {
   const SENIOR_CLASSES = [
     { value: "11", label: "Class 11" },
     { value: "12", label: "Class 12" },
-    { value: "12th pass", label: "12th Pass" },
+
   ];
   const isFoundation = form.target_exam === "Foundation";
-  const classOptions = isFoundation ? FOUNDATION_CLASSES : SENIOR_CLASSES;
+  const isBoards = form.target_exam === "Boards";
+  const BOARD_CLASSES = [
+    { value: "10", label: "Class 10" },
+    { value: "11", label: "Class 11" },
+    { value: "12", label: "Class 12" },
+  ];
+  const classOptions = isFoundation ? FOUNDATION_CLASSES : isBoards ? BOARD_CLASSES : SENIOR_CLASSES;
 
   const update = (k: keyof typeof form, v: string) =>
     setForm((f) => {
       if (k === "target_exam") {
         const foundation = v === "Foundation";
-        return { ...f, target_exam: v, class_level: foundation ? "6" : "11" };
+        return { ...f, target_exam: v, class_level: v === "Foundation" ? "8" : v === "Boards" ? "10" : "11" };
       }
       return { ...f, [k]: v };
     });
