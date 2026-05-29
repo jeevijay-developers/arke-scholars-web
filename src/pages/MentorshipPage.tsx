@@ -356,7 +356,7 @@ const MentorshipPage = () => {
             </h1>
             <p className="mt-5 text-lg text-white/80">
               Arke is programmed and designed directly under toppers from IIT, IIM and MIT. The mentorship you get here
-              comes straight from IITians, IIMians & MITians currently studying at premier IITs.
+              comes straight from IITians, IIMians & MITians currently studying or passed out from these premier institutes.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
               {iitBadges.map((b) => {
