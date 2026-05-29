@@ -116,13 +116,13 @@ const AdmissionsPage = () => {
             <h2 className="font-display text-3xl font-black text-foreground md:text-4xl">Admission in 4 steps</h2>
             <p className="mt-3 text-base text-muted-foreground">From application to your first class — built to be smooth.</p>
           </div>
-          <div className="mt-12 flex overflow-x-auto snap-x snap-mandatory no-scrollbar gap-6 pb-4 pt-6 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-4 md:pb-0 md:pt-0">
+          <div className="mt-12 flex overflow-x-auto snap-x snap-mandatory no-scrollbar gap-6 pb-4 pt-6 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-4 md:pb-0 md:pt-6">
             {steps.map(({ icon: Icon, title, body }, i) => (
               <div
                 key={title}
                 className="relative w-[260px] shrink-0 snap-start scroll-ml-4 md:scroll-ml-0 rounded-2xl border border-border bg-card p-6 text-center shadow-sm md:w-auto"
               >
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-primary to-accent px-3 py-0.5 text-[10px] font-black text-primary-foreground">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-primary to-accent px-3 py-0.5 text-[10px] font-black text-primary-foreground z-10">
                   STEP {i + 1}
                 </div>
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">

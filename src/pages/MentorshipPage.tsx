@@ -94,6 +94,7 @@ const MENTORS: { name: string; college: string; img: string }[] = [
   { name: "Yash Jain",                college: "IIT Bombay",      img: "/arke/yash jain.jpeg" },
   { name: "Amit Bhartiya",            college: "IIT Bombay",      img: "/arke/amit bhartiya.jpeg" },
   { name: "Naman",                    college: "IISC Bengaluru",  img: "/arke/naman-iisc-bengaluru.jpeg" },
+  { name: "Pawan Goyal",              college: "MIT USA",         img: "/arke/pawan-goyal.jpeg" },
 ];
 
 // Display order for college sections
@@ -112,10 +113,31 @@ const COLLEGE_ORDER = [
   "IIM Bengaluru",
 ];
 
-const toSlug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+const STUDENT_RANKS: Record<string, number> = {
+  "Pawan Goyal": 4,
+  "Aditya Gupta": 180,
+  "Animesh Baranwal": 78,
+  "Ankan Sarkar": 67,
+  "Aryan Gupta": 29,
+  "Mayank Motwani": 5,
+  "Samarth Agarwal": 25,
+  "Sankalp": 29,
+  "Yash Jain": 27,
+  "Yash Sanjeev": 102,
+  "Kushagra Gupta": 107,
+  "Prakhar Mangal": 95,
+  "Purushottam Sharma": 114,
+  "Vishwajeet Agarwal": 5,
+  "Monil Lodha": 120,
+};
+
+const toSlug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 
 // Colour palette per college — header accent + badge
 const COLLEGE_THEME: Record<string, { header: string; badge: string }> = {
+  "MIT":              { header: "text-red-700 dark:text-red-400",      badge: "bg-red-500/10 text-red-700 dark:text-red-400" },
+  "IIM":              { header: "text-amber-600 dark:text-amber-400",  badge: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
+  "IIT (Top 200)":    { header: "text-yellow-600 dark:text-yellow-400 font-bold", badge: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400" },
   "IIT Bombay":       { header: "text-blue-600 dark:text-blue-400",    badge: "bg-blue-500/10 text-blue-600 dark:text-blue-400" },
   "IIT Delhi":        { header: "text-orange-600 dark:text-orange-400",badge: "bg-orange-500/10 text-orange-600 dark:text-orange-400" },
   "IIT Kanpur":       { header: "text-emerald-600 dark:text-emerald-400", badge: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" },
@@ -131,33 +153,103 @@ const COLLEGE_THEME: Record<string, { header: string; badge: string }> = {
 };
 
 function getTheme(college: string) {
+  if (college.startsWith("MIT")) return COLLEGE_THEME["MIT"];
+  if (college.includes("IIM")) return COLLEGE_THEME["IIM"];
+  if (college.startsWith("IIT (Top 200)")) return COLLEGE_THEME["IIT (Top 200)"];
+
   for (const key of COLLEGE_ORDER) {
     if (college.startsWith(key)) return COLLEGE_THEME[key];
   }
   return { header: "text-foreground", badge: "bg-muted text-muted-foreground" };
 }
 
-// Group mentors by college, preserving COLLEGE_ORDER, names sorted A-Z within each group.
-// A mentor whose college string contains multiple keys (e.g. "IIT Roorkee · IIM Bengaluru")
-// appears in each matching section.
-function groupMentors(mentors: typeof MENTORS) {
-  const map = new Map<string, typeof MENTORS>();
+type Mentor = typeof MENTORS[number] & { rank?: number };
+
+// Group mentors by college, separating MIT, IIM, IIT (Top 200) first,
+// then the rest of the colleges.
+function groupMentors(mentors: typeof MENTORS): { college: string; members: Mentor[] }[] {
+  const mit: Mentor[] = [];
+  const iim: Mentor[] = [];
+  const top200: Mentor[] = [];
+  const others: Mentor[] = [];
+
   for (const m of mentors) {
+    const isMit = m.college.toLowerCase().includes("mit");
+    const isIim = m.college.toLowerCase().includes("iim");
+    const rank = STUDENT_RANKS[m.name];
+    const isTop200 = rank !== undefined && rank <= 200;
+    const mentorWithRank = { ...m, rank };
+
+    if (isMit) {
+      mit.push(mentorWithRank);
+    } else if (isIim) {
+      iim.push(mentorWithRank);
+    } else if (isTop200) {
+      top200.push(mentorWithRank);
+    } else {
+      others.push(mentorWithRank);
+    }
+  }
+
+  // Sort groups alphabetically by name, except top200 which is sorted by rank
+  mit.sort((a, b) => a.name.localeCompare(b.name));
+  iim.sort((a, b) => a.name.localeCompare(b.name));
+  top200.sort((a, b) => {
+    if (a.rank !== b.rank) {
+      return (a.rank ?? 0) - (b.rank ?? 0);
+    }
+    return a.name.localeCompare(b.name);
+  });
+
+  // Group other mentors by college
+  const othersMap = new Map<string, Mentor[]>();
+  for (const m of others) {
     const keys = COLLEGE_ORDER.filter((c) => m.college.includes(c));
     const effectiveKeys = keys.length > 0 ? keys : [m.college];
     for (const key of effectiveKeys) {
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(m);
+      if (!othersMap.has(key)) othersMap.set(key, []);
+      othersMap.get(key)!.push(m);
     }
   }
-  for (const group of map.values()) group.sort((a, b) => a.name.localeCompare(b.name));
-  return COLLEGE_ORDER.flatMap((c) => (map.has(c) ? [{ college: c, members: map.get(c)! }] : []));
+  for (const group of othersMap.values()) {
+    group.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  const result: { college: string; members: Mentor[] }[] = [];
+
+  if (mit.length > 0) {
+    result.push({ college: "MIT", members: mit });
+  }
+  if (iim.length > 0) {
+    result.push({ college: "IIM", members: iim });
+  }
+  if (top200.length > 0) {
+    result.push({ college: "IIT (Top 200)", members: top200 });
+  }
+
+  const addedKeys = new Set<string>();
+
+  for (const c of COLLEGE_ORDER) {
+    if (c === "IIM Bengaluru" || c === "IIM") continue;
+    if (othersMap.has(c)) {
+      result.push({ college: c, members: othersMap.get(c)! });
+      addedKeys.add(c);
+    }
+  }
+
+  for (const [key, value] of othersMap.entries()) {
+    if (!addedKeys.has(key)) {
+      result.push({ college: key, members: value });
+    }
+  }
+
+  return result;
 }
 
 // ---------------------------------------------------------------------------
 // Mentor card — native lazy loading, zero JS overhead per image
 // ---------------------------------------------------------------------------
-function MentorCard({ name, college, img }: { name: string; college: string; img: string }) {
+function MentorCard({ name, college, img, rank }: { name: string; college: string; img: string; rank?: number }) {
   const theme = getTheme(college);
   return (
     <div className="group flex flex-col items-center gap-3 rounded-2xl border border-border bg-card p-5 text-center shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
@@ -171,9 +263,16 @@ function MentorCard({ name, college, img }: { name: string; college: string; img
         />
       </div>
       <p className="text-sm font-bold leading-snug text-foreground">{name}</p>
-      <span className={`inline-block rounded-full px-3 py-0.5 text-[10px] font-bold ${theme.badge}`}>
-        {college}
-      </span>
+      <div className="flex flex-col gap-1 items-center">
+        <span className={`inline-block rounded-full px-3 py-0.5 text-[10px] font-bold ${theme.badge}`}>
+          {college}
+        </span>
+        {rank !== undefined && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 px-3 py-0.5 text-[10px] font-black">
+            <Trophy className="h-3 w-3 shrink-0" /> AIR {rank}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -182,8 +281,8 @@ function MentorCard({ name, college, img }: { name: string; college: string; img
 // Static page data
 // ---------------------------------------------------------------------------
 const iitBadges = [
-  "IIT Delhi", "IIT Bombay", "IIT Kharagpur", "IIT Madras",
-  "IIT Kanpur", "IIT Roorkee", "IIM Ahmedabad", "AIIMS Delhi",
+  "IIT (Top 200)", "IIT Delhi", "IIT Bombay", "IIT Kharagpur", "IIT Madras",
+  "IIT Kanpur", "IIT Roorkee", "IIM", "AIIMS Delhi",
 ];
 
 const builders = [
@@ -253,16 +352,16 @@ const MentorshipPage = () => {
               <Sparkles className="h-4 w-4" /> 1:1 Mentorship Program
             </span>
             <h1 className="mt-6 font-display text-4xl font-black text-white md:text-5xl lg:text-6xl">
-              Mentorship by <span className="gradient-text">IITians, IIMians & MITians doctors</span>
+              Mentorship by <span className="gradient-text">IITians, IIMians & MITian Students</span>
             </h1>
             <p className="mt-5 text-lg text-white/80">
-              Arke is programmed and designed directly under toppers from IIT, IIM and AIIMS. The mentorship you get here
+              Arke is programmed and designed directly under toppers from IIT, IIM and MIT. The mentorship you get here
               comes straight from IITians currently studying at IIT Delhi, Bombay, Kharagpur and other premier IITs.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
               {iitBadges.map((b) => {
-                const sectionSlug = COLLEGE_ORDER.includes(b) ? `#${toSlug(b)}` : "/signup";
-                const isAnchor = COLLEGE_ORDER.includes(b);
+                const isAnchor = COLLEGE_ORDER.includes(b) || b === "IIT (Top 200)" || b === "MIT" || b === "IIM";
+                const sectionSlug = isAnchor ? `#${toSlug(b)}` : "/signup";
                 return isAnchor ? (
                   <a
                     key={b}
@@ -317,7 +416,7 @@ const MentorshipPage = () => {
                   {/* Cards — max 4 per row */}
                   <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
                     {members.map((m) => (
-                      <MentorCard key={m.img} name={m.name} college={m.college} img={m.img} />
+                      <MentorCard key={m.img} name={m.name} college={m.college} img={m.img} rank={m.rank} />
                     ))}
                   </div>
                 </div>
@@ -456,10 +555,10 @@ const MentorshipPage = () => {
             <h2 className="font-display text-3xl font-black text-foreground md:text-4xl">How mentorship works</h2>
             <p className="mt-3 text-base text-muted-foreground">Four simple steps to your IITian mentor.</p>
           </div>
-          <div className="mt-12 flex overflow-x-auto snap-x snap-mandatory no-scrollbar gap-6 pb-4 pt-6 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-4 md:pb-0 md:pt-0">
+          <div className="mt-12 flex overflow-x-auto snap-x snap-mandatory no-scrollbar gap-6 pb-4 pt-6 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-4 md:pb-0 md:pt-6">
             {steps.map(({ icon: Icon, title, body }, i) => (
               <div key={title} className="relative w-[260px] shrink-0 snap-start scroll-ml-4 md:scroll-ml-0 rounded-2xl border border-border bg-background p-6 text-center shadow-sm md:w-auto">
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-primary to-accent px-3 py-0.5 text-[10px] font-black text-primary-foreground">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-primary to-accent px-3 py-0.5 text-[10px] font-black text-primary-foreground z-10">
                   STEP {i + 1}
                 </div>
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
