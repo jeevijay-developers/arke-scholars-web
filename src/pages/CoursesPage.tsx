@@ -1,6 +1,6 @@
 import { useState } from "react";
 import SEO from "@/components/SEO";
-import { Star, Users, Loader2, GraduationCap, Sparkles, ArrowRight, BookOpen, Award, Clock } from "lucide-react";
+import { Star, Users, Loader2, GraduationCap, Sparkles, ArrowRight, BookOpen, Award, Clock, Trophy, BarChart3 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCourses, type CourseRow } from "@/hooks/useCourses";
 import { useExams } from "@/hooks/useExams";
@@ -22,9 +22,9 @@ const courseImages: Record<string, string> = {
 };
 
 const highlights = [
-  { icon: BookOpen, label: "120+ Hours per Course", desc: "Conceptual + problem-solving" },
-  { icon: Award, label: "IIT & AIIMS Educators", desc: "Top 1% of India's faculty" },
-  { icon: Clock, label: "Lifetime Access", desc: "Learn at your own pace" },
+  { icon: Trophy, label: "School + Olympiad + JEE/NEET Prep", desc: "One platform. Complete academic excellence." },
+  { icon: GraduationCap, label: "IIT & AIIMS Educators", desc: "Top mentors shaping future achievers" },
+  { icon: BarChart3, label: "Performance Analytics Dashboard", desc: "Track growth with precision insights" },
 ];
 
 const CoursesPage = () => {
