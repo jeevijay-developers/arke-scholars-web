@@ -34,6 +34,7 @@ interface MatchEntry { key: string; value: string }
 interface ParsedQuestion {
   question_number: number;
   type: QuestionType;
+  topic: string | null;
   stem_html: string;
   option_1: string;
   option_2: string;
@@ -143,11 +144,11 @@ const QuestionCard = ({ q: initial, index, total, approval, onApprove, onSkip }:
     }
   };
 
-  const options: [number, string][] = [
-    [1, q.option_1],
-    [2, q.option_2],
-    [3, q.option_3],
-    [4, q.option_4],
+  const options: [number, string, string | null | undefined][] = [
+    [1, q.option_1, q.option_1_image],
+    [2, q.option_2, q.option_2_image],
+    [3, q.option_3, q.option_3_image],
+    [4, q.option_4, q.option_4_image],
   ];
 
   const stemHasImages = /<img/i.test(q.stem_html ?? "");
@@ -170,6 +171,11 @@ const QuestionCard = ({ q: initial, index, total, approval, onApprove, onSkip }:
         >
           {meta.label}
         </span>
+        {q.topic && (
+          <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold text-sky-700">
+            {q.topic}
+          </span>
+        )}
         {q.has_latex && (
           <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-indigo-700">
             LaTeX
@@ -255,7 +261,7 @@ const QuestionCard = ({ q: initial, index, total, approval, onApprove, onSkip }:
                 ({q.type === "scq" ? "select one correct" : "select all correct"})
               </span>
             </p>
-            {options.map(([num, text]) => {
+            {options.map(([num, text, image]) => {
               const isCorrect = q.correct_options.includes(num);
               return (
                 <div key={num} className="space-y-1">
@@ -270,15 +276,28 @@ const QuestionCard = ({ q: initial, index, total, approval, onApprove, onSkip }:
                     >
                       {q.type === "scq" ? (isCorrect ? "●" : num) : isCorrect ? "✓" : num}
                     </button>
-                    <textarea
-                      value={text}
-                      onChange={(e) =>
-                        patch({ [`option_${num}` as "option_1"]: e.target.value })
-                      }
-                      rows={2}
-                      placeholder={`Option (${num})`}
-                      className="flex-1 resize-y rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-                    />
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <textarea
+                        value={text}
+                        onChange={(e) =>
+                          patch({ [`option_${num}` as "option_1"]: e.target.value })
+                        }
+                        rows={2}
+                        placeholder={`Option (${num})`}
+                        className="w-full resize-y rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                      />
+                      {image && (
+                        <div className={`rounded-lg border p-2 ${isCorrect ? "border-secondary/40 bg-secondary/5" : "border-border bg-muted/20"}`}>
+                          <p className="mb-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Option {num} Image</p>
+                          <img
+                            src={image}
+                            alt={`Option ${num}`}
+                            className="max-h-32 w-auto rounded object-contain"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
                   {text && (
                     <div className={`ml-7 rounded-lg border px-3 py-1.5 text-xs ${isCorrect ? "border-secondary/30 bg-secondary/5" : "border-border bg-muted/20"}`}>
@@ -502,7 +521,7 @@ function buildTestQuestionRow(q: ParsedQuestion, position: number, subject: stri
     test_id: testId,
     position,
     subject,
-    topic: null,
+    topic: q.topic ?? null,
     question_text: q.stem_html,
     question_image_url: q.images?.[0] ?? null,
     question_type: q.type,

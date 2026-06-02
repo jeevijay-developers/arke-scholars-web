@@ -5,7 +5,6 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import MathRenderer from "@/components/MathRenderer";
 import LatexRenderer from "@/components/LatexRenderer";
 
 type TestQuestion = {
@@ -83,12 +82,17 @@ const TestTakingPage = () => {
         .eq("test_id", t.id)
         .order("position");
       setQuestions(((qs ?? []) as unknown as TestQuestion[]).map(q => {
+        // Strip "Topic: xxx" that old parser versions baked into stem_html
+        let questionText = q.question_text.replace(
+          /(<br\s*\/?>)?\s*Topic\s*:\s*[^\n<]+/gi, ""
+        ).trim();
+
         const opts = q.options as unknown as unknown[];
         if ((!opts || opts.length === 0) && q.question_type !== "integer" && q.question_type !== "match_column") {
-          const extracted = extractInlineOptions(q.question_text);
+          const extracted = extractInlineOptions(questionText);
           if (extracted) return { ...q, question_text: extracted.stem, options: extracted.options };
         }
-        return q;
+        return { ...q, question_text: questionText };
       }));
 
       const { data: existing } = await supabase
@@ -456,7 +460,7 @@ const TestTakingPage = () => {
                         <div className="flex items-start gap-2">
                           <span className="font-bold shrink-0">{String.fromCharCode(65 + idx)}.</span>
                           <div className="flex-1 min-w-0">
-                            {opt.text && <MathRenderer content={opt.text} inline />}
+                            {opt.text && <LatexRenderer html={opt.text} inline />}
                             {opt.image && (
                               <img
                                 src={opt.image}

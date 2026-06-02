@@ -18,11 +18,16 @@ interface MatchEntry { key: string; value: string }
 export interface ParsedQuestion {
   question_number: number;
   type: QuestionType;
+  topic: string | null;
   stem_html: string;
   option_1: string;
   option_2: string;
   option_3: string;
   option_4: string;
+  option_1_image: string | null;
+  option_2_image: string | null;
+  option_3_image: string | null;
+  option_4_image: string | null;
   correct_options: number[];
   correct_integer: number | null;
   match_col1: MatchEntry[] | null;
@@ -257,7 +262,10 @@ const AdminUploadQuestionsPage = () => {
             const stemText = stripHtml(q.stem_html);
             const answer = formatAnswer(q);
             const hasWarning = warnings.some((w) => w.startsWith(`Q${q.question_number}:`));
-            const options = [q.option_1, q.option_2, q.option_3, q.option_4].filter(Boolean);
+            const optionImages = [q.option_1_image, q.option_2_image, q.option_3_image, q.option_4_image];
+            const options = [q.option_1, q.option_2, q.option_3, q.option_4]
+              .map((text, i) => ({ text, image: optionImages[i] }))
+              .filter((o) => o.text || o.image);
             const imageCount = q.images?.length ?? 0;
 
             return (
@@ -278,6 +286,11 @@ const AdminUploadQuestionsPage = () => {
                       <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${TYPE_COLOUR[q.type]}`}>
                         {TYPE_LABEL[q.type]}
                       </span>
+                      {q.topic && (
+                        <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700">
+                          {q.topic}
+                        </span>
+                      )}
                       {hasWarning && <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />}
                       {imageCount > 0 && (
                         <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
@@ -320,7 +333,10 @@ const AdminUploadQuestionsPage = () => {
                             return (
                               <div key={i} className={`flex items-start gap-1.5 rounded-lg px-2.5 py-1.5 ${isCorrect ? "bg-green-50 border border-green-200" : "bg-muted/30"}`}>
                                 <span className={`shrink-0 font-bold ${isCorrect ? "text-green-600" : "text-muted-foreground"}`}>({num})</span>
-                                <LatexRenderer html={opt} className={`text-xs [&_img]:hidden ${isCorrect ? "text-green-700" : "text-foreground"}`} />
+                                <div className="flex-1 min-w-0">
+                                  {opt.text && <LatexRenderer html={opt.text} inline className={`text-xs ${isCorrect ? "text-green-700" : "text-foreground"}`} />}
+                                  {opt.image && <img src={opt.image} alt={`Option ${num}`} className={`mt-1 max-h-16 w-auto rounded object-contain ${isCorrect ? "ring-1 ring-green-400" : ""}`} />}
+                                </div>
                               </div>
                             );
                           })}

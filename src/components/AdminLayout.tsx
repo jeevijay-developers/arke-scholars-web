@@ -173,7 +173,7 @@ const AdminSidebar = memo(({ email, initials, avatarUrl, isSuperAdmin, onLogout,
 AdminSidebar.displayName = "AdminSidebar";
 
 const AdminHeader = memo(
-  ({ initials, avatarUrl, isSuperAdmin, onLogout, onMenuClick }: { initials: string; avatarUrl?: string; isSuperAdmin: boolean; onLogout: () => void; onMenuClick: () => void }) => (
+  ({ initials, avatarUrl, onLogout, onMenuClick }: { initials: string; avatarUrl?: string; onLogout: () => void; onMenuClick: () => void }) => (
     <header className="sticky top-0 z-40 flex items-center justify-between border-b border-border bg-card px-4 py-3 lg:px-6">
       <div className="flex items-center gap-3">
         <button
@@ -183,15 +183,11 @@ const AdminHeader = memo(
         >
           <Menu className="h-5 w-5" />
         </button>
-        <h1 className="text-sm font-bold text-foreground">
-          ARKE {isSuperAdmin ? "Super Admin" : "Admin"} Dashboard
-        </h1>
+      </div>
+      <div className="absolute left-1/2 -translate-x-1/2">
+        <img src={arkeLogo} alt="ARKE Logo" className="h-8 w-auto object-contain" />
       </div>
       <div className="flex items-center gap-3">
-        <div className="hidden sm:flex items-center gap-1.5 text-xs text-secondary">
-          <CircleDot className="h-3 w-3" />
-          <span className="font-medium">Connected</span>
-        </div>
         <NotificationBell />
         <LogoutButton
           onConfirm={onLogout}
@@ -245,7 +241,6 @@ export default function AdminLayout() {
         <AdminHeader
           initials={initials}
           avatarUrl={avatarUrl}
-          isSuperAdmin={isSuperAdmin}
           onLogout={handleLogout}
           onMenuClick={() => setSidebarOpen(!sidebarOpen)}
         />

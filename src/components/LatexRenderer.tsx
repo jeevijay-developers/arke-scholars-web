@@ -59,13 +59,18 @@ function segmentize(input: string): Segment[] {
 interface Props {
   html: string;
   className?: string;
+  inline?: boolean;
 }
 
-const LatexRenderer = ({ html, className = "" }: Props) => {
+const LatexRenderer = ({ html, className = "", inline = false }: Props) => {
   const segments = segmentize(html);
+  const Tag = inline ? "span" : "div";
+  const baseClass = inline
+    ? `latex-content [&_img]:max-h-20 [&_img]:w-auto [&_img]:inline-block [&_img]:align-middle ${className}`
+    : `latex-content leading-relaxed [&_img]:max-h-72 [&_img]:w-auto [&_img]:inline-block [&_img]:align-middle ${className}`;
 
   return (
-    <div className={`latex-content leading-relaxed [&_img]:max-h-72 [&_img]:w-auto [&_img]:inline-block [&_img]:align-middle ${className}`}>
+    <Tag className={baseClass}>
       {segments.map((seg, idx) => {
         if (seg.type === "html") {
           return (
@@ -105,7 +110,7 @@ const LatexRenderer = ({ html, className = "" }: Props) => {
           />
         );
       })}
-    </div>
+    </Tag>
   );
 };
 

@@ -19,6 +19,7 @@ interface ImageRef { url: string }
 interface ParsedQuestion {
   question_number: number;
   type: QuestionType;
+  topic: string | null;
   stem_html: string;
   option_1: string;
   option_2: string;
@@ -117,6 +118,10 @@ function paraText(paraXml: string): string {
 
 function paraIsBold(paraXml: string): boolean {
   return /<w:b[ \/>]/.test(paraXml);
+}
+
+function paraIsItalic(paraXml: string): boolean {
+  return /<w:i[ \/>]/.test(paraXml);
 }
 
 function paraImageRids(paraXml: string): string[] {
@@ -224,8 +229,8 @@ function detectTypeFromAnswer(raw: string): QuestionType {
   // Match-column answer pattern: "A-P, B-Q, C-R, D-S" or "A→P; B→Q"
   if (/[A-Da-d]\s*[-→]\s*[P-Sp-s]/.test(raw)) return "match_column";
 
-  // Integer
-  if (/^-?\d+(\.\d+)?$/.test(raw.trim())) return "integer";
+  // Integer — handle +6, -6, 6, 3.14
+  if (/^[+-]?\d+(\.\d+)?$/.test(raw.trim())) return "integer";
 
   return "scq";
 }
@@ -264,6 +269,7 @@ function parseDocument(
   interface Accum {
     num: number;
     type: QuestionType;       // initial guess; overridden in finalize from answer
+    topic: string | null;
     stemParas: string[];
     stemRids: string[];
     optCells: string[][];     // HTML per cell
@@ -424,6 +430,7 @@ function parseDocument(
       questions.push({
         question_number: a.num,
         type,
+        topic: a.topic,
         stem_html: stemHtml,
         option_1,
         option_2,
@@ -492,6 +499,7 @@ function parseDocument(
         accum = {
           num: parseInt(numMatch?.[1] ?? "0", 10),
           type: "scq",
+          topic: null,
           stemParas: [stemHtmlClean],
           stemRids: paraImageRids(block.xml),
           optCells: [],
@@ -526,6 +534,13 @@ function parseDocument(
           }
           continue;
         }
+      }
+
+      // Topic line — italic paragraph like "Topic: Thermodynamics"
+      // Match by prefix regardless of italic/colour formatting (formatting may vary)
+      if (/^topic\s*:/i.test(text)) {
+        accum.topic = text.replace(/^topic\s*:\s*/i, "").trim() || null;
+        continue;
       }
 
       // Answer line
