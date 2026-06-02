@@ -64,18 +64,36 @@ const TestResultPage = () => {
       if (data.test_id) {
         const { data: qs } = await supabase
           .from("test_questions")
-          .select("id, subject, correct_answer, marks_correct, marks_wrong")
+          .select("id, subject, question_type, correct_answer, marks_correct, marks_wrong")
           .eq("test_id", data.test_id);
-        const ans = (data.answers ?? {}) as Record<string, { selected: number | null }>;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const ans = (data.answers ?? {}) as Record<string, any>;
         const breakdown: Record<string, SubjectStat> = {};
         (qs ?? []).forEach((q) => {
           const subj = q.subject ?? "General";
           if (!breakdown[subj]) breakdown[subj] = { total: 0, correct: 0, attempted: 0, score: 0 };
           breakdown[subj].total += 1;
-          const sel = ans[q.id]?.selected;
-          if (sel != null) {
+          const a = ans[q.id];
+          let isAttempted = false;
+          let isCorrect = false;
+          if (q.question_type === "integer") {
+            isAttempted = a?.value != null && String(a.value).trim() !== "";
+            if (isAttempted) isCorrect = Number(a.value) === Number(q.correct_answer);
+          } else if (q.question_type === "mcq") {
+            isAttempted = Array.isArray(a?.multiSelected) && a.multiSelected.length > 0;
+            if (isAttempted)
+              isCorrect = JSON.stringify([...(a.multiSelected ?? [])].sort()) ===
+                JSON.stringify([...(Array.isArray(q.correct_answer) ? q.correct_answer : [])].sort());
+          } else if (q.question_type === "match_column") {
+            isAttempted = a?.mapping != null && Object.keys(a.mapping).length > 0;
+            if (isAttempted) isCorrect = JSON.stringify(a.mapping) === JSON.stringify(q.correct_answer);
+          } else {
+            isAttempted = a?.selected != null;
+            if (isAttempted) isCorrect = q.correct_answer === a.selected;
+          }
+          if (isAttempted) {
             breakdown[subj].attempted += 1;
-            if (q.correct_answer === sel) {
+            if (isCorrect) {
               breakdown[subj].correct += 1;
               breakdown[subj].score += Number(q.marks_correct ?? 4);
             } else {
@@ -106,8 +124,15 @@ const TestResultPage = () => {
   const total = Number(attempt.total_questions ?? 0);
   const correct = Number(attempt.correct_answers ?? 0);
   const score = Number(attempt.score ?? 0);
-  const answersMap = (attempt.answers ?? {}) as Record<string, { selected: number | null }>;
-  const attempted = Object.values(answersMap).filter((a) => a?.selected != null).length;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const answersMap = (attempt.answers ?? {}) as Record<string, any>;
+  const attempted = Object.values(answersMap).filter((a) => {
+    if (!a) return false;
+    if (a.value != null && String(a.value).trim() !== "") return true;
+    if (Array.isArray(a.multiSelected) && a.multiSelected.length > 0) return true;
+    if (a.mapping != null && Object.keys(a.mapping).length > 0) return true;
+    return a.selected != null;
+  }).length;
   const wrong = Math.max(0, attempted - correct);
   const unattempted = Math.max(0, total - attempted);
   const accuracy = calcPercent(correct, attempted || total);

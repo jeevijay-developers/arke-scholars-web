@@ -7,6 +7,26 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import LatexRenderer from "@/components/LatexRenderer";
 
+const ImageWithSkeleton = ({ src, alt, className }: { src: string; alt: string; className?: string }) => {
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    setLoaded(false);
+  }, [src]);
+
+  return (
+    <span className="block">
+      {!loaded && <span className="block h-48 w-full rounded-lg bg-muted animate-pulse" />}
+      <img
+        src={src}
+        alt={alt}
+        className={`${className ?? ""} ${loaded ? "" : "hidden"}`}
+        onLoad={() => setLoaded(true)}
+      />
+    </span>
+  );
+};
+
 type TestQuestion = {
   id: string;
   position: number;
@@ -379,19 +399,22 @@ const TestTakingPage = () => {
               <span className="ml-auto">+{q.marks_correct} / {q.marks_wrong}</span>
             </div>
             <div className="text-sm text-foreground leading-relaxed"><LatexRenderer html={q.question_text} /></div>
-            {q.question_image_url && <img src={q.question_image_url} alt="" className="rounded-lg max-h-64" />}
             {/* Integer */}
             {q.question_type === "integer" && (
-              <div className="flex justify-center py-2">
-                <div className="space-y-2 text-center">
-                  <p className="text-xs font-semibold text-muted-foreground">Enter your answer (integer / decimal)</p>
+              <div className="flex justify-center py-4">
+                <div className="space-y-3 text-center">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Enter your integer answer</p>
                   <input
                     type="number"
+                    step="1"
+                    inputMode="numeric"
+                    pattern="-?[0-9]*"
                     value={answers[q.id]?.value ?? ""}
-                    onChange={(e) => handleIntegerInput(e.target.value)}
-                    className="w-48 rounded-xl border-2 border-border px-4 py-3 text-center text-lg font-bold text-foreground focus:border-primary focus:outline-none"
-                    placeholder="0"
+                    onChange={(e) => handleIntegerInput(e.target.value.replace(/[^-0-9]/g, ""))}
+                    className="w-56 rounded-2xl border-2 border-primary/40 bg-primary/5 px-5 py-4 text-center text-2xl font-bold text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    placeholder="—"
                   />
+                  <p className="text-[10px] text-muted-foreground">Only whole numbers accepted</p>
                 </div>
               </div>
             )}
@@ -462,7 +485,7 @@ const TestTakingPage = () => {
                           <div className="flex-1 min-w-0">
                             {opt.text && <LatexRenderer html={opt.text} inline />}
                             {opt.image && (
-                              <img
+                              <ImageWithSkeleton
                                 src={opt.image}
                                 alt={`Option ${String.fromCharCode(65 + idx)}`}
                                 className="mt-2 max-h-40 w-auto rounded-lg object-contain"
