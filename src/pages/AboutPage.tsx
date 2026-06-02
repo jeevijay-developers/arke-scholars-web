@@ -33,7 +33,7 @@ const AboutPage = () => {
     <div className="bg-background">
       <SEO
         title="About ARKE Scholars — India's Next-Gen EdTech Platform"
-        description="ARKE Scholars was founded in 2024 in India to help students crack JEE, NEET & Board exams. 50,000+ students, 200+ educators, live classes & AI doubt solving."
+        description="ARKE Scholars was founded in 2024 in India to help students crack JEE, NEET & Foundation. 50,000+ students, 200+ educators, live classes & AI doubt solving."
         canonical="/about"
         jsonLd={{
           "@context": "https://schema.org",
@@ -43,7 +43,7 @@ const AboutPage = () => {
           "url": "https://arke.pro",
           "logo": "https://arke.pro/logo.png",
           "foundingDate": "2024",
-          "description": "ARKE Scholars is India's next-generation learning platform for JEE, NEET, and Board exams.",
+          "description": "ARKE Scholars is India's next-generation learning platform for JEE, NEET, and Foundation.",
           "areaServed": [
             { "@type": "Country", "name": "India" }
           ],

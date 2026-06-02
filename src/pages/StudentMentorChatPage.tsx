@@ -44,7 +44,7 @@ const StudentMentorChatPage = () => {
         <div>
           <h1 className="font-display text-2xl font-black text-foreground">Mentor Chat</h1>
           <p className="text-sm text-muted-foreground">
-            Talk to your assigned mentor and your mentor group.
+            Talk directly with your assigned mentor.
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">

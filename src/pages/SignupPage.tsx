@@ -214,7 +214,6 @@ const SignupPage = () => {
                   <option>JEE Main</option>
                   <option>JEE Advanced</option>
                   <option>NEET</option>
-                  <option>Boards</option>
                   <option>Foundation</option>
                 </select>
               </div>

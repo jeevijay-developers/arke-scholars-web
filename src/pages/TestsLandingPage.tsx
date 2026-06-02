@@ -20,7 +20,7 @@ const features = [
   {
     icon: Timer,
     title: "Real Exam Simulation",
-    description: "Take tests in a distraction-free, full-screen environment that mirrors the JEE, NEET and Board exam interface — including timers, palette and section switching.",
+    description: "Take tests in a distraction-free, full-screen environment that mirrors the JEE, NEET and Foundation exam interface — including timers, palette and section switching.",
   },
   {
     icon: Brain,

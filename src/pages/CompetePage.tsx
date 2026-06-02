@@ -15,6 +15,17 @@ import { useAuth } from "@/context/AuthContext";
 type Phase = "lobby" | "searching" | "countdown" | "match" | "result";
 const STORAGE_KEY = "compete:active_match_id";
 
+const FOUNDATION_CLASSES = ["8", "9", "10"];
+const FOUNDATION_EXAM = "Foundation";
+const ADVANCED_EXAMS = ["JEE Main", "JEE Advanced", "NEET"];
+
+function getExamsForClass(classLevel: string, allExams: string[]): string[] {
+  if (FOUNDATION_CLASSES.includes(classLevel)) {
+    return allExams.filter((e) => e === FOUNDATION_EXAM);
+  }
+  return allExams.filter((e) => ADVANCED_EXAMS.includes(e));
+}
+
 const CompetePage = () => {
   const { user } = useAuth();
   const { rating, refresh } = useCompeteRating();
@@ -124,6 +135,15 @@ const CompetePage = () => {
     if (match?.status === "active") setRoomCode(null);
   }, [match?.status, matchId, roomCode]);
 
+  const handleClassLevel = (c: string) => {
+    setClassLevel(c);
+    setSelectedTopics([]);
+    const validExams = getExamsForClass(c, exams);
+    if (!validExams.includes(targetExam)) {
+      setTargetExam(validExams.length === 1 ? validExams[0] : "");
+    }
+  };
+
   const handleQuickMatch = async () => {
     if (!user) return toast.error("Please sign in");
     setBusy(true);
@@ -173,16 +193,58 @@ const CompetePage = () => {
   };
 
   const handlePracticeBot = async () => {
+    if (!user) return toast.error("Please sign in");
     setBusy(true);
     try {
+      // Try to find a real opponent first
       const { data, error } = await supabase.functions.invoke("compete-matchmake", {
-        body: { action: "bot", subject, topics: selectedTopics, classLevel, targetExam },
+        body: { action: "find", subject, topics: selectedTopics, classLevel, targetExam },
       });
       if (error) throw error;
-      setMatchId(data.match_id);
+
+      if (data.status === "matched") {
+        setMatchId(data.match_id);
+        setPhase("searching");
+        setBusy(false);
+        return;
+      }
+
+      // No immediate match — show searching, poll for 15s then silently fall back to bot
+      setPhase("searching");
+      let elapsed = 0;
+      stopPolling();
+      pollTimer.current = window.setInterval(async () => {
+        elapsed += 3000;
+        try {
+          const { data: pd } = await supabase.functions.invoke("compete-matchmake", { body: { action: "poll" } });
+          if (pd?.status === "matched" && pd.match_id) {
+            stopPolling();
+            setMatchId(pd.match_id);
+            return;
+          }
+        } catch { /* ignore poll errors */ }
+
+        if (elapsed >= 15000) {
+          stopPolling();
+          await supabase.functions.invoke("compete-matchmake", { body: { action: "cancel" } });
+          try {
+            const { data: bd, error: be } = await supabase.functions.invoke("compete-matchmake", {
+              body: { action: "bot", subject, topics: selectedTopics, classLevel, targetExam },
+            });
+            if (be) throw be;
+            setMatchId(bd.match_id);
+          } catch (e: any) {
+            toast.error(e?.message || "Failed to start match");
+            setPhase("lobby");
+          }
+        }
+      }, 3000);
     } catch (e: any) {
-      toast.error(e?.message || "Failed to start bot match");
-    } finally { setBusy(false); }
+      toast.error(e?.message || "Failed to start match");
+      setPhase("lobby");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleCancel = async () => {
@@ -239,7 +301,7 @@ const CompetePage = () => {
             selectedTopics={selectedTopics}
             availableTopics={availableTopics}
             loadingTopics={loadingTopics}
-            onClassLevel={setClassLevel}
+            onClassLevel={handleClassLevel}
             onTargetExam={setTargetExam}
             onSubject={setSubject}
             onTopicsChange={setSelectedTopics}
@@ -250,7 +312,7 @@ const CompetePage = () => {
             joinCode={joinCode}
             onJoinCodeChange={setJoinCode}
             busy={busy}
-            exams={exams}
+            exams={getExamsForClass(classLevel, exams)}
           />
         )}
         {phase === "searching" && (

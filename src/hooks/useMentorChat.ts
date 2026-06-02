@@ -208,15 +208,13 @@ export const useStudentMentorConversations = () => {
 
     const list: Conversation[] = [];
     if (assignment?.mentor_id) {
-      const [{ data: mentorProfile }, { data: group }] = await Promise.all([
-        supabase.from("profiles").select("full_name").eq("user_id", assignment.mentor_id).maybeSingle(),
-        supabase.from("mentor_groups").select("id, name").eq("mentor_id", assignment.mentor_id).maybeSingle(),
-      ]);
+      const { data: mentorProfile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("user_id", assignment.mentor_id)
+        .maybeSingle();
 
-      const [directUnread, groupUnread] = await Promise.all([
-        computeDirectUnread(user.id, [assignment.mentor_id]),
-        computeGroupUnread(user.id, group ? [group.id] : []),
-      ]);
+      const directUnread = await computeDirectUnread(user.id, [assignment.mentor_id]);
 
       list.push({
         kind: "direct",
@@ -226,16 +224,7 @@ export const useStudentMentorConversations = () => {
         peerId: assignment.mentor_id,
         unread: directUnread.get(assignment.mentor_id) ?? 0,
       });
-      if (group) {
-        list.push({
-          kind: "group",
-          id: `g:${group.id}`,
-          title: group.name,
-          subtitle: "Group chat",
-          groupId: group.id,
-          unread: groupUnread.get(group.id) ?? 0,
-        });
-      }
+      // Group chat is hidden from students — group messages are delivered as DMs
     }
     setConvos(list);
     setLoading(false);

@@ -102,7 +102,7 @@ const EducatorsPage = () => {
     <div className="bg-background">
       <SEO
         title="Expert JEE & NEET Educators Online"
-        description="Learn from 200+ expert educators including IIT and AIIMS alumni. Physics, Chemistry, Maths & Biology specialists for JEE, NEET and Board exams. Apply to teach on ARKE Scholars."
+        description="Learn from 200+ expert educators including IIT and AIIMS alumni. Physics, Chemistry, Maths & Biology specialists for JEE, NEET and Foundation exams. Apply to teach on ARKE Scholars."
         canonical="/educators"
       />
       {/* Hero */}

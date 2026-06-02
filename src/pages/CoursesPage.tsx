@@ -48,8 +48,8 @@ const CoursesPage = () => {
   return (
     <div className="bg-background">
       <SEO
-        title="Online Courses for JEE, NEET & CBSE Board Exams"
-        description="Browse 120+ hour video courses for JEE Main, JEE Advanced, NEET & CBSE Boards. Physics, Chemistry, Maths & Biology by IIT & AIIMS-qualified educators. Start free."
+        title="Online Courses for JEE, NEET & Foundation Exams"
+        description="Browse 120+ hour video courses for JEE Main, JEE Advanced, NEET & Foundation. Physics, Chemistry, Maths & Biology by IIT & AIIMS-qualified educators. Start free."
         canonical="/courses"
       />
       {/* Hero */}
@@ -61,10 +61,10 @@ const CoursesPage = () => {
             <Sparkles className="h-3.5 w-3.5 text-accent" /> Curated by toppers
           </span>
           <h1 className="mt-5 font-display text-4xl font-black leading-tight text-white md:text-5xl">
-            <span className="gradient-text">JEE, NEET & Board</span> Exam Courses Online
+            <span className="gradient-text">JEE, NEET & Foundation</span> Exam Courses Online
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base text-white/80">
-            Browse complete batches for JEE, NEET, Boards and Foundation. Live classes, recorded lectures, tests and doubt support — all bundled together.
+            Browse complete batches for JEE, NEET, Foundation and Olympiads. Live classes, recorded lectures, tests and doubt support — all bundled together.
           </p>
 
           <div className="mx-auto mt-10 grid max-w-3xl gap-4 sm:grid-cols-3">

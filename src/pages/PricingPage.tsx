@@ -108,7 +108,7 @@ const PricingPage = () => {
           "@context": "https://schema.org",
           "@type": "Product",
           "name": "ARKE Scholars Pro Plan",
-          "description": "Unlimited live classes, full test series, AI doubt solver, and performance analytics for JEE, NEET & Board exams",
+          "description": "Unlimited live classes, full test series, AI doubt solver, and performance analytics for JEE, NEET & Foundation exams",
           "url": "https://arke.pro/pricing",
           "brand": { "@type": "Brand", "name": "ARKE Scholars" },
           "offers": [
@@ -124,10 +124,10 @@ const PricingPage = () => {
             <IndianRupee className="h-3.5 w-3.5" /> Transparent pricing · No hidden fees
           </span>
           <h1 className="mt-6 text-4xl font-black font-display text-foreground md:text-6xl">
-            Affordable Plans for <span className="gradient-text">JEE, NEET & Boards</span>
+            Affordable Plans for <span className="gradient-text">JEE, NEET & Foundation</span>
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground md:text-lg">
-            Start free, upgrade only when you're ready. Every plan is built to help you crack JEE, NEET, and Board exams without breaking the bank.
+            Start free, upgrade only when you're ready. Every plan is built to help you crack JEE, NEET, and Foundation exams without breaking the bank.
           </p>
 
           {/* Billing toggle */}
@@ -188,7 +188,7 @@ const PricingPage = () => {
                   </div>
                   {p.monthly > 0 && billing === "yearly" && (
                     <p className="mt-1 text-xs text-secondary font-semibold">
-                      That's {currency}{Math.round(p.monthly * yearlyDiscount).toLocaleString()}/mo
+                      That's ₹{Math.round(p.monthly * yearlyDiscount).toLocaleString()}/mo
                     </p>
                   )}
                   <Link

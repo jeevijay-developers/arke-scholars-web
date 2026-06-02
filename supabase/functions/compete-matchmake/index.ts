@@ -103,13 +103,20 @@ async function pickQuestionIds(sb: ReturnType<typeof admin>, subject: string, to
   return pool.slice(0, count);
 }
 
-const BOT_NAME_PREFIXES = ["Turbo","Hydro","Nano","Cyber","Quantum","Volt","Servo","Atomic","Plasma","Magnet","Piston","Gear","Rotor","Forge","Diesel","Neon","Crank","Flux","Helix","Kinetic","Lithium","Mecha","Photon","Sonic"];
-const BOT_NAME_SUFFIXES = ["Engine","Drive","Core","Wrench","Bolt","Cog","Forge","Press","Anvil","Reactor","Coil","Turbine","Piston","Sprocket","Hammer","Lathe","Drill","Boiler","Compressor","Motor"];
+const INDIAN_FIRST_NAMES = ["Aarav","Arjun","Rohan","Vikram","Karan","Amit","Rahul","Dev","Nikhil","Siddharth","Priya","Ananya","Sneha","Divya","Pooja","Nisha","Kavya","Meera","Aditi","Riya","Ishaan","Dhruv","Aditya","Yash","Rishabh","Tanvi","Shreya","Isha","Nandini","Swati"];
+const INDIAN_LAST_NAMES = ["Sharma","Verma","Singh","Kumar","Gupta","Mehta","Joshi","Patel","Reddy","Nair","Iyer","Rao","Mishra","Pandey","Agarwal","Chopra","Shah","Malhotra","Bose","Das","Kulkarni","Desai","Saxena","Tiwari","Srivastava"];
 function randomBotName(): string {
-  const p = BOT_NAME_PREFIXES[Math.floor(Math.random() * BOT_NAME_PREFIXES.length)];
-  const s = BOT_NAME_SUFFIXES[Math.floor(Math.random() * BOT_NAME_SUFFIXES.length)];
-  const n = Math.floor(Math.random() * 90) + 10;
-  return `${p}${s}-${n}`;
+  const first = INDIAN_FIRST_NAMES[Math.floor(Math.random() * INDIAN_FIRST_NAMES.length)];
+  const last = INDIAN_LAST_NAMES[Math.floor(Math.random() * INDIAN_LAST_NAMES.length)];
+  return `${first} ${last}`;
+}
+
+function simulateBotScore(userRating: number): number {
+  // Bot difficulty scales with user rating so the match feels competitive
+  if (userRating >= 1600) return 7 + Math.floor(Math.random() * 3);  // 7–9
+  if (userRating >= 1400) return 6 + Math.floor(Math.random() * 3);  // 6–8
+  if (userRating >= 1200) return 5 + Math.floor(Math.random() * 3);  // 5–7
+  return 3 + Math.floor(Math.random() * 4);                          // 3–6
 }
 
 Deno.serve(async (req: Request) => {
@@ -138,6 +145,7 @@ Deno.serve(async (req: Request) => {
     if (action === "bot") {
       await sb.from("compete_queue").delete().eq("user_id", user.id);
       const questionIds = await pickQuestionIds(sb, subject, topics, classLevel, targetExam, 10);
+      const botScore = simulateBotScore(rating.rating);
       const { data: match } = await sb.from("compete_matches").insert({
         player1_id: user.id,
         player2_id: null,
@@ -145,9 +153,10 @@ Deno.serve(async (req: Request) => {
         player1_avatar: profile.avatar_url,
         player2_name: randomBotName(),
         player1_rating_before: rating.rating,
-        player2_rating_before: 1000,
+        player2_rating_before: rating.rating,
+        player2_score: botScore,
         player1_target_exam: exam,
-        player2_target_exam: "bot",
+        player2_target_exam: exam,
         subject, topic: topics.length > 0 ? topics.join(", ") : "Any",
         question_ids: questionIds,
         total_questions: questionIds.length,
@@ -157,7 +166,7 @@ Deno.serve(async (req: Request) => {
         countdown_until: new Date(Date.now() + 5000).toISOString(),
         current_question_started_at: new Date(Date.now() + 5000).toISOString(),
       }).select("*").single();
-      return jsonResponse({ status: "matched", match_id: match!.id, is_bot: true });
+      return jsonResponse({ status: "matched", match_id: match!.id });
     }
 
     // ---------------------------------------------------------------------------

@@ -14,7 +14,7 @@ import featureMobile from "@/assets/feature-mobile.png";
 import featureTest from "@/assets/feature-test.png";
 
 const faqs = [
-  { q: "What exams does Arke cover?", a: "Arke covers JEE Main, JEE Advanced, NEET, and Board Exams (CBSE & State Boards) for classes 11 and 12. We also offer foundation courses for class 9 and 10." },
+  { q: "What exams does Arke cover?", a: "Arke covers JEE Main, JEE Advanced, NEET, and Foundation Exams for classes 11 and 12. We also offer foundation courses for class 9 and 10." },
   { q: "Can I study from outside my city?", a: "Absolutely! Our live classes run on IST but recordings are available 24/7. Students from any city or state across India study with us regularly." },
   { q: "How does the AI Doubt Solver work?", a: "Simply upload a photo of your question or type it out. Our AI analyzes the problem and gives you a step-by-step solution with explanations within seconds." },
   { q: "Is there a free trial?", a: "Yes! Our Explorer plan is completely free — you get access to 5 live classes, basic test series, and community doubt solving. No credit card required." },
@@ -126,8 +126,8 @@ const LandingPage = () => {
   return (
     <div className="min-h-screen bg-background">
       <SEO
-        title="JEE, NEET & Board Exam Prep Online"
-        description="Crack JEE Main, JEE Advanced, NEET & CBSE Boards with ARKE Scholars. Live classes from IIT educators, AI doubt solving, 500+ mock tests & 1-on-1 mentorship."
+        title="JEE, NEET & Foundation Exam Prep Online"
+        description="Crack JEE Main, JEE Advanced, NEET & Foundation with ARKE Scholars. Live classes from IIT educators, AI doubt solving, 500+ mock tests & 1-on-1 mentorship."
         canonical="/"
         jsonLd={[
           {
@@ -137,7 +137,7 @@ const LandingPage = () => {
             "alternateName": ["Arke", "Arke Scholars", "Arke Pro", "Arke EdTech", "arke.pro"],
             "url": "https://arke.pro",
             "logo": "https://arke.pro/logo.png",
-            "description": "ARKE Scholars (arke.pro) is India's next-gen EdTech platform for JEE Main, JEE Advanced, NEET, and CBSE Board exam preparation.",
+            "description": "ARKE Scholars (arke.pro) is India's next-gen EdTech platform for JEE Main, JEE Advanced, NEET, and Foundation exam preparation.",
             "foundingDate": "2024",
             "areaServed": ["IN"],
             "sameAs": [
@@ -165,7 +165,7 @@ const LandingPage = () => {
             "@type": "EducationalOrganization",
             "name": "ARKE Scholars",
             "url": "https://arke.pro",
-            "description": "Online coaching for JEE Main, JEE Advanced, NEET and CBSE Board exams",
+            "description": "Online coaching for JEE Main, JEE Advanced, NEET and Foundation exams",
             "areaServed": [
               { "@type": "Country", "name": "India" }
             ]
@@ -185,12 +185,12 @@ const LandingPage = () => {
                 <Rocket className="h-3 w-3 md:h-4 md:w-4" /> India's Rising EdTech Platform
               </span>
               <h1 className="mt-4 md:mt-6 font-display">
-                <span className="block text-3xl font-black text-white md:text-5xl lg:text-6xl">JEE, NEET & Board Exam</span>
+                <span className="block text-3xl font-black text-white md:text-5xl lg:text-6xl">JEE, NEET & Foundation Exam</span>
                 <span className="block text-3xl font-black md:text-5xl lg:text-6xl gradient-text">Prep That Actually Works</span>
               </h1>
-              <p className="mt-3 text-base font-semibold text-white/90">Schooling · Olympiads · Competitive Exams</p>
+              {/* <p className="mt-3 text-base font-semibold text-white/90">Schooling · Olympiads · Competitive Exams</p> */}
               <p className="mt-2 max-w-md text-sm md:text-base text-white/70 leading-relaxed">
-                <strong className="text-white/90">ARKE Scholars</strong> (arke.pro) is India's next-gen EdTech platform. Master JEE, NEET &amp; Board exams with live classes from top educators, AI-powered doubt solving, and smart test analytics.
+                <strong className="text-white/90">ARKE Scholars</strong> (arke.pro) is India's next-gen EdTech platform. Master JEE, NEET &amp; Foundation exams with live classes from top educators, AI-powered doubt solving, and smart test analytics.
               </p>
               <div className="mt-6 md:mt-8 flex items-center gap-3">
                 <Link to="/signup" className="inline-flex items-center gap-1.5 rounded-pill bg-gradient-to-r from-primary to-accent px-5 py-2.5 md:px-8 md:py-3.5 text-sm md:text-base font-bold text-primary-foreground shadow-blue hover:opacity-90 transition-all hover:scale-105">
