@@ -211,7 +211,7 @@ const LandingPage = () => {
             </div>
             <div className="relative hidden md:block animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
               <div className="absolute inset-0 rounded-full opacity-30" style={{ background: 'radial-gradient(circle, hsl(24 95% 53% / 0.3) 0%, transparent 70%)' }} />
-              <img src={heroIllustration} alt="Student studying with laptop and books" width={1024} height={1024} fetchPriority="high" loading="eager" className="mx-auto w-96 drop-shadow-2xl animate-float relative z-10" />
+              <img src={heroIllustration} alt="Student studying with laptop and books" width={1024} height={1024} loading="eager" className="mx-auto w-96 drop-shadow-2xl animate-float relative z-10" />
               <Sparkles className="absolute -top-4 right-8 h-6 w-6 text-accent animate-pulse" />
               <Sparkles className="absolute bottom-12 -left-4 h-5 w-5 text-primary animate-pulse" />
               <Sparkles className="absolute top-1/3 -right-2 h-4 w-4 text-secondary animate-pulse" />

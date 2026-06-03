@@ -107,18 +107,20 @@ const TeacherLiveClassesPage = () => {
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           <div className="space-y-3 p-3">
             {paged.map((c) => (
-              <div key={c.id} className="rounded-xl border border-border bg-card p-4 flex items-start gap-4 flex-wrap">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
-                  <Video className="h-5 w-5" />
+              <div key={c.id} className="rounded-xl border border-border bg-card p-4 flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+                <div className="flex items-start gap-3 sm:contents">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
+                    <Video className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-bold text-foreground">{c.title}</h3>
+                    <p className="text-xs text-muted-foreground">
+                      {c.courses?.name ? `${c.courses.name} · ` : ""}{c.subject} · <Calendar className="inline h-3 w-3" /> {new Date(c.starts_at).toLocaleString()}
+                    </p>
+                    {c.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{c.description}</p>}
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-bold text-foreground">{c.title}</h3>
-                  <p className="text-xs text-muted-foreground">
-                    {c.courses?.name ? `${c.courses.name} · ` : ""}{c.subject} · <Calendar className="inline h-3 w-3" /> {new Date(c.starts_at).toLocaleString()}
-                  </p>
-                  {c.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{c.description}</p>}
-                </div>
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-2 flex-wrap sm:shrink-0">
                   {c.status === "live" ? (
                     <Link to={`/teacher/live-classes/${c.slug}`} className="inline-flex items-center gap-1.5 rounded-lg bg-destructive px-3 py-1.5 text-xs font-bold text-destructive-foreground hover:opacity-90">
                       <Radio className="h-3.5 w-3.5 animate-pulse" /> Resume

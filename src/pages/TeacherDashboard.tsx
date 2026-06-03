@@ -61,6 +61,7 @@ const TeacherDashboard = () => {
         ? `Next: ${formatRelativeDay(upcomingClasses[0].starts_at)} · ${formatTime(upcomingClasses[0].starts_at)}`
         : "Nothing scheduled",
       color: "text-primary",
+      path: "/teacher/live-classes",
     },
     {
       label: "Pending Doubts",
@@ -68,6 +69,7 @@ const TeacherDashboard = () => {
       icon: MessageCircle,
       change: stats.pendingDoubts > 0 ? "Respond within 24hrs" : "All caught up",
       color: "text-destructive",
+      path: "/teacher/doubts",
     },
   ];
 
@@ -84,7 +86,7 @@ const TeacherDashboard = () => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 stagger-children">
         {statCards.map((s) => (
-          <div key={s.label} className="rounded-xl border border-border bg-card p-4 hover-lift">
+          <Link key={s.label} to={s.path} className="rounded-xl border border-border bg-card p-4 hover-lift block">
             <div className="flex items-center justify-between">
               <s.icon className={`h-5 w-5 ${s.color}`} />
             </div>
@@ -95,7 +97,7 @@ const TeacherDashboard = () => {
             )}
             <p className="text-xs font-medium text-muted-foreground">{s.label}</p>
             <p className="mt-1 text-[10px] text-muted-foreground">{s.change}</p>
-          </div>
+          </Link>
         ))}
       </div>
 
@@ -118,7 +120,7 @@ const TeacherDashboard = () => {
               upcomingClasses.map((c) => {
                 const isLive = c.status === "live";
                 return (
-                  <div key={c.id} className="flex items-center gap-3 rounded-lg border border-border p-3 hover-lift">
+                  <Link key={c.id} to="/teacher/live-classes" className="flex items-center gap-3 rounded-lg border border-border p-3 hover-lift">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                       {isLive ? <Video className="h-5 w-5 text-primary" /> : <Clock className="h-5 w-5 text-muted-foreground" />}
                     </div>
@@ -131,19 +133,15 @@ const TeacherDashboard = () => {
                       <p className="text-[10px] text-muted-foreground">{formatRelativeDay(c.starts_at)}</p>
                     </div>
                     {isLive && c.meeting_url ? (
-                      <button onClick={() => openMeeting(c)} className="shrink-0 rounded-lg bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground hover:opacity-90 inline-flex items-center gap-1">
+                      <button onClick={(e) => { e.preventDefault(); openMeeting(c); }} className="shrink-0 rounded-lg bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground hover:opacity-90 inline-flex items-center gap-1">
                         <Video className="h-3 w-3" /> Join Live
                       </button>
                     ) : c.meeting_url ? (
-                      <button onClick={() => openMeeting(c)} className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 inline-flex items-center gap-1">
+                      <button onClick={(e) => { e.preventDefault(); openMeeting(c); }} className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 inline-flex items-center gap-1">
                         <ExternalLink className="h-3 w-3" /> Start
                       </button>
-                    ) : (
-                      <span className="shrink-0 rounded-lg border border-border px-3 py-1.5 text-[10px] text-muted-foreground">
-                        Awaiting link
-                      </span>
-                    )}
-                  </div>
+                    ) : null}
+                  </Link>
                 );
               })
             )}
@@ -162,7 +160,7 @@ const TeacherDashboard = () => {
               <p className="text-xs text-muted-foreground py-6 text-center">No pending doubts — you're all caught up!</p>
             ) : (
               pendingDoubts.map((d) => (
-                <div key={d.id} className="rounded-lg border border-border p-3 hover-lift">
+                <Link key={d.id} to="/teacher/doubts" className="block rounded-lg border border-border p-3 hover-lift">
                   <div className="flex items-center gap-2 mb-1">
                     <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">
                       {d.student.split(' ').map(n => n[0]).join('').slice(0, 2)}
@@ -176,11 +174,11 @@ const TeacherDashboard = () => {
                   <p className="text-xs text-muted-foreground line-clamp-1">{d.question}</p>
                   <div className="flex items-center justify-between mt-2">
                     <span className="text-[10px] text-muted-foreground">{formatRelativeTime(d.created_at)}</span>
-                    <Link to="/teacher/doubts" className="text-[10px] font-semibold text-primary hover:underline flex items-center gap-0.5">
+                    <span className="text-[10px] font-semibold text-primary flex items-center gap-0.5">
                       Answer Now <ArrowRight className="h-3 w-3" />
-                    </Link>
+                    </span>
                   </div>
-                </div>
+                </Link>
               ))
             )}
           </div>
