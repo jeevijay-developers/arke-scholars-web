@@ -7,7 +7,6 @@ import { supabase } from "@/integrations/supabase/client";
 
 const contactSchema = z.object({
   name: z.string().trim().min(2, "Name is required").max(100),
-  email: z.string().trim().email("Invalid email").max(255),
   phone: z.string().trim().min(7, "Phone is required").max(20),
   subject: z.string().trim().max(150).optional().or(z.literal("")),
   message: z.string().trim().min(10, "Please share a few details").max(2000),
@@ -16,7 +15,7 @@ const contactSchema = z.object({
 const ContactPage = () => {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", subject: "", message: "" });
+  const [form, setForm] = useState({ name: "", phone: "", subject: "", message: "" });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +27,7 @@ const ContactPage = () => {
     setSubmitting(true);
     try {
       const { data: dup } = await supabase.rpc("enquiry_recently_submitted", {
-        _email: parsed.data.email,
+        _email: "",
         _phone: parsed.data.phone,
       });
       if (dup) {
@@ -38,7 +37,7 @@ const ContactPage = () => {
       }
       const { error } = await supabase.from("enquiries").insert({
         name: parsed.data.name,
-        email: parsed.data.email,
+        email: "",
         phone: parsed.data.phone,
         message: parsed.data.subject ? `[${parsed.data.subject}]\n\n${parsed.data.message}` : parsed.data.message,
         source: "contact",
@@ -46,7 +45,7 @@ const ContactPage = () => {
       if (error) throw error;
       setSubmitted(true);
       toast({ title: "Message sent!", description: "We'll reach out to you soon." });
-      setForm({ name: "", email: "", phone: "", subject: "", message: "" });
+      setForm({ name: "", phone: "", subject: "", message: "" });
       setTimeout(() => setSubmitted(false), 4000);
     } catch (err) {
       toast({ title: "Something went wrong", description: err instanceof Error ? err.message : "Please try again", variant: "destructive" });
@@ -134,18 +133,6 @@ const ContactPage = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">Email *</label>
-                  <input
-                    type="email"
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    className="w-full rounded-xl border border-border bg-background px-3 md:px-4 py-2.5 text-sm focus:border-primary focus:outline-none"
-                    placeholder="you@email.com"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
                   <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">Phone *</label>
                   <input
                     type="tel"
@@ -155,16 +142,16 @@ const ContactPage = () => {
                     placeholder="+91 98765 43210"
                   />
                 </div>
-                <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">Subject</label>
-                  <input
-                    type="text"
-                    value={form.subject}
-                    onChange={(e) => setForm({ ...form, subject: e.target.value })}
-                    className="w-full rounded-xl border border-border bg-background px-3 md:px-4 py-2.5 text-sm focus:border-primary focus:outline-none"
-                    placeholder="How can we help?"
-                  />
-                </div>
+              </div>
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">Subject</label>
+                <input
+                  type="text"
+                  value={form.subject}
+                  onChange={(e) => setForm({ ...form, subject: e.target.value })}
+                  className="w-full rounded-xl border border-border bg-background px-3 md:px-4 py-2.5 text-sm focus:border-primary focus:outline-none"
+                  placeholder="How can we help?"
+                />
               </div>
               <div>
                 <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">Message *</label>

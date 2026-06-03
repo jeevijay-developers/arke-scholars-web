@@ -15,11 +15,22 @@ const PublicLayout = () => {
     : "U";
 
   const navItems = [
-    { label: "Courses", path: "/courses" },
-    { label: "Mentorship", path: "/mentorship" },
-    { label: "Admission/Scholarship", path: "/admissions" },
-    { label: "Association", path: "/association" },
+    { label: "JEE", path: "/courses?exam=JEE Main" },
+    { label: "NEET", path: "/courses?exam=NEET" },
+    { label: "Foundation", path: "/courses?exam=Foundation" },
+    { label: "Contact", path: "/contact" },
+    { label: "About Us", path: "/about" },
   ];
+
+  /** Active state that understands the `?exam=` query param used by exam links. */
+  const isNavActive = (path: string) => {
+    const [pathname, query] = path.split("?");
+    if (location.pathname !== pathname) return false;
+    if (!query) return true;
+    const examParam = new URLSearchParams(query).get("exam");
+    const currentExam = new URLSearchParams(location.search).get("exam");
+    return examParam === currentExam;
+  };
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
@@ -55,7 +66,7 @@ const PublicLayout = () => {
               alt="ARKE"
               className="h-8 w-auto object-contain"
             />
-            
+
           </Link>
           <button
             onClick={() => setDrawerOpen(false)}
@@ -112,7 +123,7 @@ const PublicLayout = () => {
                 onClick={() => setDrawerOpen(false)}
                 className="block w-full rounded-pill bg-gradient-to-r from-primary to-accent py-2.5 text-center text-sm font-bold text-primary-foreground shadow-blue hover:opacity-90 transition-opacity"
               >
-                Start Free
+                Get Started
               </Link>
             </>
           )}
@@ -141,7 +152,7 @@ const PublicLayout = () => {
           </Link>
           <div className="hidden items-center justify-center gap-8 md:flex flex-1">
             {navItems.map((item) => {
-              const active = location.pathname === item.path || location.pathname.startsWith(item.path + "/");
+              const active = isNavActive(item.path);
               return (
                 <Link
                   key={item.path}
@@ -197,7 +208,7 @@ const PublicLayout = () => {
                   to="/signup"
                   className="rounded-pill bg-gradient-to-r from-primary to-accent px-3 md:px-5 py-2 text-xs md:text-sm font-bold text-primary-foreground shadow-blue hover:opacity-90 transition-opacity whitespace-nowrap"
                 >
-                  Start Free
+                  Get Started
                 </Link>
               </>
             )}

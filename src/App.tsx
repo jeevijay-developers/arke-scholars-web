@@ -60,6 +60,7 @@ import AdminTestsPage from "./pages/AdminTestsPage";
 import AdminQuestionBankPage from "./pages/AdminQuestionBankPage";
 import AdminCompeteQuestionsPage from "./pages/AdminCompeteQuestionsPage";
 import AdminExamsPage from "./pages/AdminExamsPage";
+import AdminCourseBannersPage from "./pages/AdminCourseBannersPage";
 import AdminAdminsPage from "./pages/AdminAdminsPage";
 import AdminModerationPage from "./pages/AdminModerationPage";
 import AdminSettingsPage from "./pages/AdminSettingsPage";
@@ -264,6 +265,7 @@ const App = () => (
               <Route path="/admin/question-bank" element={<AdminQuestionBankPage />} />
               <Route path="/admin/compete-questions" element={<AdminCompeteQuestionsPage />} />
               <Route path="/admin/exams" element={<AdminExamsPage />} />
+              <Route path="/admin/course-banners" element={<AdminCourseBannersPage />} />
               <Route path="/admin/payments" element={<AdminPaymentsPage />} />
               <Route path="/admin/notifications" element={<AdminNotificationsPage />} />
               <Route path="/admin/moderation" element={<AdminModerationPage />} />

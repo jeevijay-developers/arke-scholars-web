@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import SEO from "@/components/SEO";
 import { Star, Users, Loader2, GraduationCap, Sparkles, ArrowRight, BookOpen, Award, Clock, Trophy, BarChart3 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useCourses, type CourseRow } from "@/hooks/useCourses";
 import { useExams } from "@/hooks/useExams";
 import { useAppStore } from "@/store/useAppStore";
@@ -31,6 +31,16 @@ const CoursesPage = () => {
   const { examNames } = useExams();
   const goalFilters = ["All", ...examNames];
   const [activeGoal, setActiveGoal] = useState(0);
+  const [searchParams] = useSearchParams();
+
+  // Pre-select the goal filter from a ?exam= deep-link (e.g. nav JEE/NEET/Foundation links).
+  useEffect(() => {
+    const examParam = searchParams.get("exam");
+    if (!examParam) return;
+    const idx = goalFilters.findIndex((g) => g.toLowerCase() === examParam.toLowerCase());
+    if (idx >= 0) setActiveGoal(idx);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, examNames.join("|")]);
   const [activeSubject, setActiveSubject] = useState(0);
   const [enrollFor, setEnrollFor] = useState<CourseRow | null>(null);
   const { user } = useAppStore();

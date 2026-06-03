@@ -22,6 +22,7 @@ import {
   School,
   FileBarChart,
   FileUp,
+  Megaphone,
   Menu,
   X,
 } from "lucide-react";
@@ -49,6 +50,7 @@ const baseNav: NavItem[] = [
   { label: "Upload Test", icon: FileUp, path: "/admin/upload-questions" },
   { label: "Compete Questions", icon: Swords, path: "/admin/compete-questions" },
   { label: "Exam Management", icon: GraduationCap, path: "/admin/exams" },
+  { label: "Course Banners", icon: Megaphone, path: "/admin/course-banners" },
   { label: "Educator Applications", icon: Briefcase, path: "/admin/educator-applications" },
   { label: "Enquiries", icon: Inbox, path: "/admin/enquiries" },
   { label: "Course Content", icon: FileText, path: "/admin/course-content" },
