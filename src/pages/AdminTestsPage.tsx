@@ -65,6 +65,7 @@ type AdminTest = {
   slug: string;
   test_type: string;
   exam_pattern: string;
+  class_level: string | null;
   total_questions: number;
   duration_minutes: number;
   is_published: boolean;
@@ -85,7 +86,7 @@ const AdminTestsPage = () => {
     setLoading(true);
     const { data } = await supabase
       .from("tests")
-      .select("id, title, slug, test_type, exam_pattern, total_questions, duration_minutes, is_published, created_at")
+      .select("id, title, slug, test_type, exam_pattern, class_level, total_questions, duration_minutes, is_published, created_at")
       .order("created_at", { ascending: false });
     setTests((data ?? []) as AdminTest[]);
     setLoading(false);
@@ -150,9 +151,14 @@ const AdminTestsPage = () => {
           <h1 className="text-2xl font-black font-display">Tests Management</h1>
           <p className="text-white/90 text-sm mt-1">Create, edit and publish test papers</p>
         </div>
-        <Link to="/admin/upload-questions" className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-xs font-bold text-primary hover:bg-white/90">
-          <Plus className="h-4 w-4" /> Upload Test
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link to="/admin/tests/new" className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-xs font-bold text-primary hover:bg-white/90">
+            <Plus className="h-4 w-4" /> Create Test
+          </Link>
+          <Link to="/admin/upload-questions" className="inline-flex items-center gap-1.5 rounded-lg bg-white/20 border border-white/40 px-3 py-2 text-xs font-bold text-white hover:bg-white/30">
+            Upload Questions
+          </Link>
+        </div>
       </div>
 
       <div className="relative">
@@ -179,6 +185,7 @@ const AdminTestsPage = () => {
                 <tr className="border-b border-border bg-muted/50">
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Test</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Type</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Class</th>
                   <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground">Questions</th>
                   <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground">Duration</th>
                   <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground">Status</th>
@@ -190,6 +197,13 @@ const AdminTestsPage = () => {
                   <tr key={t.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                     <td className="px-4 py-3 font-medium text-foreground">{t.title}</td>
                     <td className="px-4 py-3 text-muted-foreground text-xs capitalize">{t.test_type} · {t.exam_pattern}</td>
+                    <td className="px-4 py-3 text-xs">
+                      {t.class_level ? (
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">{t.class_level}</span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-center text-xs text-foreground">{t.total_questions}</td>
                     <td className="px-4 py-3 text-center text-xs text-foreground">{t.duration_minutes} min</td>
                     <td className="px-4 py-3 text-center">
@@ -247,6 +261,10 @@ const AdminTestsPage = () => {
                 <div>
                   <p className="text-xs font-semibold text-muted-foreground uppercase">Type</p>
                   <p className="text-sm capitalize">{viewTest.test_type} · {viewTest.exam_pattern}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase">Class Level</p>
+                  <p className="text-sm">{viewTest.class_level ?? "All classes"}</p>
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-muted-foreground uppercase">Status</p>

@@ -393,7 +393,7 @@ function ExamCard({ exam }: { exam: typeof EXAM_CARDS[number] }) {
 
       {/* Footer — title + checklist + CTA */}
       <div className="relative z-10 px-6 pb-6">
-        <h3 className="mb-3 text-3xl md:text-4xl font-black font-display text-[#e27100] tracking-tight">
+        <h3 className="mb-3 text-3xl md:text-4xl font-black font-display text-white tracking-tight drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]">
           {exam.title}
         </h3>
         <ul className="space-y-2">

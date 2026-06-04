@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Loader2, GripVertical, BookMarked } from "lucide-react";
+import { Plus, Trash2, Loader2, GripVertical, BookMarked, Shuffle } from "lucide-react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -99,6 +99,9 @@ const CreateTestPage = () => {
   const [correctMarks, setCorrectMarks] = useState(4);
   const [wrongMarks, setWrongMarks] = useState(-1);
   const [questions, setQuestions] = useState<DraftQuestion[]>([]);
+  const [classLevel, setClassLevel] = useState("");
+  const [randomCount, setRandomCount] = useState(5);
+  const [pickingRandom, setPickingRandom] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(isEditMode);
   const [bankSheetOpen, setBankSheetOpen] = useState(false);
@@ -150,6 +153,7 @@ const CreateTestPage = () => {
       setCorrectMarks(Number(test.correct_marks ?? 4));
       setWrongMarks(Number(test.wrong_marks ?? -1));
       setCourseId(test.course_id ?? "");
+      setClassLevel((test as any).class_level ?? "");
       setQuestions(
         (tqs ?? []).map((q: any) => ({
           source: "manual" as const,
@@ -185,6 +189,52 @@ const CreateTestPage = () => {
     toast.success("Question added");
   };
 
+  const pickRandom = async () => {
+    const n = Math.max(1, Math.min(randomCount, 50));
+    setPickingRandom(true);
+    // Pick N random questions from the question bank (SCQ-compatible only).
+    const { data, error } = await supabase
+      .from("question_bank")
+      .select("id, subject, topic, question_text, options, correct_answer, question_type")
+      .in("question_type", ["scq", "mcq-single"])
+      .limit(200);
+    setPickingRandom(false);
+    if (error || !data || data.length === 0) {
+      toast.error("Could not load question bank");
+      return;
+    }
+    const shuffled = [...data].sort(() => Math.random() - 0.5).slice(0, n);
+    const existingBankIds = new Set(questions.map((q) => q.bank_id).filter(Boolean));
+    const fresh = shuffled.filter((q) => !existingBankIds.has(q.id));
+    if (fresh.length === 0) {
+      toast.info("All sampled questions are already added");
+      return;
+    }
+    const drafted = fresh.map((q) => {
+      const opts = Array.isArray(q.options)
+        ? (q.options as { id: number; text: string }[]).map((o) => o.text)
+        : ["", "", "", ""];
+      const ca = q.correct_answer;
+      const correct =
+        typeof ca === "number"
+          ? ca
+          : Array.isArray(ca) && typeof ca[0] === "number"
+          ? Math.max(0, (ca[0] as number) - 1)
+          : 0;
+      return {
+        source: "bank" as const,
+        bank_id: q.id,
+        subject: q.subject,
+        topic: (q.topic as string | null) || "",
+        text: q.question_text,
+        options: opts,
+        correct,
+      };
+    });
+    setQuestions((prev) => [...prev, ...drafted]);
+    toast.success(`Added ${drafted.length} random question${drafted.length === 1 ? "" : "s"}`);
+  };
+
   const submit = async (publish: boolean) => {
     if (!user) return toast.error("Sign in required");
     if (!title.trim()) return toast.error("Title required");
@@ -193,6 +243,42 @@ const CreateTestPage = () => {
 
     setSubmitting(true);
 
+    // ── Step 1: ensure every question exists in question_bank ─────────────────
+    // Questions from the bank already have a bank_id. Manual questions need to
+    // be inserted fresh so they become reusable from the bank going forward.
+    const bankIds: (string | null)[] = [];
+
+    for (const q of validQ) {
+      if (q.source === "bank" && q.bank_id) {
+        bankIds.push(q.bank_id);
+      } else {
+        const { data: bankRow, error: bankErr } = await supabase
+          .from("question_bank")
+          .insert({
+            created_by: user.id,
+            subject: q.subject,
+            topic: q.topic || null,
+            question_type: "scq",
+            question_text: q.text,
+            options: q.options.map((t, id) => ({ id, text: t })),
+            correct_answer: q.correct,
+            marks_correct: correctMarks,
+            marks_wrong: wrongMarks,
+            tags: [] as string[],
+            is_public: true,
+          } as any)
+          .select("id")
+          .single();
+        if (bankErr || !bankRow) {
+          toast.error(`Bank insert failed: ${bankErr?.message ?? "unknown"}`);
+          setSubmitting(false);
+          return;
+        }
+        bankIds.push((bankRow as { id: string }).id);
+      }
+    }
+
+    // ── Step 2: upsert the test row ────────────────────────────────────────────
     const subjects = Array.from(new Set(validQ.map((q) => q.subject)));
 
     const basePayload = {
@@ -208,7 +294,8 @@ const CreateTestPage = () => {
       total_marks: validQ.length * correctMarks,
       is_published: publish,
       course_id: courseId || null,
-    };
+      class_level: classLevel || null,
+    } as any;
 
     let savedTestId: string | null = resolvedTestId;
 
@@ -219,7 +306,6 @@ const CreateTestPage = () => {
         setSubmitting(false);
         return;
       }
-      // Replace questions
       await supabase.from("test_questions").delete().eq("test_id", resolvedTestId);
     } else {
       const slug = `${slugify(title)}-${Date.now().toString(36)}`;
@@ -236,6 +322,7 @@ const CreateTestPage = () => {
       savedTestId = test.id;
     }
 
+    // ── Step 3: create test_questions referencing the bank IDs ────────────────
     const rows = validQ.map((q, i) => ({
       test_id: savedTestId,
       position: i,
@@ -247,6 +334,7 @@ const CreateTestPage = () => {
       correct_answer: q.correct,
       marks_correct: correctMarks,
       marks_wrong: wrongMarks,
+      bank_question_id: bankIds[i] ?? null,
     }));
     const { error: qErr } = await supabase.from("test_questions").insert(rows);
     if (qErr) {
@@ -257,12 +345,8 @@ const CreateTestPage = () => {
 
     toast.success(
       isEditMode
-        ? publish
-          ? "Test updated and published"
-          : "Test saved as draft"
-        : publish
-          ? "Test published"
-          : "Draft saved",
+        ? publish ? "Test updated and published" : "Test saved as draft"
+        : publish ? `Test published · ${validQ.length} question${validQ.length === 1 ? "" : "s"} added to bank` : "Draft saved",
     );
     setSubmitting(false);
     navigate(isAdminContext ? "/admin/tests" : "/teacher/dashboard");
@@ -349,19 +433,30 @@ const CreateTestPage = () => {
           </div>
         </div>
 
-        <div>
-          <label className={labelCls}>Associate with Course</label>
-          <select value={courseId} onChange={(e) => setCourseId(e.target.value)} className={inputCls}>
-            <option value="">Standalone test (not linked to any course)</option>
-            {myCourses.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <p className="mt-1.5 text-[11px] text-muted-foreground">
-            Linked tests will appear inside the selected course for enrolled students.
-          </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className={labelCls}>Class Level</label>
+            <select value={classLevel} onChange={(e) => setClassLevel(e.target.value)} className={inputCls}>
+              <option value="">All classes (not class-specific)</option>
+              <option value="Class 8">Class 8</option>
+              <option value="Class 9">Class 9</option>
+              <option value="Class 10">Class 10</option>
+              <option value="Class 11">Class 11</option>
+              <option value="Class 12">Class 12</option>
+              <option value="12 Pass">12 Pass (Droppers)</option>
+            </select>
+          </div>
+          <div>
+            <label className={labelCls}>Associate with Course</label>
+            <select value={courseId} onChange={(e) => setCourseId(e.target.value)} className={inputCls}>
+              <option value="">Standalone (not course-linked)</option>
+              {myCourses.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-4">
@@ -401,7 +496,28 @@ const CreateTestPage = () => {
           <h2 className="text-lg font-bold text-foreground">
             Selected Questions <span className="text-muted-foreground font-semibold">({questions.length})</span>
           </h2>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Pick Random */}
+            <div className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-2 py-1.5">
+              <input
+                type="number"
+                min={1}
+                max={50}
+                value={randomCount}
+                onChange={(e) => setRandomCount(Math.max(1, Math.min(50, Number(e.target.value) || 1)))}
+                className="w-12 bg-transparent text-xs text-center outline-none"
+                title="Number of random questions to pick"
+              />
+              <button
+                onClick={pickRandom}
+                disabled={pickingRandom}
+                className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:opacity-80 disabled:opacity-50"
+                title="Pick random questions from the bank"
+              >
+                {pickingRandom ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Shuffle className="h-3.5 w-3.5" />}
+                Pick Random
+              </button>
+            </div>
             <Sheet open={bankSheetOpen} onOpenChange={setBankSheetOpen}>
               <SheetTrigger asChild>
                 <button className="lg:hidden inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted">
@@ -448,6 +564,7 @@ const CreateTestPage = () => {
                   <option>Chemistry</option>
                   <option>Mathematics</option>
                   <option>Biology</option>
+                  <option>Computer Science</option>
                 </select>
                 <input
                   value={q.topic}

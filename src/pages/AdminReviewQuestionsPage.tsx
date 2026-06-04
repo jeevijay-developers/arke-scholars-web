@@ -539,8 +539,22 @@ const AdminReviewQuestionsPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const { questions: initialQuestions = [], paperCode = "", subject = "Physics", durationMinutes = 180, courseId = null } =
-    (location.state as { questions: ParsedQuestion[]; paperId: string; paperCode: string; subject?: string; durationMinutes?: number; courseId?: string | null }) ?? {};
+  const {
+    questions: initialQuestions = [],
+    paperCode = "",
+    subject = "Physics",
+    classLevel = null,
+    durationMinutes = 180,
+    courseId = null,
+  } = (location.state as {
+    questions: ParsedQuestion[];
+    paperId: string;
+    paperCode: string;
+    subject?: string;
+    classLevel?: string | null;
+    durationMinutes?: number;
+    courseId?: string | null;
+  }) ?? {};
 
   const [questions, setQuestions] = useState<ParsedQuestion[]>(initialQuestions);
   const [approvals, setApprovals] = useState<Record<number, ApprovalStatus>>(() =>
@@ -573,6 +587,53 @@ const AdminReviewQuestionsPage = () => {
 
     setPublishing(true);
     try {
+      // ── Step 1: upsert each question into question_bank first ──────────────
+      const bankRows = included.map((q) => {
+        let options: unknown = [];
+        let correct_answer: unknown = null;
+        if (q.type === "scq" || q.type === "mcq") {
+          const optImages = [q.option_1_image, q.option_2_image, q.option_3_image, q.option_4_image];
+          options = [q.option_1, q.option_2, q.option_3, q.option_4]
+            .map((text, idx) => ({ id: idx + 1, text, image: optImages[idx] ?? null }))
+            .filter((o) => (o.text ?? "").trim().length > 0 || o.image);
+          correct_answer = q.correct_options ?? [];
+        } else if (q.type === "integer") {
+          options = [];
+          correct_answer = q.correct_integer;
+        } else if (q.type === "match_column") {
+          options = { col1: q.match_col1 ?? [], col2: q.match_col2 ?? [] };
+          correct_answer = q.match_answer ?? "";
+        } else if (q.type === "assertion_reasoning") {
+          options = AR_OPTIONS_TEXT.map((text, idx) => ({ id: idx + 1, text }));
+          correct_answer = q.correct_options ?? [];
+        }
+        return {
+          created_by: user.id,
+          subject,
+          topic: q.topic ?? null,
+          question_type: q.type,
+          question_text: q.stem_html,
+          question_image_url: q.images?.[0] ?? null,
+          options,
+          correct_answer,
+          explanation: q.solution_html ?? null,
+          marks_correct: 4,
+          marks_wrong: -1,
+          tags: [] as string[],
+          is_public: true,
+        };
+      });
+
+      const { data: bankInserted, error: bankErr } = await (supabase as any)
+        .from("question_bank")
+        .insert(bankRows)
+        .select("id");
+
+      if (bankErr || !bankInserted) {
+        throw new Error(`Question bank insert failed: ${bankErr?.message ?? "unknown"}`);
+      }
+
+      // ── Step 2: create the test row ────────────────────────────────────────
       const title = paperCode || `Imported test ${new Date().toISOString().slice(0, 10)}`;
       const slug = `${slugify(title)}-${Date.now().toString(36)}`;
 
@@ -584,13 +645,14 @@ const AdminReviewQuestionsPage = () => {
           test_type: "mock",
           exam_pattern: "jee-main",
           subjects: [subject],
+          class_level: classLevel ?? null,
           duration_minutes: durationMinutes,
           correct_marks: 4,
           wrong_marks: -1,
           total_questions: included.length,
           total_marks: included.length * 4,
           visibility: "public",
-          is_published: false, // draft — admin reviews / publishes from /admin/tests
+          is_published: false,
           created_by: user.id,
           course_id: courseId ?? null,
         })
@@ -599,44 +661,18 @@ const AdminReviewQuestionsPage = () => {
 
       if (testErr || !testRow) throw new Error(testErr?.message ?? "Could not create test");
 
-      const rows = included.map((q, i) => buildTestQuestionRow(q, i, subject, testRow.id));
+      // ── Step 3: create test_questions referencing the bank IDs ────────────
+      const rows = included.map((q, i) => ({
+        ...buildTestQuestionRow(q, i, subject, testRow.id),
+        bank_question_id: (bankInserted as { id: string }[])[i]?.id ?? null,
+      }));
       const { error: tqErr } = await (supabase as any).from("test_questions").insert(rows);
       if (tqErr) {
-        // Best-effort rollback so we don't leave an empty test in /admin/tests
         await (supabase as any).from("tests").delete().eq("id", testRow.id);
         throw new Error(tqErr.message);
       }
 
-      // Also populate the reusable question bank. Non-fatal: pool failure
-      // must not roll back the published test.
-      const poolRows = included.map((q) => ({
-        paper_id: paperId,
-        question_number: q.question_number,
-        type: q.type,
-        stem_html: q.stem_html,
-        option_1: q.option_1 || null,
-        option_2: q.option_2 || null,
-        option_3: q.option_3 || null,
-        option_4: q.option_4 || null,
-        correct_options: q.correct_options?.length ? q.correct_options : null,
-        correct_integer: q.correct_integer ?? null,
-        match_col1: q.match_col1 ?? null,
-        match_col2: q.match_col2 ?? null,
-        match_answer: q.match_answer ?? null,
-        assertion_text: q.assertion_text ?? null,
-        reason_text: q.reason_text ?? null,
-        images: q.images,
-        solution_html: q.solution_html || null,
-        has_latex: q.has_latex,
-        needs_review: false,
-      }));
-      const { error: poolErr } = await (supabase as any).from("questions").insert(poolRows);
-      if (poolErr) {
-        console.warn("Question bank insert failed:", poolErr.message);
-        toast.warning("Test published, but question bank insert failed — questions not added to bank.");
-      }
-
-      toast.success(`Test created with ${included.length} question${included.length === 1 ? "" : "s"}`);
+      toast.success(`Test created · ${included.length} question${included.length === 1 ? "" : "s"} saved to bank`);
       navigate("/admin/tests");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Unknown error";
