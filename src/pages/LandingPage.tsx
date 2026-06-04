@@ -2,10 +2,12 @@ import { Link } from "react-router-dom";
 import SEO from "@/components/SEO";
 import { toast } from "sonner";
 import {
-  ArrowRight, Play, Check, CheckCircle2, Trophy, FileText, MessageCircle,
+  ArrowRight, Play, Check, Trophy, FileText, MessageCircle,
   GraduationCap, ChevronRight, ChevronLeft,
+  Brain, ClipboardList, BookOpen, FlaskConical, Sparkles, Target,
+  type LucideIcon,
 } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useCourseBanners, type CourseBanner } from "@/hooks/useCourseBanners";
 import MarqueeTestimonials from "@/components/MarqueeTestimonialCard";
 
@@ -95,22 +97,36 @@ const EXAM_CARDS = [
   {
     title: "IIT-JEE",
     image: "/exam-svgs/iit-jee.svg",
-    points: ["Advanced Problem Solving", "Mock Test Series"],
+    points: [
+      { label: "Advanced Problem Solving", icon: Brain },
+      { label: "Mock Test Series", icon: ClipboardList },
+    ],
     exam: "JEE Main",
   },
   {
     title: "NEET",
     image: "/exam-svgs/neet.svg",
-    points: ["Biology Specialization", "Daily Practice Papers"],
+    points: [
+      { label: "Biology Specialization", icon: FlaskConical },
+      { label: "Daily Practice Papers", icon: BookOpen },
+    ],
     exam: "NEET",
   },
   {
     title: "Foundation",
     image: "/exam-svgs/foundation.svg",
-    points: ["Conceptual Clarity", "Olympiad Prep"],
+    points: [
+      { label: "Conceptual Clarity", icon: Sparkles },
+      { label: "Olympiad Prep", icon: Target },
+    ],
     exam: "Foundation",
   },
-];
+] satisfies ReadonlyArray<{
+  title: string;
+  image: string;
+  points: { label: string; icon: LucideIcon }[];
+  exam: string;
+}>;
 
 const APP_BULLETS = [
   "Live & recorded classes available at ease",
@@ -120,7 +136,6 @@ const APP_BULLETS = [
 
 const LandingPage = () => {
   const { banners } = useCourseBanners();
-  const banner = banners[0];
 
   return (
     <div className="min-h-screen bg-background">
@@ -172,16 +187,8 @@ const LandingPage = () => {
         ]}
       />
 
-      {/* Active courses banner — only shown if an admin has added one. Full-bleed, no margin. */}
-      {banner && (
-        banner.cta_link ? (
-          <Link to={banner.cta_link} className="block w-full">
-            <BannerContent banner={banner} />
-          </Link>
-        ) : (
-          <BannerContent banner={banner} />
-        )
-      )}
+      {/* Active courses banners — shown only if an admin has added them. Full-bleed, no margin. */}
+      <BannerCarousel banners={banners} />
 
       {/* Hero */}
       <section className="bg-[hsl(var(--navy))] overflow-hidden">
@@ -221,7 +228,7 @@ const LandingPage = () => {
       </section>
 
       {/* Stats */}
-      <section className="bg-card py-10 md:pb-12 md:pt-0">
+      <section className="bg-card py-10 md:pb-6 md:pt-0">
         {/* Mobile: standalone carousel, not attached to the hero */}
         <div className="md:hidden px-4">
           <MobileCarousel>
@@ -255,7 +262,7 @@ const LandingPage = () => {
       </section>
 
       {/* Exam cards */}
-      <section className="bg-card py-12 md:py-20">
+      <section className="bg-card py-12 md:pb-20">
         <div className="container mx-auto px-4">
           <div className="text-center">
             <h2 className="text-2xl md:text-3xl lg:text-4xl font-black font-display text-foreground">Choose Your Exam</h2>
@@ -333,38 +340,82 @@ const LandingPage = () => {
   );
 };
 
-/** Full-bleed promotional banner. Edge-to-edge, no x/y margin. */
-function BannerContent({ banner }: { banner: CourseBanner }) {
-  // If an image is provided, show it full-width with no margins. Text/CTA overlay on top when present.
-  if (banner.image_url) {
-    return (
-      <div className="relative w-full">
-        <img src={banner.image_url} alt={banner.title} className="block w-full h-[8rem] sm:h-[11rem] md:h-[16rem] object-cover" loading="eager" />
-        {(banner.title || banner.subtitle || banner.cta_label) && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/30 px-4 text-center text-white">
-            {banner.title && <p className="text-base md:text-2xl font-black font-display">{banner.title}</p>}
-            {banner.subtitle && <p className="text-xs md:text-base text-white/90">{banner.subtitle}</p>}
-            {banner.cta_label && (
-              <span className="mt-1 rounded-pill bg-primary px-4 py-1.5 text-xs md:text-sm font-bold text-primary-foreground">
-                {banner.cta_label}
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  }
-  // No image — solid accent strip, full width.
+/** Full-bleed promotional banner image. Edge-to-edge, no x/y margin. */
+function BannerImage({ banner }: { banner: CourseBanner }) {
+  const img = (
+    <img
+      src={banner.image_url!}
+      alt={banner.title || "Promotional banner"}
+      className="block w-full h-[8rem] sm:h-[11rem] md:h-[16rem] object-cover"
+      loading="eager"
+    />
+  );
+  return banner.cta_link ? (
+    <Link to={banner.cta_link} className="block w-full">{img}</Link>
+  ) : img;
+}
+
+/** Full-bleed banner carousel — auto-rotates and supports manual swipe + dots. */
+function BannerCarousel({ banners }: { banners: CourseBanner[] }) {
+  const slides = banners.filter((b) => b.image_url);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [active, setActive] = useState(0);
+
+  const goTo = (i: number) => {
+    const track = trackRef.current;
+    if (!track) return;
+    const idx = (i + slides.length) % slides.length;
+    track.scrollTo({ left: idx * track.clientWidth, behavior: "smooth" });
+    setActive(idx);
+  };
+
+  // Auto-rotate every 5s (paused if the user prefers reduced motion or there's only one slide).
+  useEffect(() => {
+    if (slides.length < 2) return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const id = setInterval(() => {
+      const track = trackRef.current;
+      if (!track) return;
+      const next = (Math.round(track.scrollLeft / track.clientWidth) + 1) % slides.length;
+      track.scrollTo({ left: next * track.clientWidth, behavior: "smooth" });
+      setActive(next);
+    }, 5000);
+    return () => clearInterval(id);
+  }, [slides.length]);
+
+  if (slides.length === 0) return null;
+  if (slides.length === 1) return <BannerImage banner={slides[0]} />;
+
+  const onScroll = () => {
+    const track = trackRef.current;
+    if (!track) return;
+    setActive(Math.round(track.scrollLeft / track.clientWidth));
+  };
+
   return (
-    <div className="w-full bg-primary text-primary-foreground">
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 px-4 py-3 text-center">
-        <p className="text-sm md:text-base font-bold">{banner.title}</p>
-        {banner.subtitle && <p className="text-xs md:text-sm text-primary-foreground/80">{banner.subtitle}</p>}
-        {banner.cta_label && (
-          <span className="rounded-pill bg-primary-foreground px-4 py-1.5 text-xs md:text-sm font-bold text-primary">
-            {banner.cta_label}
-          </span>
-        )}
+    <div className="relative w-full">
+      <div
+        ref={trackRef}
+        onScroll={onScroll}
+        className="flex w-full overflow-x-auto snap-x snap-mandatory scrollbar-hide"
+        style={{ scrollbarWidth: "none" }}
+      >
+        {slides.map((b) => (
+          <div key={b.id} className="w-full shrink-0 snap-start">
+            <BannerImage banner={b} />
+          </div>
+        ))}
+      </div>
+      {/* Dots */}
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
+        {slides.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => goTo(i)}
+            className={`rounded-full transition-all ${i === active ? "w-5 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/60"}`}
+            aria-label={`Go to banner ${i + 1}`}
+          />
+        ))}
       </div>
     </div>
   );
@@ -374,38 +425,34 @@ function ExamCard({ exam }: { exam: typeof EXAM_CARDS[number] }) {
   return (
     <Link
       to={`/courses?exam=${encodeURIComponent(exam.exam)}`}
-      className="group relative flex h-[26rem] flex-col overflow-hidden rounded-2xl border border-border ring-0 transition-[box-shadow,transform] duration-200"
+      className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card ring-0 hover:shadow-lg transition-[box-shadow,transform,ring] duration-200"
     >
-      {/* Full-bleed background image */}
-      <img
-        src={exam.image}
-        alt={`${exam.title} courses`}
-        width={400}
-        height={520}
-        loading="lazy"
-        className="absolute inset-0 h-full w-full object-contain transition-transform duration-500 group-hover:scale-105"
-      />
-      {/* Dark scrim only over the bottom 30%, for text legibility */}
-      <div className="absolute inset-x-0 bottom-0 h-[60%] bg-[linear-gradient(to_top,rgba(10,15,28,0.95)_0%,rgba(10,15,28,0.7)_45%,transparent_100%)]" />
+      {/* Image panel — solid orange, rounded, sits at the top */}
+      <div className="p-3">
+        <div className="overflow-hidden rounded-xl bg-[#E1F6FF]">
+          <img
+            src={exam.image}
+            alt={`${exam.title} courses`}
+            width={400}
+            height={260}
+            loading="lazy"
+            className="h-44 w-full object-contain transition-transform duration-500 group-hover:scale-105"
+          />
+        </div>
+      </div>
 
-      {/* Spacer pushes the content block to the bottom */}
-      <div className="relative z-10 flex-1" />
-
-      {/* Footer — title + checklist + CTA */}
-      <div className="relative z-10 px-6 pb-6">
-        <h3 className="mb-3 text-3xl md:text-4xl font-black font-display text-white tracking-tight drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]">
+      {/* Body — title + checklist */}
+      <div className="px-5 pb-5 pt-1">
+        <h3 className="mb-3 text-xl md:text-2xl font-black font-display text-foreground tracking-tight">
           {exam.title}
         </h3>
-        <ul className="space-y-2">
+        <ul className="space-y-2.5">
           {exam.points.map((p) => (
-            <li key={p} className="flex items-center gap-2 text-sm text-white/90">
-              <CheckCircle2 className="h-4 w-4 text-primary shrink-0" /> {p}
+            <li key={p.label} className="flex items-center gap-2.5 text-sm text-foreground">
+              <p.icon className="h-4 w-4 text-primary shrink-0" /> {p.label}
             </li>
           ))}
         </ul>
-        <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-bold uppercase tracking-wide text-primary">
-          Explore Courses <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-        </span>
       </div>
     </Link>
   );

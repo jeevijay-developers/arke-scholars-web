@@ -6,17 +6,14 @@ import { useCourseBanners, type CourseBanner } from "@/hooks/useCourseBanners";
 import { usePagination } from "@/hooks/usePagination";
 import TablePagination from "@/components/TablePagination";
 
-type EditDraft = Partial<CourseBanner> & { title: string };
+type EditDraft = Partial<CourseBanner>;
 
 // Accepted banner image formats.
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"];
 const ACCEPT_ATTR = ACCEPTED_IMAGE_TYPES.join(",");
 
 const empty: EditDraft = {
-  title: "",
-  subtitle: "",
   image_url: "",
-  cta_label: "",
   cta_link: "",
   sort_order: 0,
   is_active: true,
@@ -27,6 +24,8 @@ const AdminCourseBannersPage = () => {
   const [editing, setEditing] = useState<EditDraft | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<CourseBanner | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const { paged, page, setPage, totalPages, total, pageSize } = usePagination(banners, 15);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -53,13 +52,12 @@ const AdminCourseBannersPage = () => {
 
   const save = async () => {
     if (!editing) return;
-    if (!editing.title?.trim()) return toast.error("Banner title is required");
+    if (!editing.image_url?.trim()) return toast.error("Please upload a banner image");
     setSaving(true);
     const payload: any = {
-      title: editing.title.trim(),
-      subtitle: editing.subtitle?.trim() || null,
-      image_url: editing.image_url?.trim() || null,
-      cta_label: editing.cta_label?.trim() || null,
+      // `title` is NOT NULL in the DB but no longer surfaced in the form — set a placeholder.
+      title: "Banner",
+      image_url: editing.image_url.trim(),
       cta_link: editing.cta_link?.trim() || null,
       sort_order: Number(editing.sort_order) || 0,
       is_active: editing.is_active ?? true,
@@ -81,11 +79,14 @@ const AdminCourseBannersPage = () => {
     reload();
   };
 
-  const remove = async (b: CourseBanner) => {
-    if (!confirm(`Delete banner "${b.title}"?`)) return;
-    const { error } = await (supabase as any).from("course_banners").delete().eq("id", b.id);
+  const confirmRemove = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const { error } = await (supabase as any).from("course_banners").delete().eq("id", deleteTarget.id);
+    setDeleting(false);
     if (error) return toast.error(error.message);
     toast.success("Banner deleted");
+    setDeleteTarget(null);
     reload();
   };
 
@@ -115,9 +116,8 @@ const AdminCourseBannersPage = () => {
               <thead className="bg-muted">
                 <tr className="text-left">
                   <th className="px-3 py-2 font-semibold w-16">Order</th>
-                  <th className="px-3 py-2 font-semibold">Title</th>
-                  <th className="px-3 py-2 font-semibold">Subtitle</th>
-                  <th className="px-3 py-2 font-semibold">CTA</th>
+                  <th className="px-3 py-2 font-semibold">Image</th>
+                  <th className="px-3 py-2 font-semibold">Link</th>
                   <th className="px-3 py-2 font-semibold w-24">Status</th>
                   <th className="px-3 py-2 w-32" />
                 </tr>
@@ -126,9 +126,12 @@ const AdminCourseBannersPage = () => {
                 {paged.map((b) => (
                   <tr key={b.id} className="border-t border-border">
                     <td className="px-3 py-2 text-muted-foreground">{b.sort_order}</td>
-                    <td className="px-3 py-2 font-bold text-foreground">{b.title}</td>
-                    <td className="px-3 py-2 text-muted-foreground max-w-xs truncate">{b.subtitle || "—"}</td>
-                    <td className="px-3 py-2 text-muted-foreground">{b.cta_label || "—"}</td>
+                    <td className="px-3 py-2">
+                      {b.image_url
+                        ? <img src={b.image_url} alt="Banner" className="h-10 w-20 rounded border border-border object-cover" />
+                        : <span className="text-muted-foreground">—</span>}
+                    </td>
+                    <td className="px-3 py-2 text-muted-foreground max-w-xs truncate">{b.cta_link || "—"}</td>
                     <td className="px-3 py-2">
                       {b.is_active
                         ? <span className="text-secondary font-bold">Active</span>
@@ -139,12 +142,12 @@ const AdminCourseBannersPage = () => {
                         {b.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                       <button onClick={() => setEditing({ ...b })} className="p-1 hover:bg-muted rounded ml-1"><Edit3 className="h-4 w-4" /></button>
-                      <button onClick={() => remove(b)} className="p-1 hover:bg-destructive/10 text-destructive rounded ml-1"><Trash2 className="h-4 w-4" /></button>
+                      <button onClick={() => setDeleteTarget(b)} className="p-1 hover:bg-destructive/10 text-destructive rounded ml-1"><Trash2 className="h-4 w-4" /></button>
                     </td>
                   </tr>
                 ))}
                 {banners.length === 0 && (
-                  <tr><td colSpan={6} className="px-3 py-10 text-center text-muted-foreground">No banners yet — create one to show a launch announcement on the homepage.</td></tr>
+                  <tr><td colSpan={5} className="px-3 py-10 text-center text-muted-foreground">No banners yet — create one to show a launch announcement on the homepage.</td></tr>
                 )}
               </tbody>
             </table>
@@ -161,13 +164,7 @@ const AdminCourseBannersPage = () => {
               <button onClick={() => setEditing(null)} className="p-1 rounded hover:bg-muted"><X className="h-4 w-4" /></button>
             </div>
 
-            <Field label="Title *">
-              <input value={editing.title ?? ""} onChange={(e) => setEditing({ ...editing, title: e.target.value })} placeholder="e.g. New NEET 2027 Dropper Batch — Enrolling Now" className="banner-input" />
-            </Field>
-            <Field label="Subtitle">
-              <input value={editing.subtitle ?? ""} onChange={(e) => setEditing({ ...editing, subtitle: e.target.value })} placeholder="e.g. Limited seats · Starts 1 July" className="banner-input" />
-            </Field>
-            <Field label="Banner Image">
+            <Field label="Banner Image *">
               {editing.image_url ? (
                 <img src={editing.image_url} alt="Banner preview" className="mb-2 h-28 w-full border border-border object-cover" />
               ) : (
@@ -183,16 +180,11 @@ const AdminCourseBannersPage = () => {
                   <button type="button" onClick={() => setEditing({ ...editing, image_url: "" })} className="text-xs text-destructive hover:underline">Remove</button>
                 )}
               </div>
-              <p className="mt-1.5 text-xs text-muted-foreground">Recommended aspect ratio ~ 16:9 (e.g. 1200×675). Max 5MB</p>
+              <p className="mt-1.5 text-xs text-muted-foreground">Use a wide banner — the image fills the full page width at a fixed height. <strong className="text-foreground">Recommended size: 1440×256 (desktop), 412×128 (mobile).</strong> Max 5MB.</p>
             </Field>
-            <div className="grid grid-cols-2 gap-2">
-              <Field label="CTA Label">
-                <input value={editing.cta_label ?? ""} onChange={(e) => setEditing({ ...editing, cta_label: e.target.value })} placeholder="e.g. Explore" className="banner-input" />
-              </Field>
-              <Field label="CTA Link">
-                <input value={editing.cta_link ?? ""} onChange={(e) => setEditing({ ...editing, cta_link: e.target.value })} placeholder="e.g. /courses?exam=NEET" className="banner-input" />
-              </Field>
-            </div>
+            <Field label="Banner Link">
+              <input value={editing.cta_link ?? ""} onChange={(e) => setEditing({ ...editing, cta_link: e.target.value })} placeholder="e.g. /courses?exam=NEET" className="banner-input" />
+            </Field>
             <Field label="Sort Order">
               <input type="number" value={editing.sort_order ?? 0} onChange={(e) => setEditing({ ...editing, sort_order: Number(e.target.value) })} className="banner-input" />
             </Field>
@@ -205,6 +197,31 @@ const AdminCourseBannersPage = () => {
               <button onClick={() => setEditing(null)} className="rounded-lg px-4 py-2 text-sm font-medium hover:bg-muted">Cancel</button>
               <button onClick={save} disabled={saving} className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-60">
                 {saving ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => !deleting && setDeleteTarget(null)}>
+          <div className="bg-card rounded-xl border border-border max-w-sm w-full p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10">
+                <Trash2 className="h-5 w-5 text-destructive" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-foreground">Delete banner?</h2>
+                <p className="mt-1 text-sm text-muted-foreground">This banner will be permanently removed from the landing page. This action cannot be undone.</p>
+              </div>
+            </div>
+            {deleteTarget.image_url && (
+              <img src={deleteTarget.image_url} alt="Banner to delete" className="h-20 w-full rounded border border-border object-cover" />
+            )}
+            <div className="flex justify-end gap-2 pt-1">
+              <button onClick={() => setDeleteTarget(null)} disabled={deleting} className="rounded-lg px-4 py-2 text-sm font-medium hover:bg-muted disabled:opacity-60">Cancel</button>
+              <button onClick={confirmRemove} disabled={deleting} className="inline-flex items-center gap-1.5 rounded-lg bg-destructive px-4 py-2 text-sm font-bold text-destructive-foreground hover:opacity-90 transition-opacity disabled:opacity-60">
+                {deleting ? <><Loader2 className="h-4 w-4 animate-spin" /> Deleting…</> : "Delete"}
               </button>
             </div>
           </div>

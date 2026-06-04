@@ -57,7 +57,7 @@ const TestimonialCard = ({ card }: { card: Testimonial }) => (
       <img className="size-11 rounded-full object-cover" src={card.image} alt={card.name} />
       <div className="flex flex-col">
         <p className="text-sm font-bold text-foreground">{card.name}</p>
-        <span className="text-xs font-semibold text-primary">{card.result}</span>
+        <span className="text-xs font-semibold text-muted-foreground">{card.result}</span>
       </div>
     </div>
     <p className="text-sm pt-4 text-muted-foreground leading-relaxed">{card.quote}</p>
