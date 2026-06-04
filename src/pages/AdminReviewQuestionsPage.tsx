@@ -214,6 +214,19 @@ const QuestionCard = ({ q: initial, index, total, approval, onApprove, onSkip }:
           )}
         </div>
 
+        {/* Topic editor */}
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-foreground">
+            Topic
+          </label>
+          <input
+            value={q.topic ?? ""}
+            onChange={(e) => patch({ topic: e.target.value || null })}
+            placeholder="e.g. Kinematics, Human Reproduction…"
+            className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
+
         {/* Stem editor */}
         <div>
           <label className="mb-1 block text-xs font-semibold text-foreground">
