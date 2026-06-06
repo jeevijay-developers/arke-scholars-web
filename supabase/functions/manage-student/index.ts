@@ -46,6 +46,54 @@ Deno.serve(async (req) => {
       return true;
     };
 
+    if (action === "create") {
+      const email = String(body?.email ?? "").trim().toLowerCase();
+      const password = String(body?.password ?? "").trim();
+      if (!email) return json(400, { error: "email required" });
+      if (!password || password.length < 6) return json(400, { error: "password must be at least 6 characters" });
+
+      // Create auth user
+      const { data: created, error: createErr } = await admin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+      });
+      if (createErr) throw createErr;
+      const newUserId = created.user.id;
+
+      // Upsert profile
+      const profileData: Record<string, unknown> = { user_id: newUserId };
+      for (const k of ["full_name", "phone", "target_exam", "class_level", "city", "country", "plan", "goal"]) {
+        if (body?.[k] !== undefined && body[k] !== "") profileData[k] = body[k];
+      }
+      await admin.from("profiles").upsert(profileData, { onConflict: "user_id" });
+
+      // Assign student role
+      await admin.from("user_roles").upsert({ user_id: newUserId, role: "student" }, { onConflict: "user_id,role" });
+
+      // Optional: enroll in a course
+      if (body?.course_id) {
+        const expiresAt = body?.expires_at ? new Date(body.expires_at).toISOString() : null;
+        await admin.from("enrollments").upsert(
+          { user_id: newUserId, course_id: body.course_id, is_active: true, expires_at: expiresAt },
+          { onConflict: "user_id,course_id" },
+        );
+        if (body?.amount !== undefined) {
+          await admin.from("payments").insert({
+            user_id: newUserId,
+            student_name: body?.full_name ?? null,
+            amount: Number(body.amount) || 0,
+            currency: "INR",
+            gateway: body?.gateway ?? "cash",
+            external_id: body?.external_id ?? null,
+            status: "success",
+          });
+        }
+      }
+
+      return json(200, { success: true, user_id: newUserId });
+    }
+
     if (action === "get_emails") {
       const ids: string[] = Array.isArray(body?.user_ids) ? body.user_ids : [];
       if (!ids.length) return json(200, { emails: {} });

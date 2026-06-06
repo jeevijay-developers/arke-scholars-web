@@ -67,9 +67,19 @@ const AdminCourseAssignmentsPage = () => {
   const { data: students = [] } = useQuery<StudentRow[]>({
     queryKey: ["admin-students-list"],
     queryFn: async () => {
+      const { data: roleRows, error: roleErr } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "student");
+      if (roleErr) throw roleErr;
+
+      const studentIds = (roleRows ?? []).map((r) => r.user_id);
+      if (studentIds.length === 0) return [];
+
       const { data, error } = await supabase
         .from("profiles")
         .select("user_id, full_name, phone")
+        .in("user_id", studentIds)
         .order("full_name");
       if (error) throw error;
       return data ?? [];

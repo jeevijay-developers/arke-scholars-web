@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { Search, Download, X, ChevronLeft, ChevronRight, Loader2, Trash2, Save, Mail, GraduationCap, RefreshCw } from "lucide-react";
+import { Search, Download, X, ChevronLeft, ChevronRight, Loader2, Trash2, Save, Mail, GraduationCap, RefreshCw, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useExams } from "@/hooks/useExams";
 
 type StudentRow = {
   user_id: string;
@@ -25,6 +26,16 @@ type StudentRow = {
 };
 
 type SchoolLite = { id: string; name: string };
+type CourseLite = { id: string; name: string; subject: string };
+
+const GATEWAYS = [
+  { value: "cash", label: "Cash" },
+  { value: "bank-transfer", label: "Bank Transfer" },
+  { value: "cheque", label: "Cheque" },
+  { value: "other", label: "Other" },
+];
+
+const PLAN_OPTIONS_LIST = ["Free", "Pro", "Elite"];
 
 const PAGE_SIZE = 25;
 
@@ -55,9 +66,8 @@ const exportCsv = (rows: StudentRow[]) => {
   URL.revokeObjectURL(url);
 };
 
-const PLAN_OPTIONS = ["Free", "Pro", "Elite"];
-
 const AdminStudentsPage = () => {
+  const { examNames } = useExams();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [rows, setRows] = useState<StudentRow[]>([]);
@@ -71,6 +81,50 @@ const AdminStudentsPage = () => {
   const [confirmDelete, setConfirmDelete] = useState<StudentRow | null>(null);
   const [schools, setSchools] = useState<SchoolLite[]>([]);
   const [schoolFilter, setSchoolFilter] = useState<string>(""); // "", "none", or school id
+
+  // Add Student modal
+  const [addOpen, setAddOpen] = useState(false);
+  const [addForm, setAddForm] = useState({
+    full_name: "", email: "", phone: "", password: "",
+    target_exam: "", class_level: "", city: "", country: "", plan: "Free",
+    course_id: "", amount: "", gateway: "cash", external_id: "", expires_at: "",
+  });
+  const [addSaving, setAddSaving] = useState(false);
+  const [courses, setCourses] = useState<CourseLite[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("courses").select("id, name, subject").order("name");
+      setCourses((data as CourseLite[]) ?? []);
+    })();
+  }, []);
+
+  const handleAddStudent = async () => {
+    if (!addForm.email.trim()) return toast.error("Email is required");
+    if (!addForm.password || addForm.password.length < 6) return toast.error("Password must be at least 6 characters");
+    setAddSaving(true);
+    try {
+      const { error } = await supabase.functions.invoke("manage-student", {
+        body: {
+          action: "create",
+          ...addForm,
+          amount: addForm.amount ? Number(addForm.amount) : undefined,
+          course_id: addForm.course_id || undefined,
+          expires_at: addForm.expires_at || undefined,
+          external_id: addForm.external_id || undefined,
+        },
+      });
+      if (error) throw error;
+      toast.success(`Student ${addForm.full_name || addForm.email} added`);
+      setAddOpen(false);
+      setAddForm({ full_name: "", email: "", phone: "", password: "", target_exam: "", class_level: "", city: "", country: "", plan: "Free", course_id: "", amount: "", gateway: "cash", external_id: "", expires_at: "" });
+      load();
+    } catch (e: any) {
+      toast.error("Failed to add student", { description: e.message });
+    } finally {
+      setAddSaving(false);
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -239,10 +293,16 @@ const AdminStudentsPage = () => {
           </button>
           <button
             onClick={exportSelected}
-            className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-primary to-accent px-3 py-2 text-xs font-semibold text-primary-foreground"
+            className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium text-muted-foreground"
           >
             <Download className="h-3.5 w-3.5" />
             Export {selected.length ? `(${selected.length})` : "All"}
+          </button>
+          <button
+            onClick={() => setAddOpen(true)}
+            className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-primary to-accent px-3 py-2 text-xs font-semibold text-primary-foreground"
+          >
+            <UserPlus className="h-3.5 w-3.5" /> Add Student
           </button>
         </div>
       </div>
@@ -448,7 +508,6 @@ const AdminStudentsPage = () => {
                 {[
                   { key: "full_name", label: "Full name" },
                   { key: "phone", label: "Phone" },
-                  { key: "target_exam", label: "Target exam" },
                   { key: "class_level", label: "Class level" },
                   { key: "city", label: "City" },
                   { key: "country", label: "Country" },
@@ -464,13 +523,24 @@ const AdminStudentsPage = () => {
                   </div>
                 ))}
                 <div>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase">Target exam</label>
+                  <select
+                    value={edit.target_exam ?? ""}
+                    onChange={(e) => setEdit((s) => ({ ...s, target_exam: e.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary"
+                  >
+                    <option value="">— Select exam —</option>
+                    {examNames.map((e) => <option key={e} value={e}>{e}</option>)}
+                  </select>
+                </div>
+                <div>
                   <label className="text-[10px] font-bold text-muted-foreground uppercase">Plan</label>
                   <select
                     value={edit.plan ?? "Free"}
                     onChange={(e) => setEdit((s) => ({ ...s, plan: e.target.value }))}
                     className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary"
                   >
-                    {PLAN_OPTIONS.map((p) => (
+                    {PLAN_OPTIONS_LIST.map((p) => (
                       <option key={p} value={p}>{p}</option>
                     ))}
                   </select>
@@ -558,6 +628,196 @@ const AdminStudentsPage = () => {
               >
                 {deleting && <Loader2 className="h-3 w-3 animate-spin" />}
                 Delete forever
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Student Modal */}
+      {addOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => !addSaving && setAddOpen(false)} />
+          <div className="relative w-full max-w-lg rounded-2xl bg-card border border-border shadow-xl overflow-y-auto max-h-[90vh]">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+              <div className="flex items-center gap-2">
+                <UserPlus className="h-4 w-4 text-primary" />
+                <h2 className="text-sm font-bold text-foreground">Add New Student</h2>
+              </div>
+              <button onClick={() => setAddOpen(false)} disabled={addSaving}>
+                <X className="h-4 w-4 text-muted-foreground" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              {/* Account */}
+              <div>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase mb-2">Account</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-medium text-muted-foreground">Full Name</label>
+                    <input
+                      value={addForm.full_name}
+                      onChange={(e) => setAddForm((s) => ({ ...s, full_name: e.target.value }))}
+                      placeholder="e.g. Rahul Sharma"
+                      className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-medium text-muted-foreground">Phone</label>
+                    <input
+                      value={addForm.phone}
+                      onChange={(e) => setAddForm((s) => ({ ...s, phone: e.target.value }))}
+                      placeholder="e.g. 9876543210"
+                      className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-medium text-muted-foreground">Email <span className="text-destructive">*</span></label>
+                    <input
+                      type="email"
+                      value={addForm.email}
+                      onChange={(e) => setAddForm((s) => ({ ...s, email: e.target.value }))}
+                      placeholder="student@example.com"
+                      className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-medium text-muted-foreground">Password <span className="text-destructive">*</span></label>
+                    <input
+                      type="password"
+                      value={addForm.password}
+                      onChange={(e) => setAddForm((s) => ({ ...s, password: e.target.value }))}
+                      placeholder="Min 6 characters"
+                      className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Profile */}
+              <div>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase mb-2">Profile</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-medium text-muted-foreground">Target Exam</label>
+                    <select
+                      value={addForm.target_exam}
+                      onChange={(e) => setAddForm((s) => ({ ...s, target_exam: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary"
+                    >
+                      <option value="">— Select exam —</option>
+                      {examNames.map((e) => <option key={e} value={e}>{e}</option>)}
+                    </select>
+                  </div>
+                  {[
+                    { key: "class_level", label: "Class Level", placeholder: "e.g. 11, 12" },
+                    { key: "city", label: "City", placeholder: "e.g. Mumbai" },
+                    { key: "country", label: "Country", placeholder: "e.g. India" },
+                  ].map((f) => (
+                    <div key={f.key}>
+                      <label className="text-[10px] font-medium text-muted-foreground">{f.label}</label>
+                      <input
+                        value={(addForm as any)[f.key]}
+                        onChange={(e) => setAddForm((s) => ({ ...s, [f.key]: e.target.value }))}
+                        placeholder={f.placeholder}
+                        className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary"
+                      />
+                    </div>
+                  ))}
+                  <div>
+                    <label className="text-[10px] font-medium text-muted-foreground">Plan</label>
+                    <select
+                      value={addForm.plan}
+                      onChange={(e) => setAddForm((s) => ({ ...s, plan: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary"
+                    >
+                      {PLAN_OPTIONS_LIST.map((p) => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Course Enrollment */}
+              <div>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase mb-2">Course Enrollment <span className="font-normal normal-case text-muted-foreground">(optional)</span></p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="sm:col-span-2">
+                    <label className="text-[10px] font-medium text-muted-foreground">Course</label>
+                    <select
+                      value={addForm.course_id}
+                      onChange={(e) => setAddForm((s) => ({ ...s, course_id: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary"
+                    >
+                      <option value="">— No enrollment —</option>
+                      {courses.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name} · {c.subject}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {addForm.course_id && (
+                    <>
+                      <div>
+                        <label className="text-[10px] font-medium text-muted-foreground">Amount (INR)</label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={addForm.amount}
+                          onChange={(e) => setAddForm((s) => ({ ...s, amount: e.target.value }))}
+                          placeholder="0"
+                          className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-medium text-muted-foreground">Payment Method</label>
+                        <select
+                          value={addForm.gateway}
+                          onChange={(e) => setAddForm((s) => ({ ...s, gateway: e.target.value }))}
+                          className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary"
+                        >
+                          {GATEWAYS.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-medium text-muted-foreground">Reference / Receipt No.</label>
+                        <input
+                          value={addForm.external_id}
+                          onChange={(e) => setAddForm((s) => ({ ...s, external_id: e.target.value }))}
+                          placeholder="e.g. CASH-001"
+                          className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-medium text-muted-foreground">Valid Until</label>
+                        <input
+                          type="date"
+                          min={new Date().toISOString().split("T")[0]}
+                          value={addForm.expires_at}
+                          onChange={(e) => setAddForm((s) => ({ ...s, expires_at: e.target.value }))}
+                          className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary"
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 px-5 py-4 border-t border-border">
+              <button
+                disabled={addSaving}
+                onClick={() => setAddOpen(false)}
+                className="rounded-lg border border-border px-4 py-2 text-xs font-medium text-muted-foreground disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={addSaving}
+                onClick={handleAddStudent}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground disabled:opacity-60"
+              >
+                {addSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <UserPlus className="h-3 w-3" />}
+                Add Student
               </button>
             </div>
           </div>
