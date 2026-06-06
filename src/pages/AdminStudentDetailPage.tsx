@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useExams } from "@/hooks/useExams";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import CityStateFields from "@/components/CityStateFields";
+import { CLASS_LEVELS } from "@/lib/constants";
 
 type ProfileData = {
   user_id: string;
@@ -14,6 +16,7 @@ type ProfileData = {
   avatar_url: string | null;
   country: string | null;
   city: string | null;
+  state?: string | null;
   target_exam: string | null;
   class_level: string | null;
   is_suspended: boolean;
@@ -97,6 +100,7 @@ const AdminStudentDetailPage = () => {
         target_exam: p.target_exam ?? "",
         class_level: p.class_level ?? "",
         city: p.city ?? "",
+        state: "",
         country: p.country ?? "",
       });
     } catch (e: any) {
@@ -219,11 +223,14 @@ const AdminStudentDetailPage = () => {
     if (!enrollCourseId) return toast.error("Select a course");
     setEnrollSaving(true);
     try {
-      const expiresAt = enrollExpiry ? new Date(enrollExpiry).toISOString() : null;
-      const { error } = await supabase.from("enrollments").upsert(
-        { user_id: userId!, course_id: enrollCourseId, is_active: true, expires_at: expiresAt },
-        { onConflict: "user_id,course_id" },
-      );
+      const { error } = await supabase.functions.invoke("manage-student", {
+        body: {
+          action: "enroll",
+          user_id: userId,
+          course_id: enrollCourseId,
+          expires_at: enrollExpiry || null,
+        },
+      });
       if (error) throw error;
       toast.success("Course enrolled");
       setEnrollFormOpen(false);
@@ -330,9 +337,6 @@ const AdminStudentDetailPage = () => {
               {[
                 { key: "full_name", label: "Full Name", placeholder: "Full name" },
                 { key: "phone", label: "Phone", placeholder: "Phone number" },
-                { key: "class_level", label: "Class Level", placeholder: "e.g. Class 11, Class 12" },
-                { key: "city", label: "City", placeholder: "City" },
-                { key: "country", label: "Country", placeholder: "Country" },
               ].map((f) => (
                 <div key={f.key}>
                   <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">{f.label}</label>
@@ -344,6 +348,29 @@ const AdminStudentDetailPage = () => {
                   />
                 </div>
               ))}
+              <div>
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Class Level</label>
+                <select
+                  value={edit.class_level ?? ""}
+                  onChange={(e) => setEdit((s) => ({ ...s, class_level: e.target.value }))}
+                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary transition-colors"
+                >
+                  <option value="">— Select class —</option>
+                  {CLASS_LEVELS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                </select>
+              </div>
+              <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <CityStateFields
+                  city={edit.city ?? ""}
+                  state={edit.state ?? ""}
+                  country={edit.country ?? ""}
+                  onCityChange={(v) => setEdit((s) => ({ ...s, city: v }))}
+                  onStateChange={(v) => setEdit((s) => ({ ...s, state: v }))}
+                  onCountryChange={(v) => setEdit((s) => ({ ...s, country: v }))}
+                  inputClassName="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary transition-colors"
+                  labelClassName="text-[10px] font-bold text-muted-foreground uppercase tracking-wide"
+                />
+              </div>
               <div>
                 <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Target Exam</label>
                 <select

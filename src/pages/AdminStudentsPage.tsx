@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useMemo, useState, useCallback } from "react"; import { useNavigate } from "react-router-dom";
-import { Search, Download, ChevronLeft, ChevronRight, Loader2, GraduationCap, RefreshCw, UserPlus, X } from "lucide-react";
+import { Search, Download, ChevronLeft, ChevronRight, Loader2, GraduationCap, RefreshCw, UserPlus, X, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useExams } from "@/hooks/useExams";
+import { CLASS_LEVELS } from "@/lib/constants";
 
 type StudentRow = {
   user_id: string;
@@ -75,6 +76,8 @@ const AdminStudentsPage = () => {
     target_exam: "", class_level: "", city: "", country: ""
   });
   const [addSaving, setAddSaving] = useState(false);
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   // 300ms debounce on search
   useEffect(() => {
@@ -181,6 +184,22 @@ const AdminStudentsPage = () => {
     }
   };
 
+  const handleBulkDelete = async () => {
+    setBulkDeleting(true);
+    const results = await Promise.allSettled(
+      selected.map((uid) =>
+        supabase.functions.invoke("manage-student", { body: { action: "delete", user_id: uid } })
+      )
+    );
+    const failed = results.filter((r) => r.status === "rejected").length;
+    setBulkDeleting(false);
+    setConfirmBulkDelete(false);
+    setSelected([]);
+    if (failed > 0) toast.error(`${failed} deletion(s) failed`);
+    else toast.success(`${results.length} student(s) deleted`);
+    load();
+  };
+
   const exportSelected = () => {
     const target = selected.length ? rows.filter((r) => selected.includes(r.user_id)) : rows;
     if (!target.length) return toast.error("Nothing to export");
@@ -254,6 +273,12 @@ const AdminStudentsPage = () => {
             className="rounded-lg bg-background border border-border px-3 py-1 text-[10px] font-medium text-muted-foreground flex items-center gap-1 cursor-pointer"
           >
             <Download className="h-3 w-3" /> Export CSV
+          </button>
+          <button
+            onClick={() => setConfirmBulkDelete(true)}
+            className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-1 text-[10px] font-bold text-destructive flex items-center gap-1 cursor-pointer hover:bg-destructive/20 transition-colors"
+          >
+            <Trash2 className="h-3 w-3" /> Delete Selected
           </button>
           <button
             onClick={() => setSelected([])}
@@ -383,6 +408,43 @@ const AdminStudentsPage = () => {
         </div>
       </div>
 
+      {/* Bulk Delete Confirm */}
+      {confirmBulkDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => !bulkDeleting && setConfirmBulkDelete(false)} />
+          <div className="relative w-full max-w-md rounded-2xl bg-card border border-border p-5 shadow-xl space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10">
+                <Trash2 className="h-5 w-5 text-destructive" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-foreground">Delete {selected.length} student{selected.length !== 1 ? "s" : ""} permanently?</h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  This will permanently delete all selected students and their data (profile, progress, enrollments). This cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                disabled={bulkDeleting}
+                onClick={() => setConfirmBulkDelete(false)}
+                className="rounded-lg border border-border px-3 py-2 text-xs font-medium text-muted-foreground disabled:opacity-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={bulkDeleting}
+                onClick={handleBulkDelete}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-destructive px-4 py-2 text-xs font-bold text-destructive-foreground disabled:opacity-60 cursor-pointer hover:bg-destructive/90 transition-colors"
+              >
+                {bulkDeleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                Delete forever
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add Student Modal */}
       {addOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -459,8 +521,18 @@ const AdminStudentsPage = () => {
                       {examNames.map((e) => <option key={e} value={e}>{e}</option>)}
                     </select>
                   </div>
+                  <div>
+                    <label className="text-[10px] font-medium text-muted-foreground">Class Level</label>
+                    <select
+                      value={addForm.class_level}
+                      onChange={(e) => setAddForm((s) => ({ ...s, class_level: e.target.value }))}
+                      className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary transition-colors"
+                    >
+                      <option value="">— Select class —</option>
+                      {CLASS_LEVELS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                    </select>
+                  </div>
                   {[
-                    { key: "class_level", label: "Class Level", placeholder: "e.g. 11, 12" },
                     { key: "city", label: "City", placeholder: "e.g. Mumbai" },
                     { key: "country", label: "Country", placeholder: "e.g. India" },
                   ].map((f) => (

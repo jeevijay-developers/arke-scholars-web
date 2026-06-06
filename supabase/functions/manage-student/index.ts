@@ -128,6 +128,20 @@ Deno.serve(async (req) => {
       return json(200, { success: true });
     }
 
+    if (action === "enroll") {
+      const user_id = String(body?.user_id ?? "");
+      const course_id = String(body?.course_id ?? "");
+      if (!user_id || !course_id) return json(400, { error: "user_id and course_id required" });
+      if (!(await ensureStudent(user_id))) return json(403, { error: "Target is not a student" });
+      const expiresAt = body?.expires_at ? new Date(body.expires_at).toISOString() : null;
+      const { error: enrErr } = await admin.from("enrollments").upsert(
+        { user_id, course_id, is_active: true, expires_at: expiresAt },
+        { onConflict: "user_id,course_id" },
+      );
+      if (enrErr) throw enrErr;
+      return json(200, { success: true });
+    }
+
     if (action === "delete") {
       const user_id = String(body?.user_id ?? "");
       if (!user_id) return json(400, { error: "user_id required" });

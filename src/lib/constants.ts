@@ -73,6 +73,7 @@ export type ManualGateway = (typeof MANUAL_GATEWAYS)[number]["value"];
 
 // Class level options — canonical list used across all student-facing and admin forms.
 export const CLASS_LEVELS = [
+  { value: "Class 8",  label: "Class 8" },
   { value: "Class 9",  label: "Class 9" },
   { value: "Class 10", label: "Class 10" },
   { value: "Class 11", label: "Class 11" },
