@@ -53,7 +53,7 @@ import AdminMentorAssignmentsPage from "./pages/AdminMentorAssignmentsPage";
 import AdminPaymentsPage from "./pages/AdminPaymentsPage";
 import AdminNotificationsPage from "./pages/AdminNotificationsPage";
 import AdminCoursesPage from "./pages/AdminCoursesPage";
-import AdminCourseAssignmentsPage from "./pages/AdminCourseAssignmentsPage";
+import AdminStudentDetailPage from "./pages/AdminStudentDetailPage";
 import CreateCoursePage from "./pages/CreateCoursePage";
 import CreateTestPage from "./pages/CreateTestPage";
 import AdminLiveClassesPage from "./pages/AdminLiveClassesPage";
@@ -263,12 +263,13 @@ const App = () => (
               <Route path="/admin/reports" element={<AdminReportsPage />} />
               <Route path="/admin/users" element={<AdminUsersPage />} />
               <Route path="/admin/students" element={<AdminStudentsPage />} />
+              <Route path="/admin/students/:userId" element={<AdminStudentDetailPage />} />
               <Route path="/admin/student-reports" element={<AdminStudentReportsPage />} />
               <Route path="/admin/schools" element={<AdminSchoolsPage />} />
               <Route path="/admin/mentor-assignments" element={<AdminMentorAssignmentsPage />} />
               <Route path="/admin/mentor-handovers" element={<AdminMentorHandoversPage />} />
               <Route path="/admin/courses" element={<AdminCoursesPage />} />
-              <Route path="/admin/course-assignments" element={<AdminCourseAssignmentsPage />} />
+
               <Route path="/admin/courses/new" element={<CreateCoursePage />} />
               <Route path="/admin/courses/:courseId/edit" element={<CreateCoursePage />} />
               <Route path="/admin/live-classes" element={<AdminLiveClassesPage />} />

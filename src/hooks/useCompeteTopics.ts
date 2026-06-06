@@ -13,7 +13,7 @@ export const useCompeteTopics = (subject: string, classLevel: string, targetExam
 
     (async () => {
       const { data } = await supabase
-        .from("compete_questions")
+        .from("compete_questions_public")
         .select("topic")
         .eq("subject", subject)
         .eq("is_active", true)
@@ -28,7 +28,7 @@ export const useCompeteTopics = (subject: string, classLevel: string, targetExam
       // If nothing for this exact class+exam, fall back to any active questions for the subject
       if (unique.length === 0) {
         const { data: fallback } = await supabase
-          .from("compete_questions")
+          .from("compete_questions_public")
           .select("topic")
           .eq("subject", subject)
           .eq("is_active", true);

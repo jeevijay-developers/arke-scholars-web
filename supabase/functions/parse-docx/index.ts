@@ -663,6 +663,24 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return respond({ error: "Unauthorized" }, 401);
 
+    // verify_jwt=false (required for multipart). Validate JWT + require admin manually.
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const anonKey    = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: userData, error: userErr } = await userClient.auth.getUser();
+    if (userErr || !userData?.user) return respond({ error: "Unauthorized" }, 401);
+
+    const admin = createClient(supabaseUrl, serviceKey);
+    const [{ data: isAdm }, { data: isSuper }] = await Promise.all([
+      admin.rpc("has_role", { _user_id: userData.user.id, _role: "admin" }),
+      admin.rpc("has_role", { _user_id: userData.user.id, _role: "super_admin" }),
+    ]);
+    if (!isAdm && !isSuper) return respond({ error: "Forbidden: admin access required" }, 403);
+
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const paperId = (formData.get("paper_id") as string | null)?.trim();
@@ -671,10 +689,6 @@ serve(async (req) => {
     if (!file.name.toLowerCase().endsWith(".docx")) {
       return respond({ error: "File must be a .docx" }, 400);
     }
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const admin = createClient(supabaseUrl, serviceKey);
 
     // ── 1. Unzip ──────────────────────────────────────────────────────────────
     const uint8 = new Uint8Array(await file.arrayBuffer());

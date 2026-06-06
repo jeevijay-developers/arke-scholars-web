@@ -54,7 +54,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [roleReady, setRoleReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const setStoreUser = useAppStore((s) => s.setUser);
-  const setStoreGoal = useAppStore((s) => s.setCurrentGoal);
   // Track which user we last resolved a role for to avoid stale writes when
   // multiple sign-in events fire in quick succession.
   const lastRoleUserId = useRef<string | null>(null);
@@ -120,7 +119,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const loadProfile = async (authUser: User) => {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("full_name, avatar_url, target_exam, goal")
+      .select("full_name, avatar_url, target_exam")
       .eq("user_id", authUser.id)
       .maybeSingle();
 
@@ -139,7 +138,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       avatar_url: profile?.avatar_url || (authUser.user_metadata?.avatar_url as string | undefined),
     });
 
-    if (profile?.goal) setStoreGoal(profile.goal);
   };
 
   const refreshProfile = useCallback(async () => {

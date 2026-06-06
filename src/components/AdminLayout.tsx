@@ -24,7 +24,6 @@ import {
   FileBarChart,
   FileUp,
   Megaphone,
-  BookmarkPlus,
   Menu,
   X,
 } from "lucide-react";
@@ -47,7 +46,6 @@ const baseNav: NavItem[] = [
   { label: "Mentor Assignments", icon: HeartHandshake, path: "/admin/mentor-assignments" },
   { label: "Mentor Handovers", icon: HeartHandshake, path: "/admin/mentor-handovers" },
   { label: "Courses", icon: GraduationCap, path: "/admin/courses" },
-  { label: "Course Assignments", icon: BookmarkPlus, path: "/admin/course-assignments" },
   { label: "Live Classes", icon: Video, path: "/admin/live-classes" },
   { label: "Tests", icon: ClipboardCheck, path: "/admin/tests" },
   { label: "Question Bank", icon: Library, path: "/admin/question-bank" },

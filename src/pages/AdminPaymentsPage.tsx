@@ -9,7 +9,7 @@ type Payment = {
   id: string;
   user_id: string | null;
   student_name: string | null;
-  plan: string | null;
+  course_name: string | null;
   amount: number;
   currency: string;
   gateway: string;
@@ -36,10 +36,10 @@ const statusBadge = (s: string) => {
 };
 
 const exportCsv = (rows: Payment[]) => {
-  const header = ["id", "external_id", "student", "plan", "amount", "currency", "gateway", "status", "date"];
+  const header = ["id", "external_id", "student", "course_name", "amount", "currency", "gateway", "status", "date"];
   const lines = [header.join(",")].concat(
     rows.map((r) =>
-      [r.id, r.external_id ?? "", r.student_name ?? "", r.plan ?? "", r.amount, r.currency, r.gateway, r.status, r.created_at]
+      [r.id, r.external_id ?? "", r.student_name ?? "", r.course_name ?? "", r.amount, r.currency, r.gateway, r.status, r.created_at]
         .map((v) => `"${String(v).replace(/"/g, '""')}"`)
         .join(","),
     ),
@@ -253,7 +253,7 @@ const AdminPaymentsPage = () => {
                 <tr className="border-b border-border text-muted-foreground">
                   <th className="text-left py-2 font-medium">ID</th>
                   <th className="text-left py-2 font-medium">Student</th>
-                  <th className="text-left py-2 font-medium hidden sm:table-cell">Plan</th>
+                  <th className="text-left py-2 font-medium hidden sm:table-cell">Course</th>
                   <th className="text-right py-2 font-medium">Amount</th>
                   <th className="text-left py-2 font-medium hidden md:table-cell">Gateway</th>
                   <th className="text-left py-2 font-medium hidden lg:table-cell">Date</th>
@@ -265,7 +265,7 @@ const AdminPaymentsPage = () => {
                   <tr key={t.id} className="border-b border-border last:border-0">
                     <td className="py-2.5 font-mono text-muted-foreground">{t.external_id ?? t.id.slice(0, 8)}</td>
                     <td className="py-2.5 font-medium text-foreground">{t.student_name ?? "—"}</td>
-                    <td className="py-2.5 text-muted-foreground hidden sm:table-cell">{t.plan ?? "—"}</td>
+                    <td className="py-2.5 text-muted-foreground hidden sm:table-cell">{t.course_name ?? "—"}</td>
                     <td className="py-2.5 text-right font-medium text-foreground">{fmtCurrency(Number(t.amount), t.currency)}</td>
                     <td className="py-2.5 text-muted-foreground hidden md:table-cell capitalize">{t.gateway}</td>
                     <td className="py-2.5 text-muted-foreground hidden lg:table-cell">{format(new Date(t.created_at), "dd MMM yy")}</td>

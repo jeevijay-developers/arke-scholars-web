@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 
 const GOALS = [
-  { value: "JEE", label: "IIT JEE", desc: "Engineering aspirant" },
+  { value: "IIT JEE", label: "IIT JEE", desc: "Engineering aspirant" },
   { value: "NEET", label: "NEET", desc: "Medical aspirant" },
   { value: "Class 11", label: "Class 11", desc: "Boards & foundation" },
   { value: "Class 12", label: "Class 12", desc: "Boards & entrance prep" },
@@ -17,7 +17,7 @@ const GoalSetupCard = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [needsGoal, setNeedsGoal] = useState(false);
+  const [needsExam, setNeedsExam] = useState(false);
   const [dismissed, setDismissed] = useState<boolean>(() =>
     typeof window !== "undefined" && sessionStorage.getItem(DISMISS_KEY) === "1"
   );
@@ -32,7 +32,7 @@ const GoalSetupCard = () => {
     (async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("goal")
+        .select("target_exam")
         .eq("user_id", user.id)
         .maybeSingle();
       if (!active) return;
@@ -40,7 +40,7 @@ const GoalSetupCard = () => {
         setLoading(false);
         return;
       }
-      setNeedsGoal(!data?.goal);
+      setNeedsExam(!data?.target_exam);
       setLoading(false);
     })();
     return () => {
@@ -58,18 +58,18 @@ const GoalSetupCard = () => {
     setSaving(true);
     const { error } = await supabase
       .from("profiles")
-      .update({ goal: selected, onboarding_completed: true })
+      .update({ target_exam: selected, onboarding_completed: true })
       .eq("user_id", user.id);
     setSaving(false);
     if (error) {
-      toast.error("Could not save your goal. Please try again.");
+      toast.error("Could not save your target exam. Please try again.");
       return;
     }
-    toast.success(`Goal set to ${selected}. Let's go!`);
-    setNeedsGoal(false);
+    toast.success(`Target exam set to ${selected}. Let's go!`);
+    setNeedsExam(false);
   };
 
-  if (loading || !needsGoal || dismissed || !user) return null;
+  if (loading || !needsExam || dismissed || !user) return null;
 
   return (
     <div className="mb-6 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-accent/10 p-5 shadow-elevated animate-fade-in-up">
@@ -79,7 +79,7 @@ const GoalSetupCard = () => {
             <Target className="h-5 w-5 text-primary-foreground" />
           </div>
           <div>
-            <h3 className="font-display text-lg font-black text-foreground">Pick your goal to personalize Arke</h3>
+            <h3 className="font-display text-lg font-black text-foreground">Pick your target exam to personalise Arke</h3>
             <p className="text-xs text-muted-foreground">We&apos;ll tailor courses, tests, and educators around it.</p>
           </div>
         </div>
@@ -130,7 +130,7 @@ const GoalSetupCard = () => {
           className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 disabled:opacity-60 transition-opacity"
         >
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-          Save my goal
+          Save
         </button>
       </div>
     </div>

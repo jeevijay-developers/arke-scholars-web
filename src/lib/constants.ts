@@ -30,7 +30,6 @@ export const ADMIN_PAGE_KEYS = [
   { key: "mentor-assignments", label: "Mentor Assignments" },
   { key: "mentor-handovers", label: "Mentor Handovers" },
   { key: "courses", label: "Courses" },
-  { key: "course-assignments", label: "Course Assignments" },
   { key: "live-classes", label: "Live Classes" },
   { key: "tests", label: "Tests" },
   { key: "question-bank", label: "Question Bank" },
@@ -59,3 +58,26 @@ export type StaffPagePermission = {
   can_approve: boolean;
   can_export: boolean;
 };
+
+// Canonical payment gateway list used across admin enrollment/assignment pages.
+// "razorpay" is excluded from MANUAL_GATEWAYS because manual assignments are
+// offline payments; Razorpay payments are processed through the payment flow.
+export const MANUAL_GATEWAYS = [
+  { value: "cash",          label: "Cash" },
+  { value: "bank-transfer", label: "Bank Transfer" },
+  { value: "cheque",        label: "Cheque" },
+  { value: "other",         label: "Other" },
+] as const;
+
+export type ManualGateway = (typeof MANUAL_GATEWAYS)[number]["value"];
+
+// Class level options — canonical list used across all student-facing and admin forms.
+export const CLASS_LEVELS = [
+  { value: "Class 9",  label: "Class 9" },
+  { value: "Class 10", label: "Class 10" },
+  { value: "Class 11", label: "Class 11" },
+  { value: "Class 12", label: "Class 12" },
+  { value: "Dropper",  label: "Dropper" },
+] as const;
+
+export type ClassLevel = (typeof CLASS_LEVELS)[number]["value"];

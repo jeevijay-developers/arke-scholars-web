@@ -58,12 +58,10 @@ serve(async (req) => {
 
     const body = await req.json();
     const razorpayPaymentId = String(body.razorpayPaymentId ?? "");
-    const razorpayOrderId = String(body.razorpayOrderId ?? "");
+    const razorpayOrderId   = String(body.razorpayOrderId ?? "");
     const razorpaySignature = String(body.razorpaySignature ?? "");
+    // courseId from body is validated against the order on Razorpay's side below
     const courseId = String(body.courseId ?? "");
-    const courseName = String(body.courseName ?? "Course");
-    const amountINR = Number(body.amount ?? 0);
-    const currency = String(body.currency ?? "INR");
 
     if (!razorpayPaymentId || !razorpayOrderId || !razorpaySignature || !courseId) {
       return new Response(JSON.stringify({ error: "Missing required payment fields" }), {
@@ -72,21 +70,17 @@ serve(async (req) => {
       });
     }
 
+    const keyId     = Deno.env.get("RAZORPAY_KEY_ID");
     const keySecret = Deno.env.get("RAZORPAY_KEY_SECRET");
-    if (!keySecret) {
+    if (!keyId || !keySecret) {
       return new Response(JSON.stringify({ error: "Payment gateway not configured" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Verify the payment signature to confirm it came from Razorpay
-    const isValid = await verifyRazorpaySignature(
-      razorpayOrderId,
-      razorpayPaymentId,
-      razorpaySignature,
-      keySecret
-    );
+    // Step 1: Verify HMAC signature — confirms the callback is genuine Razorpay
+    const isValid = await verifyRazorpaySignature(razorpayOrderId, razorpayPaymentId, razorpaySignature, keySecret);
     if (!isValid) {
       console.error("Razorpay signature verification failed", { razorpayOrderId, razorpayPaymentId });
       return new Response(JSON.stringify({ error: "Payment verification failed" }), {
@@ -95,7 +89,84 @@ serve(async (req) => {
       });
     }
 
+    const rzpAuth = `Basic ${btoa(`${keyId}:${keySecret}`)}`;
+
+    // Step 2: Fetch the order from Razorpay to read the authoritative course_id from notes
+    const orderResp = await fetch(`https://api.razorpay.com/v1/orders/${razorpayOrderId}`, {
+      headers: { Authorization: rzpAuth },
+    });
+    if (!orderResp.ok) {
+      console.error("Failed to fetch Razorpay order", razorpayOrderId, await orderResp.text());
+      return new Response(JSON.stringify({ error: "Could not verify payment order" }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const rzpOrder = await orderResp.json() as { notes?: Record<string, string>; currency?: string };
+
+    // Step 3: Validate the course_id in the order matches what the client claims
+    const orderedCourseId = String(rzpOrder.notes?.course_id ?? "");
+    if (!orderedCourseId || orderedCourseId !== courseId) {
+      console.error("Course ID mismatch", { body_courseId: courseId, order_courseId: orderedCourseId });
+      return new Response(JSON.stringify({ error: "Payment verification failed: course mismatch" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Step 4: Look up the authoritative course price from DB
     const admin = createClient(supabaseUrl, serviceKey);
+    const { data: course, error: courseErr } = await admin
+      .from("courses")
+      .select("id, name, price")
+      .eq("id", orderedCourseId)
+      .maybeSingle();
+    if (courseErr || !course) {
+      return new Response(JSON.stringify({ error: "Course not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Step 5: Fetch payments on this order to confirm a captured payment exists
+    const paymentsResp = await fetch(`https://api.razorpay.com/v1/orders/${razorpayOrderId}/payments`, {
+      headers: { Authorization: rzpAuth },
+    });
+    if (!paymentsResp.ok) {
+      console.error("Failed to fetch payments for order", razorpayOrderId);
+      return new Response(JSON.stringify({ error: "Could not verify payment capture" }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const paymentsData = await paymentsResp.json() as {
+      items?: Array<{ id: string; status: string; amount: number }>;
+    };
+    const capturedPayment = (paymentsData.items ?? []).find(
+      (p) => p.id === razorpayPaymentId && p.status === "captured"
+    );
+    if (!capturedPayment) {
+      console.error("Payment not captured", { razorpayPaymentId, items: paymentsData.items });
+      return new Response(JSON.stringify({ error: "Payment not captured" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Step 6: Validate captured amount matches DB price (no underpayment)
+    const expectedPaise = Math.round(Number(course.price) * 100);
+    if (capturedPayment.amount < expectedPaise) {
+      console.error("Payment amount insufficient", { paid: capturedPayment.amount, expected: expectedPaise });
+      return new Response(JSON.stringify({ error: "Payment amount does not match course price" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // All checks passed — use server-derived values, not client-supplied ones
+    const courseName = course.name;
+    const amountINR  = capturedPayment.amount / 100;
+    const currency   = String(rzpOrder.currency ?? "INR");
 
     // Record the payment
     const now = new Date().toISOString();
@@ -104,7 +175,7 @@ serve(async (req) => {
       .insert({
         user_id: user.id,
         student_name: user.user_metadata?.full_name ?? user.email ?? "",
-        plan: courseName,
+        course_name: courseName,
         amount: amountINR,
         currency,
         gateway: "razorpay",
@@ -129,7 +200,7 @@ serve(async (req) => {
       console.error("Enrollment upsert error", enrollError);
     }
 
-    // Notify the user via in-app notification
+    // In-app notification
     await admin.from("notifications").insert({
       user_id: user.id,
       title: "Payment successful!",
@@ -138,7 +209,7 @@ serve(async (req) => {
       link: "/my-courses",
     });
 
-    // Send payment receipt email via the send-transactional-email edge function
+    // Payment receipt email (fire-and-forget)
     if (user.email) {
       const amountFormatted = currency === "AED"
         ? `AED ${amountINR.toLocaleString()}`
@@ -148,13 +219,9 @@ serve(async (req) => {
         dateStyle: "medium",
         timeStyle: "short",
       });
-
       fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${serviceKey}`,
-          "Content-Type": "application/json",
-        },
+        headers: { Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           templateName: "payment-receipt",
           recipientEmail: user.email,

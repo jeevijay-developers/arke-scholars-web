@@ -38,11 +38,12 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const action: string = body?.action;
 
-    // Ensure target user is a student (not admin/super_admin/teacher/mentor)
+    // Ensure target is a student: must have the student role and no privileged roles
     const ensureStudent = async (uid: string) => {
       const { data: roles } = await admin.from("user_roles").select("role").eq("user_id", uid);
       const set = new Set((roles ?? []).map((r) => r.role));
-      if (set.has("super_admin") || set.has("admin")) return false;
+      if (set.has("super_admin") || set.has("admin") || set.has("teacher") || set.has("mentor")) return false;
+      if (!set.has("student")) return false;
       return true;
     };
 
@@ -61,9 +62,9 @@ Deno.serve(async (req) => {
       if (createErr) throw createErr;
       const newUserId = created.user.id;
 
-      // Upsert profile
+      // Upsert profile — plan and goal excluded (goal = target_exam, plan is dead)
       const profileData: Record<string, unknown> = { user_id: newUserId };
-      for (const k of ["full_name", "phone", "target_exam", "class_level", "city", "country", "plan", "goal"]) {
+      for (const k of ["full_name", "phone", "target_exam", "class_level", "city", "country"]) {
         if (body?.[k] !== undefined && body[k] !== "") profileData[k] = body[k];
       }
       await admin.from("profiles").upsert(profileData, { onConflict: "user_id" });
@@ -83,7 +84,7 @@ Deno.serve(async (req) => {
             user_id: newUserId,
             student_name: body?.full_name ?? null,
             amount: Number(body.amount) || 0,
-            currency: "INR",
+            currency: body?.currency ?? "INR",  // M3: accept currency from caller
             gateway: body?.gateway ?? "cash",
             external_id: body?.external_id ?? null,
             status: "success",
@@ -95,15 +96,16 @@ Deno.serve(async (req) => {
     }
 
     if (action === "get_emails") {
+      // M4: look up each ID individually — avoids the 1000-user listUsers cap
       const ids: string[] = Array.isArray(body?.user_ids) ? body.user_ids : [];
       if (!ids.length) return json(200, { emails: {} });
-      const { data: usersList } = await admin.auth.admin.listUsers({ perPage: 1000 });
-      const map: Record<string, string | null> = {};
-      ids.forEach((id) => {
-        const u = usersList?.users.find((x) => x.id === id);
-        map[id] = u?.email ?? null;
-      });
-      return json(200, { emails: map });
+      const entries = await Promise.all(
+        ids.map(async (id) => {
+          const { data } = await admin.auth.admin.getUserById(id);
+          return [id, data?.user?.email ?? null] as [string, string | null];
+        }),
+      );
+      return json(200, { emails: Object.fromEntries(entries) });
     }
 
     if (action === "update") {
@@ -111,7 +113,8 @@ Deno.serve(async (req) => {
       if (!user_id) return json(400, { error: "user_id required" });
       if (!(await ensureStudent(user_id))) return json(403, { error: "Target is not a student" });
 
-      const allowed = ["full_name", "phone", "target_exam", "class_level", "city", "country", "plan", "goal"];
+      // plan + goal excluded (plan is dead; goal = target_exam, use target_exam instead)
+      const allowed = ["full_name", "phone", "target_exam", "class_level", "city", "country"];
       const update: Record<string, unknown> = { user_id };
       for (const k of allowed) {
         if (body?.[k] !== undefined) update[k] = body[k];
@@ -134,6 +137,24 @@ Deno.serve(async (req) => {
       await admin.from("user_roles").delete().eq("user_id", user_id);
       const { error: dErr } = await admin.auth.admin.deleteUser(user_id);
       if (dErr) throw dErr;
+      return json(200, { success: true });
+    }
+
+    if (action === "set_suspended") {
+      const user_id = String(body?.user_id ?? "");
+      const is_suspended = !!body?.is_suspended;
+      if (!user_id) return json(400, { error: "user_id required" });
+      if (user_id === userData.user.id) return json(400, { error: "Cannot suspend yourself" });
+      if (!(await ensureStudent(user_id))) return json(403, { error: "Target is not a student" });
+      const { error: pErr } = await admin
+        .from("profiles")
+        .update({ is_suspended })
+        .eq("user_id", user_id);
+      if (pErr) throw pErr;
+      // Revoke all active sessions immediately when suspending
+      if (is_suspended) {
+        try { await admin.auth.admin.signOut(user_id); } catch (_) { /* ignore */ }
+      }
       return json(200, { success: true });
     }
 

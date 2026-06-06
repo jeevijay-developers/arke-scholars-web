@@ -28,7 +28,7 @@ const OnboardingTracker = () => {
 
     (async () => {
       const [profileRes, attendanceRes, lessonRes, testRes] = await Promise.all([
-        supabase.from("profiles").select("full_name, phone, city, goal").eq("user_id", user.id).maybeSingle(),
+        supabase.from("profiles").select("full_name, phone, city, target_exam").eq("user_id", user.id).maybeSingle(),
         supabase.from("live_class_attendance").select("id", { count: "exact", head: true }).eq("user_id", user.id),
         supabase.from("lesson_progress").select("id", { count: "exact", head: true }).eq("user_id", user.id),
         supabase.from("test_attempts").select("id", { count: "exact", head: true }).eq("user_id", user.id),
@@ -47,11 +47,11 @@ const OnboardingTracker = () => {
         },
         {
           key: "goal",
-          label: "Pick your exam goal",
+          label: "Set your target exam",
           desc: "We tailor everything around it",
           icon: Target,
           link: "/profile",
-          done: !!profile?.goal,
+          done: !!profile?.target_exam,
         },
         {
           key: "class",

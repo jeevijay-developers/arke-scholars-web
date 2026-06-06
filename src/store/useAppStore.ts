@@ -22,13 +22,11 @@ export interface AppNotification {
 
 interface AppState {
   user: AppUser | null;
-  currentGoal: string;
   notifications: AppNotification[];
   unreadCount: number;
   country: 'india' | 'dubai';
   favouriteIds: Set<string>;
   setUser: (user: AppUser | null) => void;
-  setCurrentGoal: (goal: string) => void;
   setNotifications: (n: AppNotification[]) => void;
   addNotification: (n: AppNotification) => void;
   markRead: (id: string) => void;
@@ -54,7 +52,6 @@ const loadCachedUser = (): AppUser | null => {
 
 export const useAppStore = create<AppState>((set, get) => ({
   user: loadCachedUser(),
-  currentGoal: 'IIT JEE',
   notifications: [],
   unreadCount: 0,
   country: savedCountry || 'india',
@@ -66,7 +63,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
     set({ user });
   },
-  setCurrentGoal: (currentGoal) => set({ currentGoal }),
   setNotifications: (notifications) =>
     set({ notifications, unreadCount: notifications.filter((n) => !n.read_at).length }),
   addNotification: (n) => {

@@ -11,17 +11,12 @@ import {
 import { formatDistanceToNow, format, subDays, startOfDay } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 
-type ProfileRow = { user_id: string; full_name: string | null; plan: string; created_at: string; country: string | null };
+type ProfileRow = { user_id: string; full_name: string | null; created_at: string; country: string | null };
 type CourseRow = { id: string; name: string; educator_name: string; total_enrolled: number | null; rating: number | null; price: number };
 type EnrollmentRow = { id: string; course_id: string; created_at: string };
 type LiveClassRow = { id: string; title: string; educator_name: string; status: string; starts_at: string };
 type TestAttemptRow = { id: string; created_at: string };
 
-const PLAN_STYLE: Record<string, string> = {
-  Elite: "bg-accent/20 text-accent",
-  Pro: "bg-primary/10 text-primary",
-  Free: "bg-muted text-muted-foreground",
-};
 
 const fetchDashboard = async () => {
   const todayStart = startOfDay(new Date()).toISOString();
@@ -31,7 +26,7 @@ const fetchDashboard = async () => {
     profilesRes, coursesRes, enrollmentsRes, liveRes, attemptsRes, eduRes, enqRes, repRes,
   ] = await Promise.all([
     supabase.from("profiles")
-      .select("user_id, full_name, plan, created_at, country")
+      .select("user_id, full_name, created_at, country")
       .order("created_at", { ascending: false })
       .limit(200),
     supabase.from("courses")
@@ -232,7 +227,6 @@ const AdminDashboard = () => {
                   <thead>
                     <tr className="border-b border-border text-muted-foreground">
                       <th className="text-left py-2 font-medium">Name</th>
-                      <th className="text-left py-2 font-medium">Plan</th>
                       <th className="text-left py-2 font-medium">Joined</th>
                     </tr>
                   </thead>
@@ -240,11 +234,6 @@ const AdminDashboard = () => {
                     {recentUsers.map((u) => (
                       <tr key={u.user_id} className="border-b border-border last:border-0">
                         <td className="py-2.5 font-medium text-foreground">{u.full_name || "Unnamed user"}</td>
-                        <td className="py-2.5">
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${PLAN_STYLE[u.plan] ?? PLAN_STYLE.Free}`}>
-                            {u.plan}
-                          </span>
-                        </td>
                         <td className="py-2.5 text-muted-foreground">
                           {formatDistanceToNow(new Date(u.created_at), { addSuffix: true })}
                         </td>

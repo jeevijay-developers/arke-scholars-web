@@ -76,8 +76,8 @@ Deno.serve(async (req) => {
 
     const email = app.email.toLowerCase().trim();
 
-    // Find or create user
-    const { data: existing } = await admin.auth.admin.listUsers();
+    // Find or create user — perPage:1000 matches manage-admin (default 50 misses users; V12)
+    const { data: existing } = await admin.auth.admin.listUsers({ perPage: 1000 });
     let user = existing?.users.find((u) => u.email?.toLowerCase() === email);
 
     if (!user) {

@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "../_shared/cors.ts";
 
 const AGORA_API_BASE = "https://api.agora.io/v1/apps";
@@ -199,6 +200,39 @@ serve(async (req) => {
   }
 
   try {
+    // Auth: require admin or teacher to start/stop recording
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const anonKey     = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const svcKey      = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error: userErr } = await userClient.auth.getUser();
+    if (userErr || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const svc = createClient(supabaseUrl, svcKey);
+    const [{ data: isAdmin }, { data: isSuper }, { data: isTeacher }] = await Promise.all([
+      svc.rpc("has_role", { _user_id: user.id, _role: "admin" }),
+      svc.rpc("has_role", { _user_id: user.id, _role: "super_admin" }),
+      svc.rpc("has_role", { _user_id: user.id, _role: "teacher" }),
+    ]);
+    if (!isAdmin && !isSuper && !isTeacher) {
+      return new Response(JSON.stringify({ error: "Forbidden: admin or teacher access required" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const body = await req.json() as Request;
     const { action, channelName, classId } = body;
 

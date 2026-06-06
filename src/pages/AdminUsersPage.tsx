@@ -16,15 +16,11 @@ const roleBadge = (role: string) => {
   return <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${styles[role] ?? styles.student}`}>{role.replace("_", " ")}</span>;
 };
 
-const planBadge = (plan: string) => {
-  const styles: Record<string, string> = { Free: "bg-muted text-muted-foreground", Pro: "bg-primary/10 text-primary", Elite: "bg-accent/20 text-accent" };
-  return <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${styles[plan] ?? styles.Free}`}>{plan}</span>;
-};
 
 const exportCsv = (rows: AdminUserRow[]) => {
-  const header = ["Name", "Phone", "Role", "Plan", "Country", "Target Exam", "Suspended", "Joined"];
+  const header = ["Name", "Phone", "Role", "Country", "Target Exam", "Suspended", "Joined"];
   const lines = rows.map((u) =>
-    [u.full_name ?? "", u.phone ?? "", u.role, u.plan, u.country ?? "", u.target_exam ?? "", u.is_suspended ? "Yes" : "No", new Date(u.created_at).toISOString()]
+    [u.full_name ?? "", u.phone ?? "", u.role, u.country ?? "", u.target_exam ?? "", u.is_suspended ? "Yes" : "No", new Date(u.created_at).toISOString()]
       .map((v) => `"${String(v).replace(/"/g, '""')}"`)
       .join(","),
   );
@@ -91,7 +87,6 @@ const UserListRow = ({
       </div>
       <div className="p-3 w-32 hidden sm:block text-muted-foreground truncate">{u.phone || "—"}</div>
       <div className="p-3 w-28">{roleBadge(u.role)}</div>
-      <div className="p-3 w-20 hidden md:block">{planBadge(u.plan)}</div>
       <div className="p-3 w-28 hidden lg:block text-muted-foreground truncate">{u.country || "—"}</div>
       <div className="p-3 w-24 hidden lg:block text-muted-foreground">{new Date(u.created_at).toLocaleDateString()}</div>
       <div className="p-3 w-12 text-muted-foreground">
@@ -135,7 +130,6 @@ const UsersVirtualTable = ({
         <div className="p-3 flex-1">Name</div>
         <div className="p-3 w-32 hidden sm:block">Phone</div>
         <div className="p-3 w-28">Role</div>
-        <div className="p-3 w-20 hidden md:block">Plan</div>
         <div className="p-3 w-28 hidden lg:block">Country</div>
         <div className="p-3 w-24 hidden lg:block">Joined</div>
         <div className="p-3 w-12"></div>
@@ -178,8 +172,12 @@ const AdminUsersPage = () => {
   const allSelected = useMemo(() => rows.length > 0 && rows.every((r) => selected.includes(r.user_id)), [rows, selected]);
 
   const toggleSuspend = async (u: AdminUserRow) => {
-    const { error } = await supabase.from("profiles").update({ is_suspended: !u.is_suspended }).eq("user_id", u.user_id);
-    if (error) return toast.error(error.message);
+    // Route to the function that also revokes sessions on suspend
+    const fn = (u.role === "admin" || u.role === "super_admin") ? "manage-admin" : "manage-student";
+    const { error } = await supabase.functions.invoke(fn, {
+      body: { action: "set_suspended", user_id: u.user_id, is_suspended: !u.is_suspended },
+    });
+    if (error) return toast.error(error.message ?? "Failed to update");
     toast.success(u.is_suspended ? "User unsuspended" : "User suspended");
     setDrawerUser(null);
     reload();
@@ -331,7 +329,6 @@ const AdminUsersPage = () => {
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { label: "Role", value: drawerUser.role },
-                  { label: "Plan", value: drawerUser.plan },
                   { label: "Target exam", value: drawerUser.target_exam ?? "—" },
                   { label: "Country", value: drawerUser.country ?? "—" },
                   { label: "City", value: drawerUser.city ?? "—" },

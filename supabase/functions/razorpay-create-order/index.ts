@@ -35,18 +35,17 @@ serve(async (req) => {
 
     const body = await req.json();
     const courseId = String(body.courseId ?? "");
-    const courseName = String(body.courseName ?? "Course");
-    const amountINR = Number(body.amount ?? 0);
+    // currency accepted from client (INR vs AED); amount is always server-authoritative
     const currency = String(body.currency ?? "INR");
 
-    if (!courseId || amountINR <= 0) {
-      return new Response(JSON.stringify({ error: "Invalid input" }), {
+    if (!courseId) {
+      return new Response(JSON.stringify({ error: "courseId is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const keyId = Deno.env.get("RAZORPAY_KEY_ID");
+    const keyId     = Deno.env.get("RAZORPAY_KEY_ID");
     const keySecret = Deno.env.get("RAZORPAY_KEY_SECRET");
     if (!keyId || !keySecret) {
       return new Response(JSON.stringify({ error: "Payment gateway not configured" }), {
@@ -55,8 +54,35 @@ serve(async (req) => {
       });
     }
 
-    // Amount in paise (1 INR = 100 paise)
-    const amountInPaise = Math.round(amountINR * 100);
+    // Look up course server-side — never trust client-supplied amount
+    const admin = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const { data: course, error: courseErr } = await admin
+      .from("courses")
+      .select("id, name, price, is_published")
+      .eq("id", courseId)
+      .maybeSingle();
+
+    if (courseErr || !course) {
+      return new Response(JSON.stringify({ error: "Course not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!course.is_published) {
+      return new Response(JSON.stringify({ error: "Course is not available for purchase" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!course.price || Number(course.price) <= 0) {
+      return new Response(JSON.stringify({ error: "Course has no price configured" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Amount in paise derived from DB — client-supplied amount ignored
+    const amountInPaise = Math.round(Number(course.price) * 100);
     const receipt = `course_${courseId.slice(0, 8)}_${Date.now()}`;
 
     const rzpResp = await fetch("https://api.razorpay.com/v1/orders", {
@@ -69,7 +95,8 @@ serve(async (req) => {
         amount: amountInPaise,
         currency,
         receipt,
-        notes: { course_id: courseId, user_id: user.id, course_name: courseName },
+        // Store course_id in notes so verify-payment can re-validate server-side
+        notes: { course_id: courseId, user_id: user.id, course_name: course.name },
       }),
     });
 

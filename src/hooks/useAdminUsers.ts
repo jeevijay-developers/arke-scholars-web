@@ -9,7 +9,6 @@ export type AdminUserRow = {
   country: string | null;
   city: string | null;
   target_exam: string | null;
-  plan: string;
   is_suspended: boolean;
   created_at: string;
   email: string | null;
@@ -23,12 +22,16 @@ const fetchAdminUsers = async (filter: string, search: string, page: number) => 
   let query = supabase
     .from("profiles")
     .select(
-      "user_id, full_name, phone, avatar_url, country, city, target_exam, plan, is_suspended, created_at",
+      "user_id, full_name, phone, avatar_url, country, city, target_exam, is_suspended, created_at",
       { count: "exact" },
     )
     .order("created_at", { ascending: false });
 
-  if (search) query = query.or(`full_name.ilike.%${search}%,phone.ilike.%${search}%`);
+  if (search) {
+    // Strip PostgREST .or() metacharacters to prevent filter injection (M2)
+    const s = search.trim().replace(/[%,()*]/g, "");
+    if (s) query = query.or(`full_name.ilike.%${s}%,phone.ilike.%${s}%`);
+  }
 
   const from = page * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;

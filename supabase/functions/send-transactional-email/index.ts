@@ -122,6 +122,51 @@ Deno.serve(async (req) => {
     )
   }
 
+  // Auth gate: reject anon key; non-admin authenticated users can only
+  // send to their own email address (blocks open relay / phishing abuse).
+  // verify_jwt=true already ensures a structurally valid JWT, but the anon
+  // publishable key is a valid JWT, so we must inspect the role claim.
+  const authToken = req.headers.get('Authorization')?.slice('Bearer '.length).trim() ?? ''
+  let callerJwtRole: string | null = null
+  try {
+    const parts = authToken.split('.')
+    if (parts.length === 3) {
+      const pad = (s: string) => s.padEnd(Math.ceil(s.length / 4) * 4, '=').replace(/-/g, '+').replace(/_/g, '/')
+      callerJwtRole = (JSON.parse(atob(pad(parts[1]))) as Record<string, unknown>).role as string ?? null
+    }
+  } catch { /* ignore — gate below rejects null */ }
+
+  if (!callerJwtRole || callerJwtRole === 'anon') {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
+  if (callerJwtRole === 'authenticated') {
+    const anonKeyEnv = Deno.env.get('SUPABASE_ANON_KEY')!
+    const callerUserClient = createClient(supabaseUrl, anonKeyEnv, {
+      global: { headers: { Authorization: `Bearer ${authToken}` } },
+    })
+    const { data: { user: callerUser } } = await callerUserClient.auth.getUser()
+    if (callerUser) {
+      const svc = createClient(supabaseUrl, supabaseServiceKey)
+      const [{ data: isAdm }, { data: isSuper }] = await Promise.all([
+        svc.rpc('has_role', { _user_id: callerUser.id, _role: 'admin' }),
+        svc.rpc('has_role', { _user_id: callerUser.id, _role: 'super_admin' }),
+      ])
+      if (!isAdm && !isSuper) {
+        const callerEmail = (callerUser.email ?? '').toLowerCase()
+        if (callerEmail !== effectiveRecipient.toLowerCase()) {
+          return new Response(
+            JSON.stringify({ error: 'Forbidden: may only send to your own email address' }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+      }
+    }
+  }
+
   // Create Supabase client with service role (bypasses RLS)
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
