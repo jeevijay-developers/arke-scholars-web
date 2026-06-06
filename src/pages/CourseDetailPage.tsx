@@ -78,6 +78,7 @@ const CourseDetailPage = () => {
         .eq("user_id", user.id)
         .eq("course_id", course.id)
         .eq("is_active", true)
+        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
         .maybeSingle();
       setEnrollment(enr as EnrollmentInfo | null);
 
@@ -184,6 +185,7 @@ const CourseDetailPage = () => {
       .eq("user_id", user.id)
       .eq("course_id", course.id)
       .eq("is_active", true)
+      .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
       .maybeSingle();
     setEnrollment(enr as EnrollmentInfo | null);
   };

@@ -113,7 +113,8 @@ function extractTopLevelBlocks(bodyXml: string): Block[] {
 
 function paraText(paraXml: string): string {
   return [...paraXml.matchAll(/<w:t[^>]*>([^<]*)<\/w:t>/g)]
-    .map((m) => m[1]).join("");
+    .map((m) => m[1]).join("")
+    .replace(/ /g, " "); // normalise non-breaking spaces from Word
 }
 
 function paraIsBold(paraXml: string): boolean {
@@ -258,7 +259,8 @@ function parseDocument(
 ): { questions: ParsedQuestion[]; skipped: number; warnings: string[] } {
   const warnings: string[] = [];
   const questions: ParsedQuestion[] = [];
-  let skipped = 0;
+  let skipped = 0;        // questions that failed to parse (shown to user)
+  let _discarded = 0;     // pre-section / orphan paragraphs (not shown)
 
   const bodyMatch = /<w:body>([\s\S]*)<\/w:body>/.exec(docXml);
   if (!bodyMatch) return { questions, skipped, warnings: ["Could not locate <w:body> in document XML"] };
@@ -292,6 +294,23 @@ function parseDocument(
       let stemHtml = a.stemParas.join("<br/>").trim()
         .replace(/^<strong>\s*\d+\s*\.\s*<\/strong>\s*/i, "")
         .replace(/^\d+\s*\.\s+/, "");
+
+      // ── Extract topic embedded in stem via <br/> line break ───────────────
+      // Word sometimes puts "Topic: Kinematics" as a soft line-break inside the
+      // same paragraph as the question stem instead of a separate <w:p>.
+      if (!a.topic) {
+        const stemLines = stemHtml.split(/<br\s*\/?>/i);
+        const kept: string[] = [];
+        for (const line of stemLines) {
+          const plain = line.replace(/<[^>]+>/g, " ").replace(/ /g, " ").trim();
+          if (/^topic\b/i.test(plain)) {
+            a.topic = plain.replace(/^topic\s*[:\-–—\t]\s*/i, "").trim() || a.topic;
+          } else {
+            kept.push(line);
+          }
+        }
+        stemHtml = kept.join("<br/>").trim();
+      }
 
       // ── Determine type from answer (override structural defaults) ──────────
       let type: QuestionType = a.type;
@@ -471,7 +490,7 @@ function parseDocument(
       }
 
       // Skip everything before the first SECTION header (cover page, instruction list, etc.)
-      if (!seenSection) { skipped++; continue; }
+      if (!seenSection) { _discarded++; continue; }
 
       // Skip italic descriptor sub-line under section header (contains pipes + "Exam:")
       if (text.includes("|") && /exam\s*:/i.test(text)) continue;
@@ -516,7 +535,7 @@ function parseDocument(
         continue;
       }
 
-      if (!accum) { skipped++; continue; }
+      if (!accum) { _discarded++; continue; }
 
       // Image-only paragraphs after a table-based options block: assign to options in order
       if (accum.optionsDone && !accum.inSolution) {
@@ -536,10 +555,11 @@ function parseDocument(
         }
       }
 
-      // Topic line — italic paragraph like "Topic: Thermodynamics"
-      // Match by prefix regardless of italic/colour formatting (formatting may vary)
-      if (/^topic\s*:/i.test(text)) {
-        accum.topic = text.replace(/^topic\s*:\s*/i, "").trim() || null;
+      // Topic line — paragraph like "Topic: Thermodynamics", "Topic : Kinematics",
+      // "Topic- Laws of Motion", or "Topic\tWaves". Word formatting varies widely.
+      if (/^topic\b/i.test(text)) {
+        const topicValue = text.replace(/^topic\s*[:\-–—\t]\s*/i, "").trim();
+        if (topicValue) accum.topic = topicValue;
         continue;
       }
 
@@ -608,7 +628,7 @@ function parseDocument(
       }
     } else {
       // Table block
-      if (!accum) { skipped++; continue; }
+      if (!accum) { _discarded++; continue; }
       if (accum.optionsDone) continue;
 
       if (isMatchTable(block.xml)) {

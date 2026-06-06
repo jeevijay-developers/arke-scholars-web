@@ -4,14 +4,21 @@
 -- Drop permissive policy and recreate with published course check only
 DROP POLICY IF EXISTS "View pdfs of published courses" ON public.course_pdfs;
 
-CREATE POLICY "course_pdfs_select"
-ON public.course_pdfs FOR SELECT
-USING (
-  EXISTS (
-    SELECT 1 FROM public.courses c
-    WHERE c.id = course_pdfs.course_id AND c.is_published = true
-  )
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE tablename = 'course_pdfs' AND policyname = 'course_pdfs_select'
+  ) THEN
+    CREATE POLICY "course_pdfs_select"
+    ON public.course_pdfs FOR SELECT
+    USING (
+      EXISTS (
+        SELECT 1 FROM public.courses c
+        WHERE c.id = course_pdfs.course_id AND c.is_published = true
+      )
+    );
+  END IF;
+END $$;
 
 -- Add enrollment-gated RLS for course_resources (if not already present)
 CREATE POLICY IF NOT EXISTS "course_resources_enrolled_select"

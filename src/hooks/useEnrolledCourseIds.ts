@@ -19,6 +19,7 @@ export const useEnrolledCourseIds = () => {
       .select("course_id")
       .eq("user_id", user.id)
       .eq("is_active", true)
+      .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
       .then(({ data }) => {
         setEnrolledCourseIds(new Set((data ?? []).map((e) => e.course_id)));
         setLoading(false);

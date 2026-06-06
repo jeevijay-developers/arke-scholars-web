@@ -23,7 +23,7 @@ const PricingPage = () => {
       monthly: 0,
       gradient: "from-muted to-muted",
       popular: false,
-      cta: "Start Free",
+      cta: "Get Started",
       features: [
         { label: "5 free live classes per month", included: true },
         { label: "Basic test series (10 tests)", included: true },
@@ -160,11 +160,10 @@ const PricingPage = () => {
               return (
                 <div
                   key={p.name}
-                  className={`relative rounded-2xl border p-8 transition-transform hover:-translate-y-1 ${
-                    p.popular
+                  className={`relative rounded-2xl border p-8 transition-transform hover:-translate-y-1 ${p.popular
                       ? "border-primary bg-card shadow-blue"
                       : "border-border bg-card shadow-sm"
-                  }`}
+                    }`}
                 >
                   {p.popular && (
                     <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-pill bg-gradient-to-r from-primary to-accent px-4 py-1 text-xs font-bold text-primary-foreground">
@@ -193,11 +192,10 @@ const PricingPage = () => {
                   )}
                   <Link
                     to="/signup"
-                    className={`mt-6 block rounded-pill py-3 text-center text-sm font-bold transition-colors ${
-                      p.popular
+                    className={`mt-6 block rounded-pill py-3 text-center text-sm font-bold transition-colors ${p.popular
                         ? "bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90"
                         : "border border-border text-foreground hover:bg-primary/5"
-                    }`}
+                      }`}
                   >
                     {p.cta}
                   </Link>
@@ -320,7 +318,7 @@ const PricingPage = () => {
                 to="/signup"
                 className="rounded-pill bg-primary-foreground px-6 py-3 text-sm font-bold text-primary hover:opacity-90 transition-opacity"
               >
-                Start Free
+                Get Started
               </Link>
               <Link
                 to="/courses"

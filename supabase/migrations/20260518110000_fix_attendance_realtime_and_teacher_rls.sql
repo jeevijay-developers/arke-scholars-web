@@ -1,6 +1,14 @@
 -- 1. Add live_class_attendance to realtime publication so teacher dashboard
 --    receives INSERT/UPDATE events when students join.
-ALTER PUBLICATION supabase_realtime ADD TABLE public.live_class_attendance;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND tablename = 'live_class_attendance'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.live_class_attendance;
+  END IF;
+END $$;
 
 -- REPLICA IDENTITY FULL lets Supabase send the full OLD row on UPDATE/DELETE,
 -- which is required for postgres_changes subscriptions with filters.

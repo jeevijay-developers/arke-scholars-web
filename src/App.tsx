@@ -53,6 +53,7 @@ import AdminMentorAssignmentsPage from "./pages/AdminMentorAssignmentsPage";
 import AdminPaymentsPage from "./pages/AdminPaymentsPage";
 import AdminNotificationsPage from "./pages/AdminNotificationsPage";
 import AdminCoursesPage from "./pages/AdminCoursesPage";
+import AdminCourseAssignmentsPage from "./pages/AdminCourseAssignmentsPage";
 import CreateCoursePage from "./pages/CreateCoursePage";
 import CreateTestPage from "./pages/CreateTestPage";
 import AdminLiveClassesPage from "./pages/AdminLiveClassesPage";
@@ -60,7 +61,8 @@ import AdminTestsPage from "./pages/AdminTestsPage";
 import AdminQuestionBankPage from "./pages/AdminQuestionBankPage";
 import AdminCompeteQuestionsPage from "./pages/AdminCompeteQuestionsPage";
 import AdminExamsPage from "./pages/AdminExamsPage";
-import AdminAdminsPage from "./pages/AdminAdminsPage";
+import AdminCourseBannersPage from "./pages/AdminCourseBannersPage";
+import AdminStaffRolesPage from "./pages/AdminStaffRolesPage";
 import AdminModerationPage from "./pages/AdminModerationPage";
 import AdminSettingsPage from "./pages/AdminSettingsPage";
 import AdminEducatorApplicationsPage from "./pages/AdminEducatorApplicationsPage";
@@ -266,6 +268,7 @@ const App = () => (
               <Route path="/admin/mentor-assignments" element={<AdminMentorAssignmentsPage />} />
               <Route path="/admin/mentor-handovers" element={<AdminMentorHandoversPage />} />
               <Route path="/admin/courses" element={<AdminCoursesPage />} />
+              <Route path="/admin/course-assignments" element={<AdminCourseAssignmentsPage />} />
               <Route path="/admin/courses/new" element={<CreateCoursePage />} />
               <Route path="/admin/courses/:courseId/edit" element={<CreateCoursePage />} />
               <Route path="/admin/live-classes" element={<AdminLiveClassesPage />} />
@@ -275,11 +278,12 @@ const App = () => (
               <Route path="/admin/question-bank" element={<AdminQuestionBankPage />} />
               <Route path="/admin/compete-questions" element={<AdminCompeteQuestionsPage />} />
               <Route path="/admin/exams" element={<AdminExamsPage />} />
+              <Route path="/admin/course-banners" element={<AdminCourseBannersPage />} />
               <Route path="/admin/payments" element={<AdminPaymentsPage />} />
               <Route path="/admin/notifications" element={<AdminNotificationsPage />} />
               <Route path="/admin/moderation" element={<AdminModerationPage />} />
               <Route path="/admin/settings" element={<AdminSettingsPage />} />
-              <Route path="/admin/admins" element={<AdminAdminsPage />} />
+              <Route path="/admin/staff-roles" element={<AdminStaffRolesPage />} />
               <Route path="/admin/profile" element={<AdminProfilePage />} />
               <Route path="/admin/overview" element={<AdminDashboard />} />
               <Route path="/admin/upload-questions" element={<AdminUploadQuestionsPage />} />

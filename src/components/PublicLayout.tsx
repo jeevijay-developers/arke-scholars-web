@@ -1,7 +1,7 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
-import { Flame, Heart, Globe, Menu, X, Phone } from "lucide-react";
+import { Flame, Heart, Globe, Phone } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import arkeLogo from "@/assets/arke-logo.png";
 import { useFavourites } from "@/hooks/useFavourites";
 
@@ -9,17 +9,27 @@ const PublicLayout = () => {
   const location = useLocation();
   const { user } = useAppStore();
   const { count: favCount } = useFavourites();
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const initials = user?.full_name
     ? user.full_name.split(" ").filter(Boolean).slice(0, 2).map((n) => n[0]?.toUpperCase()).join("")
     : "U";
 
   const navItems = [
-    { label: "Courses", path: "/courses" },
-    { label: "Mentorship", path: "/mentorship" },
-    { label: "Admission/Scholarship", path: "/admissions" },
-    { label: "Association", path: "/association" },
+    { label: "JEE", path: "/courses?exam=JEE Main" },
+    { label: "NEET", path: "/courses?exam=NEET" },
+    { label: "Foundation", path: "/courses?exam=Foundation" },
+    { label: "Contact", path: "/contact" },
+    { label: "About Us", path: "/about" },
   ];
+
+  /** Active state that understands the `?exam=` query param used by exam links. */
+  const isNavActive = (path: string) => {
+    const [pathname, query] = path.split("?");
+    if (location.pathname !== pathname) return false;
+    if (!query) return true;
+    const examParam = new URLSearchParams(query).get("exam");
+    const currentExam = new URLSearchParams(location.search).get("exam");
+    return examParam === currentExam;
+  };
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
@@ -36,99 +46,9 @@ const PublicLayout = () => {
         </div>
       </div>
 
-      {/* Mobile drawer overlay */}
-      {drawerOpen && (
-        <div
-          className="fixed inset-0 z-[60] bg-black/50 md:hidden"
-          onClick={() => setDrawerOpen(false)}
-        />
-      )}
-
-      {/* Mobile drawer */}
-      <aside
-        className={`fixed top-0 left-0 z-[70] h-full w-72 bg-card border-r border-border shadow-2xl transition-transform duration-300 ease-in-out md:hidden flex flex-col ${drawerOpen ? "translate-x-0" : "-translate-x-full"}`}
-      >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <Link to="/" onClick={() => setDrawerOpen(false)} className="flex items-center gap-2">
-            <img
-              src={arkeLogo}
-              alt="ARKE"
-              className="h-8 w-auto object-contain"
-            />
-            
-          </Link>
-          <button
-            onClick={() => setDrawerOpen(false)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            aria-label="Close menu"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-1">
-          {navItems.map((link) => (
-            <Link
-              key={link.path}
-              to={link.path}
-              onClick={() => setDrawerOpen(false)}
-              className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="border-t border-border px-4 py-5 space-y-3">
-          {user ? (
-            <Link
-              to="/dashboard"
-              onClick={() => setDrawerOpen(false)}
-              className="flex items-center gap-3 rounded-xl px-4 py-3 bg-muted hover:bg-muted/70 transition-colors"
-            >
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-xs font-black text-primary-foreground overflow-hidden shrink-0">
-                {user.avatar_url ? (
-                  <img src={user.avatar_url} alt={user.full_name} className="h-full w-full object-cover" />
-                ) : (
-                  initials
-                )}
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-bold text-foreground truncate">{user.full_name?.split(" ")[0] || "Account"}</p>
-                <p className="text-xs text-muted-foreground">Go to Dashboard</p>
-              </div>
-            </Link>
-          ) : (
-            <>
-              <Link
-                to="/login"
-                onClick={() => setDrawerOpen(false)}
-                className="block w-full rounded-pill border border-border py-2.5 text-center text-sm font-semibold text-foreground hover:bg-muted transition-colors"
-              >
-                Login
-              </Link>
-              <Link
-                to="/signup"
-                onClick={() => setDrawerOpen(false)}
-                className="block w-full rounded-pill bg-gradient-to-r from-primary to-accent py-2.5 text-center text-sm font-bold text-primary-foreground shadow-blue hover:opacity-90 transition-opacity"
-              >
-                Start Free
-              </Link>
-            </>
-          )}
-        </div>
-      </aside>
-
       {/* Navbar */}
       <nav className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md">
         <div className="container mx-auto flex items-center justify-between gap-2 md:gap-4 px-4 py-3">
-          <button
-            className="md:hidden p-1 text-foreground shrink-0"
-            onClick={() => setDrawerOpen(!drawerOpen)}
-            aria-label="Open menu"
-          >
-            {drawerOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
           <Link
             to="/"
             className="flex items-center gap-2 shrink-0"
@@ -141,7 +61,7 @@ const PublicLayout = () => {
           </Link>
           <div className="hidden items-center justify-center gap-8 md:flex flex-1">
             {navItems.map((item) => {
-              const active = location.pathname === item.path || location.pathname.startsWith(item.path + "/");
+              const active = isNavActive(item.path);
               return (
                 <Link
                   key={item.path}
@@ -197,13 +117,35 @@ const PublicLayout = () => {
                   to="/signup"
                   className="rounded-pill bg-gradient-to-r from-primary to-accent px-3 md:px-5 py-2 text-xs md:text-sm font-bold text-primary-foreground shadow-blue hover:opacity-90 transition-opacity whitespace-nowrap"
                 >
-                  Start Free
+                  Get Started
                 </Link>
               </>
             )}
           </div>
         </div>
       </nav>
+
+      {/* Mobile tab strip — sticky below navbar, hidden on desktop */}
+      <div className="sticky top-[57px] z-40 md:hidden border-b border-border bg-card/90 backdrop-blur-md overflow-x-auto">
+        <div className="flex min-w-max px-2">
+          {navItems.map((item) => {
+            const active = isNavActive(item.path);
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`px-4 py-2.5 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors ${
+                  active
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      </div>
 
       <main className="flex-1">
         <Outlet />

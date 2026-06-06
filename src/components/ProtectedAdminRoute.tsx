@@ -42,6 +42,11 @@ const ProtectedAdminRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to={home} replace />;
   }
 
+  // Mentor role is staff but not admin-panel staff — bounce to mentor portal.
+  if (role === "mentor") {
+    return <Navigate to="/mentor/dashboard" replace />;
+  }
+
   return <>{children}</>;
 };
 
