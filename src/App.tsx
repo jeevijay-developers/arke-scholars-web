@@ -101,6 +101,8 @@ import BattleRoom from "./pages/BattleRoom";
 import BattleResult from "./pages/BattleResult";
 import BattleLeaderboard from "./pages/BattleLeaderboard";
 import { AuthProvider } from "./context/AuthContext";
+import LeadManagerLayout from "./components/LeadManagerLayout";
+import LeadManagerDashboardPage from "./pages/LeadManagerDashboardPage";
 import NotFound from "./pages/NotFound";
 
 function RouteTracker() {
@@ -228,6 +230,15 @@ const App = () => (
                 <Route path="/mentor/chats" element={<MentorChatsPage />} />
                 <Route path="/mentor/performance" element={<MentorPerformancePage />} />
                 <Route path="/mentor/settings" element={<MentorSettingsPage />} />
+              </Route>
+            </Route>
+
+            {/* Lead Manager layout — lead_manager role only */}
+            <Route element={<ProtectedRoute allow={["lead_manager"]} loginPath="/login" />}>
+              <Route element={<LeadManagerLayout />}>
+                <Route path="/lead-manager" element={<Navigate to="/lead-manager/dashboard" replace />} />
+                <Route path="/lead-manager/dashboard" element={<LeadManagerDashboardPage />} />
+                <Route path="/lead-manager/leads" element={<LeadManagerDashboardPage />} />
               </Route>
             </Route>
 
