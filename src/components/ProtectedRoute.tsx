@@ -29,6 +29,8 @@ const homeForRole = (role: UserRole | null): string => {
       return "/teacher/dashboard";
     case "mentor":
       return "/mentor/dashboard";
+    case "lead_manager":
+      return "/lead-manager/dashboard";
     case "student":
       return "/dashboard";
     default:

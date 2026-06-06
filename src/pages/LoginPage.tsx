@@ -10,7 +10,7 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get("redirect");
-  const { session, user, isStaff, isTeacher, roleReady, loading, signIn } = useAuth();
+  const { session, user, isStaff, isTeacher, isMentor, isLeadManager, roleReady, loading, signIn } = useAuth();
 
   // If already authenticated, send to the right portal based on role.
   // Wait until roleReady so a staff/teacher user isn't briefly sent to
@@ -45,12 +45,20 @@ const LoginPage = () => {
       navigate("/teacher/dashboard", { replace: true });
       return;
     }
+    if (isMentor) {
+      navigate("/mentor/dashboard", { replace: true });
+      return;
+    }
+    if (isLeadManager) {
+      navigate("/lead-manager/dashboard", { replace: true });
+      return;
+    }
     if (redirectTo) {
       navigate(redirectTo, { replace: true });
       return;
     }
     navigate("/my-courses", { replace: true });
-  }, [loading, session, user, roleReady, isStaff, isTeacher, navigate, redirectTo]);
+  }, [loading, session, user, roleReady, isStaff, isTeacher, isMentor, isLeadManager, navigate, redirectTo]);
 
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
