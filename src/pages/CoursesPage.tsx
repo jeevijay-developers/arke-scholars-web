@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import SEO from "@/components/SEO";
-import { Star, Users, Loader2, GraduationCap, Sparkles, ArrowRight, ChevronDown, Trophy, BarChart3 } from "lucide-react";
+import { Star, Users, Loader2, GraduationCap, ArrowRight, ChevronDown } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useCourses, type CourseRow } from "@/hooks/useCourses";
+import { useCourseBanners, type CourseBanner } from "@/hooks/useCourseBanners";
 import { useAppStore } from "@/store/useAppStore";
 import EnrollmentModal from "@/components/EnrollmentModal";
-import { SUBJECTS_WITH_ALL } from "@/lib/constants";
 import coursePhysics from "@/assets/course-physics.png";
 import courseChemistry from "@/assets/course-chemistry.png";
 import courseMaths from "@/assets/course-maths.png";
@@ -24,14 +24,14 @@ const EXAM_OPTIONS: ExamOption[] = [
   { label: "All",        value: "All",          classes: [] },
   {
     label: "JEE",        value: "JEE",
-    children: ["JEE Main", "JEE Advanced"],
+    children: ["MAINS", "Advance"],
     classes: ["Class 11", "Class 12"],
   },
   { label: "NEET",       value: "NEET",         classes: ["Class 11", "Class 12"] },
   { label: "Foundation", value: "Foundation",   classes: ["Class 8", "Class 9", "Class 10"] },
 ];
 
-const subjectFilters: string[] = [...SUBJECTS_WITH_ALL];
+// Subject filters removed — we no longer show subject capsules
 
 const courseImages: Record<string, string> = {
   Physics: coursePhysics,
@@ -40,11 +40,6 @@ const courseImages: Record<string, string> = {
   Biology: courseBiology,
 };
 
-const highlights = [
-  { icon: Trophy,       label: "School + Olympiad + JEE/NEET Prep", desc: "One platform. Complete academic excellence." },
-  { icon: GraduationCap, label: "IIT & AIIMS Educators",             desc: "Top mentors shaping future achievers" },
-  { icon: BarChart3,    label: "Performance Analytics Dashboard",    desc: "Track growth with precision insights" },
-];
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -59,12 +54,12 @@ const CoursesPage = () => {
   const [activeSub, setActiveSub] = useState<string | null>(null);
   // Class level filter ("" = All classes)
   const [activeClass, setActiveClass] = useState("");
-  // Subject filter
-  const [activeSubject, setActiveSubject] = useState(0);
+  // Subject filter removed
   // JEE hover dropdown open
   const [jeeOpen, setJeeOpen] = useState(false);
   const jeeRef = useRef<HTMLDivElement>(null);
   const [enrollFor, setEnrollFor] = useState<CourseRow | null>(null);
+  const { banners } = useCourseBanners();
 
   // Derived: what value to pass to useCourses
   const activeExam = EXAM_OPTIONS[activeExamIdx];
@@ -85,15 +80,15 @@ const CoursesPage = () => {
     if (!p) return;
     if (p.includes("foundation")) { setActiveExamIdx(3); setActiveSub(null); }
     else if (p.includes("neet"))  { setActiveExamIdx(2); setActiveSub(null); }
-    else if (p.includes("advanced")) { setActiveExamIdx(1); setActiveSub("JEE Advanced"); }
-    else if (p.includes("jee"))   { setActiveExamIdx(1); setActiveSub("JEE Main"); }
+    else if (p.includes("advanced")) { setActiveExamIdx(1); setActiveSub("Advance"); }
+    else if (p.includes("jee"))   { setActiveExamIdx(1); setActiveSub("MAINS"); }
     setActiveClass("");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   const { courses, loading } = useCourses(
     examFilter,
-    subjectFilters[activeSubject],
+    undefined,
     activeClass || undefined,
   );
 
@@ -115,8 +110,8 @@ const CoursesPage = () => {
     setJeeOpen(false);
   };
 
-  // Label shown in the active JEE pill
-  const jeeLabel = activeSub ?? "JEE";
+  // Show selected sub-option in the button label when active
+  const jeeLabel = activeSub ? `JEE ${activeSub}` : "JEE";
   const classOptions = activeExam.classes;
 
   return (
@@ -127,31 +122,8 @@ const CoursesPage = () => {
         canonical="/courses"
       />
 
-      {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[hsl(var(--navy))] via-[hsl(var(--navy2))] to-[hsl(222,47%,15%)] py-16 md:py-20">
-        <div className="absolute inset-0 opacity-30" style={{ background: "radial-gradient(circle at 30% 50%, hsl(24 95% 53% / 0.25) 0%, transparent 60%)" }} />
-        <div className="absolute inset-0 opacity-20" style={{ background: "radial-gradient(circle at 70% 30%, hsl(38 92% 50% / 0.2) 0%, transparent 50%)" }} />
-        <div className="container relative z-10 mx-auto px-4 text-center animate-fade-in-up">
-          <span className="inline-flex items-center gap-2 rounded-pill bg-white/10 px-4 py-1.5 text-xs font-bold text-white/90 backdrop-blur-sm">
-            <Sparkles className="h-3.5 w-3.5 text-accent" /> Curated by toppers
-          </span>
-          <h1 className="mt-5 font-display text-4xl font-black leading-tight text-white md:text-5xl">
-            <span className="gradient-text">JEE, NEET & Foundation</span> Exam Courses Online
-          </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-base text-white/80">
-            Browse complete batches for JEE, NEET, Foundation and Olympiads. Live classes, recorded lectures, tests and doubt support — all bundled together.
-          </p>
-          <div className="mx-auto mt-10 grid max-w-3xl gap-4 sm:grid-cols-3">
-            {highlights.map((h) => (
-              <div key={h.label} className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm text-left">
-                <h.icon className="h-5 w-5 text-accent" />
-                <p className="mt-2 text-sm font-bold text-white">{h.label}</p>
-                <p className="mt-0.5 text-xs text-white/60">{h.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* Banner — same as Home page */}
+      <BannerCarousel banners={banners} />
 
       {/* Listing */}
       <section className="container mx-auto px-4 py-12 md:py-16">
@@ -173,8 +145,8 @@ const CoursesPage = () => {
         </div>
 
         <div className="mt-6 space-y-3">
-          {/* Row 1: Exam filters */}
-          <div className="flex gap-2 overflow-x-auto no-scrollbar items-center">
+          {/* Row 1: Exam filters — overflow must be visible so the JEE dropdown isn't clipped */}
+          <div className="flex gap-2 flex-wrap items-center">
             {EXAM_OPTIONS.map((opt, i) => {
               const isActive = i === activeExamIdx;
               const isJee = opt.label === "JEE";
@@ -200,8 +172,8 @@ const CoursesPage = () => {
                       <ChevronDown className={`h-3 w-3 transition-transform ${jeeOpen ? "rotate-180" : ""}`} />
                     </button>
                     {jeeOpen && (
-                      <div className="absolute left-0 top-full pt-1 z-30 min-w-[144px]">
-                        <div className="rounded-xl border border-border bg-card shadow-lg overflow-hidden">
+                      <div className="absolute left-0 top-full pt-1 z-50 min-w-[144px]">
+                        <div className="rounded-xl border border-border bg-card shadow-xl overflow-hidden">
                           {opt.children!.map((sub) => (
                             <button
                               key={sub}
@@ -265,20 +237,7 @@ const CoursesPage = () => {
             </div>
           )}
 
-          {/* Row 3: Subject filters */}
-          <div className="flex gap-2 overflow-x-auto no-scrollbar">
-            {subjectFilters.map((s, i) => (
-              <button
-                key={s}
-                onClick={() => setActiveSubject(i)}
-                className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  i === activeSubject ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted/50"
-                }`}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
+          {/* Subject capsules removed */}
         </div>
 
         {loading ? (
@@ -382,5 +341,84 @@ const CoursesPage = () => {
     </div>
   );
 };
+
+// ── Banner components (same as LandingPage) ───────────────────────────────────
+
+function BannerImage({ banner }: { banner: CourseBanner }) {
+  const img = (
+    <img
+      src={banner.image_url!}
+      alt={banner.title || "Promotional banner"}
+      className="block w-full h-[8rem] sm:h-[11rem] md:h-[16rem] object-cover"
+      loading="eager"
+    />
+  );
+  return banner.cta_link ? (
+    <Link to={banner.cta_link} className="block w-full">{img}</Link>
+  ) : img;
+}
+
+function BannerCarousel({ banners }: { banners: CourseBanner[] }) {
+  const slides = banners.filter((b) => b.image_url);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [active, setActive] = useState(0);
+
+  const goTo = (i: number) => {
+    const track = trackRef.current;
+    if (!track) return;
+    const idx = (i + slides.length) % slides.length;
+    track.scrollTo({ left: idx * track.clientWidth, behavior: "smooth" });
+    setActive(idx);
+  };
+
+  useEffect(() => {
+    if (slides.length < 2) return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const id = setInterval(() => {
+      const track = trackRef.current;
+      if (!track) return;
+      const next = (Math.round(track.scrollLeft / track.clientWidth) + 1) % slides.length;
+      track.scrollTo({ left: next * track.clientWidth, behavior: "smooth" });
+      setActive(next);
+    }, 5000);
+    return () => clearInterval(id);
+  }, [slides.length]);
+
+  if (slides.length === 0) return null;
+  if (slides.length === 1) return <BannerImage banner={slides[0]} />;
+
+  const onScroll = () => {
+    const track = trackRef.current;
+    if (!track) return;
+    setActive(Math.round(track.scrollLeft / track.clientWidth));
+  };
+
+  return (
+    <div className="relative w-full">
+      <div
+        ref={trackRef}
+        onScroll={onScroll}
+        className="flex w-full overflow-x-auto snap-x snap-mandatory scrollbar-hide"
+        style={{ scrollbarWidth: "none" }}
+      >
+        {slides.map((b) => (
+          <div key={b.id} className="w-full shrink-0 snap-start">
+            <BannerImage banner={b} />
+          </div>
+        ))}
+      </div>
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
+        {slides.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => goTo(i)}
+            className={`rounded-full transition-all ${i === active ? "w-5 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/60"}`}
+            aria-label={`Go to banner ${i + 1}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default CoursesPage;
