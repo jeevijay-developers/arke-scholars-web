@@ -16,6 +16,7 @@ import {
   Bell,
   Settings,
   ShieldCheck,
+  ShieldPlus,
   HeartHandshake,
   Library,
   Swords,
@@ -23,6 +24,7 @@ import {
   FileBarChart,
   FileUp,
   Megaphone,
+  BookmarkPlus,
   Menu,
   X,
 } from "lucide-react";
@@ -31,6 +33,7 @@ import NotificationBell from "@/components/NotificationBell";
 import { memo, useCallback, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useAppStore } from "@/store/useAppStore";
+import { useStaffPermissions } from "@/hooks/useStaffPermissions";
 import { toast } from "sonner";
 
 type NavItem = { label: string; icon: typeof LayoutDashboard; path: string };
@@ -44,6 +47,7 @@ const baseNav: NavItem[] = [
   { label: "Mentor Assignments", icon: HeartHandshake, path: "/admin/mentor-assignments" },
   { label: "Mentor Handovers", icon: HeartHandshake, path: "/admin/mentor-handovers" },
   { label: "Courses", icon: GraduationCap, path: "/admin/courses" },
+  { label: "Course Assignments", icon: BookmarkPlus, path: "/admin/course-assignments" },
   { label: "Live Classes", icon: Video, path: "/admin/live-classes" },
   { label: "Tests", icon: ClipboardCheck, path: "/admin/tests" },
   { label: "Question Bank", icon: Library, path: "/admin/question-bank" },
@@ -61,7 +65,7 @@ const baseNav: NavItem[] = [
 
 // Items only super-admin sees: revenue, settings, moderation.
 const superAdminNav: NavItem[] = [
-  { label: "Admin Management", icon: ShieldCheck, path: "/admin/admins" },
+  { label: "Staff", icon: ShieldPlus, path: "/admin/staff-roles" },
   { label: "Payments & Revenue", icon: CreditCard, path: "/admin/payments" },
   { label: "Moderation", icon: ShieldCheck, path: "/admin/moderation" },
   { label: "Platform Settings", icon: Settings, path: "/admin/settings" },
@@ -72,15 +76,16 @@ type SidebarProps = {
   initials: string;
   avatarUrl?: string;
   isSuperAdmin: boolean;
+  role: string | null;
+  visibleBaseNav: NavItem[];
   onLogout: () => void;
   isOpen: boolean;
   onClose: () => void;
 };
 
-const AdminSidebar = memo(({ email, initials, avatarUrl, isSuperAdmin, onLogout, isOpen, onClose }: SidebarProps) => {
+const AdminSidebar = memo(({ email, initials, avatarUrl, isSuperAdmin, role, visibleBaseNav, onLogout, isOpen, onClose }: SidebarProps) => {
   const { pathname } = useLocation();
-  const panelLabel = isSuperAdmin ? "Super Admin Panel" : "Admin Panel";
-  const roleLabel = isSuperAdmin ? "Super Admin" : "Admin";
+  const roleLabel = isSuperAdmin ? "Super Admin" : role === "lead_manager" ? "Lead Manager" : "Admin";
 
   return (
     <>
@@ -102,16 +107,11 @@ const AdminSidebar = memo(({ email, initials, avatarUrl, isSuperAdmin, onLogout,
         <Link to="/" onClick={onClose} className="flex items-center justify-center w-full bg-white rounded-xl py-2 px-4 hover:opacity-95 transition-opacity">
           <img src={arkeLogo} alt="ARKE Logo" className="h-10 w-auto object-contain" />
         </Link>
-        {/* <div className="mt-3 rounded-md bg-primary/20 px-2 py-1 text-center">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-primary">
-            {panelLabel}
-          </span>
-        </div> */}
       </div>
 
       <nav className="flex-1 px-3 space-y-1">
         <p className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white/40">Main</p>
-        {baseNav.map((item) => {
+        {visibleBaseNav.map((item) => {
           const active = pathname === item.path;
           return (
             <Link
@@ -211,8 +211,9 @@ AdminHeader.displayName = "AdminHeader";
 
 export default function AdminLayout() {
   const navigate = useNavigate();
-  const { user, signOut, isSuperAdmin } = useAuth();
+  const { user, signOut, isSuperAdmin, role } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { permissions } = useStaffPermissions();
 
   const handleLogout = useCallback(async () => {
     await signOut();
@@ -227,6 +228,16 @@ export default function AdminLayout() {
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
 
+  // permissions === null means super_admin or full admin — show everything.
+  // Otherwise filter to items where the staff member has can_view.
+  const visibleBaseNav = useMemo(() => {
+    if (permissions === null) return baseNav;
+    return baseNav.filter((item) => {
+      const pageKey = item.path.replace("/admin/", "");
+      return permissions[pageKey]?.can_view === true;
+    });
+  }, [permissions]);
+
   return (
     <div className="flex min-h-screen bg-background">
       <AdminSidebar
@@ -234,6 +245,8 @@ export default function AdminLayout() {
         initials={initials}
         avatarUrl={avatarUrl}
         isSuperAdmin={isSuperAdmin}
+        role={role}
+        visibleBaseNav={visibleBaseNav}
         onLogout={handleLogout}
         isOpen={sidebarOpen}
         onClose={closeSidebar}

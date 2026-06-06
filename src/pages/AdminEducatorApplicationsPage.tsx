@@ -303,104 +303,127 @@ const AdminEducatorApplicationsPage = () => {
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {paged.map((a) => {
-            const status = statusVariants[a.status] ?? statusVariants.pending;
-            return (
-              <div key={a.id} className="rounded-xl border border-border bg-card p-4 hover:shadow-md transition-shadow">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
-                  {/* Photo + identity */}
-                  <div className="flex items-center gap-3 lg:w-72 shrink-0">
-                    <Avatar className="h-14 w-14 border-2 border-border">
-                      <AvatarImage src={a.photo_url ?? undefined} alt={a.candidate_name} />
-                      <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground font-bold">
-                        {a.candidate_name.split(" ").map((n) => n[0]).slice(0, 2).join("")}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0">
-                      <p className="font-bold text-foreground truncate">{a.candidate_name}</p>
-                      <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
-                        <Mail className="h-3 w-3" /> {a.email}
-                      </p>
-                      <Badge variant="outline" className={`mt-1 ${status.className}`}>{status.label}</Badge>
-                    </div>
-                  </div>
-
-                  {/* Details */}
-                  <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                    <div>
-                      <p className="text-muted-foreground">Subject</p>
-                      <p className="font-semibold text-foreground flex items-center gap-1"><GraduationCap className="h-3 w-3 text-primary" />{a.subject}</p>
-                      {a.class_level && a.class_level.length > 0 && <p className="text-[10px] text-muted-foreground mt-0.5">{Array.isArray(a.class_level) ? a.class_level.join(", ") : a.class_level}</p>}
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Experience</p>
-                      <p className="font-semibold text-foreground">{a.total_experience} yrs</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Expected CTC</p>
-                      <p className="font-semibold text-foreground">₹{a.expected_ctc.toLocaleString()}/mo</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Applied</p>
-                      <p className="font-semibold text-foreground">{format(new Date(a.created_at), "dd MMM yyyy")}</p>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
-                    <Button size="sm" variant="outline" onClick={() => setSelected(a)}>
-                      <Eye className="h-3.5 w-3.5" /> View
-                    </Button>
-                    {a.resume_url && (
-                      <Button size="sm" variant="outline" asChild>
-                        <a href={a.resume_url} target="_blank" rel="noreferrer" download>
-                          <FileText className="h-3.5 w-3.5" /> Resume
-                        </a>
-                      </Button>
-                    )}
-                    {(a.status === "approved" || a.status === "credentials_sent") && (
-                      <Button
-                        size="sm"
-                        variant={a.status === "credentials_sent" ? "outline" : "default"}
-                        onClick={() => openCredentialDialog(a)}
-                      >
-                        <KeyRound className="h-3.5 w-3.5" />
-                        {a.status === "credentials_sent" ? "Re-issue" : "Generate Login"}
-                      </Button>
-                    )}
-                    <Select
-                      value={a.status}
-                      onValueChange={(v) => updateStatus(a.id, v as AppStatus)}
-                      disabled={updatingId === a.id}
-                    >
-                      <SelectTrigger className="w-[160px] h-9">
-                        {updatingId === a.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <SelectValue />}
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pending"><span className="flex items-center gap-2"><Clock className="h-3 w-3" /> Pending</span></SelectItem>
-                        <SelectItem value="reviewed"><span className="flex items-center gap-2"><Eye className="h-3 w-3" /> Reviewed</span></SelectItem>
-                        <SelectItem value="approved"><span className="flex items-center gap-2"><Check className="h-3 w-3" /> Approved</span></SelectItem>
-                        <SelectItem value="credentials_sent"><span className="flex items-center gap-2"><KeyRound className="h-3 w-3" /> Credentials Sent</span></SelectItem>
-                        <SelectItem value="rejected"><span className="flex items-center gap-2"><X className="h-3 w-3" /> Rejected</span></SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {isSuperAdmin && (
-                      <Button size="sm" variant="destructive" onClick={() => deleteApp(a)} title="Delete (super admin)">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/40">
+                  <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3 whitespace-nowrap">Candidate</th>
+                  <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3 whitespace-nowrap">Subject</th>
+                  <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3 whitespace-nowrap">Classes</th>
+                  <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3 whitespace-nowrap">Exp.</th>
+                  <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3 whitespace-nowrap">Expected CTC</th>
+                  <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3 whitespace-nowrap">Applied</th>
+                  <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3 whitespace-nowrap">Status</th>
+                  <th className="text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3 whitespace-nowrap">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {paged.map((a) => {
+                  const status = statusVariants[a.status] ?? statusVariants.pending;
+                  const classLevels = Array.isArray(a.class_level) ? a.class_level : [];
+                  return (
+                    <tr key={a.id} className="hover:bg-muted/30 transition-colors">
+                      {/* Candidate */}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-9 w-9 border border-border shrink-0">
+                            <AvatarImage src={a.photo_url ?? undefined} alt={a.candidate_name} />
+                            <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-primary-foreground font-bold text-xs">
+                              {a.candidate_name.split(" ").map((n) => n[0]).slice(0, 2).join("")}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-foreground truncate max-w-[160px]">{a.candidate_name}</p>
+                            <p className="text-xs text-muted-foreground truncate max-w-[160px]">{a.email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      {/* Subject */}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className="font-medium text-foreground flex items-center gap-1">
+                          <GraduationCap className="h-3.5 w-3.5 text-primary shrink-0" />{a.subject}
+                        </span>
+                      </td>
+                      {/* Classes */}
+                      <td className="px-4 py-3 max-w-[160px]">
+                        {classLevels.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {classLevels.slice(0, 3).map((cl) => (
+                              <span key={cl} className="inline-block rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground whitespace-nowrap">{cl}</span>
+                            ))}
+                            {classLevels.length > 3 && (
+                              <span className="inline-block rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">+{classLevels.length - 3}</span>
+                            )}
+                          </div>
+                        ) : <span className="text-muted-foreground text-xs">—</span>}
+                      </td>
+                      {/* Experience */}
+                      <td className="px-4 py-3 whitespace-nowrap font-medium text-foreground">{a.total_experience} yrs</td>
+                      {/* CTC */}
+                      <td className="px-4 py-3 whitespace-nowrap font-medium text-foreground">₹{a.expected_ctc.toLocaleString()}/mo</td>
+                      {/* Applied */}
+                      <td className="px-4 py-3 whitespace-nowrap text-muted-foreground text-xs">{format(new Date(a.created_at), "dd MMM yyyy")}</td>
+                      {/* Status badge */}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <Badge variant="outline" className={status.className}>{status.label}</Badge>
+                      </td>
+                      {/* Actions */}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button size="sm" variant="outline" onClick={() => setSelected(a)}>
+                            <Eye className="h-3.5 w-3.5" /> View
+                          </Button>
+                          {a.resume_url && (
+                            <Button size="sm" variant="outline" asChild>
+                              <a href={a.resume_url} target="_blank" rel="noreferrer" download>
+                                <FileText className="h-3.5 w-3.5" /> Resume
+                              </a>
+                            </Button>
+                          )}
+                          {(a.status === "approved" || a.status === "credentials_sent") && (
+                            <Button
+                              size="sm"
+                              variant={a.status === "credentials_sent" ? "outline" : "default"}
+                              onClick={() => openCredentialDialog(a)}
+                            >
+                              <KeyRound className="h-3.5 w-3.5" />
+                              {a.status === "credentials_sent" ? "Re-issue" : "Generate Login"}
+                            </Button>
+                          )}
+                          <Select
+                            value={a.status}
+                            onValueChange={(v) => updateStatus(a.id, v as AppStatus)}
+                            disabled={updatingId === a.id}
+                          >
+                            <SelectTrigger className="w-[150px] h-8 text-xs">
+                              {updatingId === a.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <SelectValue />}
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pending"><span className="flex items-center gap-2"><Clock className="h-3 w-3" /> Pending</span></SelectItem>
+                              <SelectItem value="reviewed"><span className="flex items-center gap-2"><Eye className="h-3 w-3" /> Reviewed</span></SelectItem>
+                              <SelectItem value="approved"><span className="flex items-center gap-2"><Check className="h-3 w-3" /> Approved</span></SelectItem>
+                              <SelectItem value="credentials_sent"><span className="flex items-center gap-2"><KeyRound className="h-3 w-3" /> Credentials Sent</span></SelectItem>
+                              <SelectItem value="rejected"><span className="flex items-center gap-2"><X className="h-3 w-3" /> Rejected</span></SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {isSuperAdmin && (
+                            <Button size="sm" variant="destructive" onClick={() => deleteApp(a)} title="Delete (super admin)">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
       {!loading && filtered.length > 0 && (
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
-          <TablePagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
-        </div>
+        <TablePagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} onPageChange={setPage} />
       )}
 
       {/* Detail Dialog */}

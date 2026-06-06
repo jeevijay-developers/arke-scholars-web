@@ -59,7 +59,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const isSuperAdmin = role === "super_admin";
   const isAdmin = role === "admin";
-  const isStaff = role === "admin" || role === "super_admin";
+  const isStaff = role === "admin" || role === "super_admin" || role === "lead_manager";
   const isTeacher = role === "teacher";
   const isMentor = role === "mentor";
   const isStudent = role === "student";

@@ -52,7 +52,7 @@ const LecturePlayerPage = () => {
     (async () => {
       const { data: enr } = await supabase
         .from("enrollments")
-        .select("id")
+        .select("id, expires_at")
         .eq("user_id", user.id)
         .eq("course_id", course.id)
         .eq("is_active", true)
@@ -60,6 +60,12 @@ const LecturePlayerPage = () => {
 
       if (!enr) {
         toast.info("Enroll in this course to start learning");
+        navigate(`/courses/${slug}`);
+        return;
+      }
+
+      if (enr.expires_at && new Date(enr.expires_at) < new Date()) {
+        toast.error("Your access to this course has expired. Please renew your enrollment.");
         navigate(`/courses/${slug}`);
         return;
       }
