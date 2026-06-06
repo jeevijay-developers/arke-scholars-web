@@ -77,14 +77,13 @@ Deno.serve(async (req) => {
     })
   }
 
-  // Gate: paid enrollment that is still active and not expired
+  // Gate: active enrollment that is not expired (payment_id may be null for admin-assigned enrollments)
   const { data: enrollment } = await admin
     .from('enrollments')
-    .select('payment_id')
+    .select('id')
     .eq('user_id', user.id)
     .eq('course_id', lesson.course_id)
     .eq('is_active', true)
-    .not('payment_id', 'is', null)
     .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
     .maybeSingle()
 

@@ -21,7 +21,7 @@ export type CourseRow = {
   total_enrolled: number | null;
 };
 
-export const useCourses = (targetExam?: string, subject?: string) => {
+export const useCourses = (targetExam?: string, subject?: string, level?: string) => {
   const [courses, setCourses] = useState<CourseRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -35,9 +35,7 @@ export const useCourses = (targetExam?: string, subject?: string) => {
         .order("created_at", { ascending: false });
 
       if (targetExam && targetExam !== "All") {
-        // Courses may store a short key ("JEE") while the filter label is
-        // "JEE Main" or "JEE Advanced". Match the exact label AND any
-        // prefix-only variant (first word) so legacy data still surfaces.
+        // Match exact label ("JEE Main") AND short prefix ("JEE") for legacy data.
         const prefix = targetExam.split(" ")[0];
         const filter =
           prefix !== targetExam
@@ -46,13 +44,14 @@ export const useCourses = (targetExam?: string, subject?: string) => {
         q = q.or(filter);
       }
       if (subject && subject !== "All") q = q.eq("subject", subject);
+      if (level && level !== "All") q = q.eq("level", level);
 
       const { data } = await q;
       setCourses((data ?? []) as CourseRow[]);
       setLoading(false);
     };
     load();
-  }, [targetExam, subject]);
+  }, [targetExam, subject, level]);
 
   return { courses, loading };
 };

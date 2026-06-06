@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useExams } from "@/hooks/useExams";
 import { CLASS_LEVELS } from "@/lib/constants";
+import CityStateFields from "@/components/CityStateFields";
 
 type StudentRow = {
   user_id: string;
@@ -73,7 +74,7 @@ const AdminStudentsPage = () => {
   const [addOpen, setAddOpen] = useState(false);
   const [addForm, setAddForm] = useState({
     full_name: "", email: "", phone: "", password: "",
-    target_exam: "", class_level: "", city: "", country: ""
+    target_exam: "", class_level: "", city: "", state: "", country: ""
   });
   const [addSaving, setAddSaving] = useState(false);
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
@@ -171,7 +172,7 @@ const AdminStudentsPage = () => {
       const newUserId: string | undefined = data?.user_id;
       toast.success(`Student ${addForm.full_name || addForm.email} added`);
       setAddOpen(false);
-      setAddForm({ full_name: "", email: "", phone: "", password: "", target_exam: "", class_level: "", city: "", country: "" });
+      setAddForm({ full_name: "", email: "", phone: "", password: "", target_exam: "", class_level: "", city: "", state: "", country: "" });
       if (newUserId) {
         navigate(`/admin/students/${newUserId}`);
       } else {
@@ -532,20 +533,18 @@ const AdminStudentsPage = () => {
                       {CLASS_LEVELS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
                     </select>
                   </div>
-                  {[
-                    { key: "city", label: "City", placeholder: "e.g. Mumbai" },
-                    { key: "country", label: "Country", placeholder: "e.g. India" },
-                  ].map((f) => (
-                    <div key={f.key}>
-                      <label className="text-[10px] font-medium text-muted-foreground">{f.label}</label>
-                      <input
-                        value={(addForm as any)[f.key]}
-                        onChange={(e) => setAddForm((s) => ({ ...s, [f.key]: e.target.value }))}
-                        placeholder={f.placeholder}
-                        className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary transition-colors"
-                      />
-                    </div>
-                  ))}
+                  <div className="col-span-full">
+                    <CityStateFields
+                      city={addForm.city}
+                      state={addForm.state}
+                      country={addForm.country}
+                      onCityChange={(v) => setAddForm((s) => ({ ...s, city: v }))}
+                      onStateChange={(v) => setAddForm((s) => ({ ...s, state: v }))}
+                      onCountryChange={(v) => setAddForm((s) => ({ ...s, country: v }))}
+                      inputClassName="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary transition-colors"
+                      labelClassName="text-[10px] font-medium text-muted-foreground"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
