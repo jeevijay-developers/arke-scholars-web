@@ -37,6 +37,10 @@ const LoginPage = () => {
         if (!error) void supabase.auth.refreshSession();
       });
     }
+    if (isLeadManager) {
+      navigate("/lead-manager/dashboard", { replace: true });
+      return;
+    }
     if (isStaff) {
       navigate("/admin/dashboard", { replace: true });
       return;
@@ -47,10 +51,6 @@ const LoginPage = () => {
     }
     if (isMentor) {
       navigate("/mentor/dashboard", { replace: true });
-      return;
-    }
-    if (isLeadManager) {
-      navigate("/lead-manager/dashboard", { replace: true });
       return;
     }
     if (redirectTo) {
