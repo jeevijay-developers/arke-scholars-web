@@ -10,6 +10,7 @@ export type UpcomingClass = {
   starts_at: string;
   status: string;
   meeting_url: string | null;
+  slug: string | null;
 };
 
 export type DoubtPreview = {
@@ -90,7 +91,7 @@ export const useTeacherDashboard = (): TeacherDashboardData => {
           .eq("created_by", teacherId),
         supabase
           .from("live_classes")
-          .select("id, title, subject, target_exam, starts_at, status, meeting_url")
+          .select("id, title, subject, target_exam, starts_at, status, meeting_url, slug")
           .eq("created_by", teacherId)
           .or(`starts_at.gte.${nowIso},status.eq.live`)
           .order("starts_at", { ascending: true })
@@ -229,6 +230,7 @@ export const useTeacherDashboard = (): TeacherDashboardData => {
         starts_at: string;
         status: string;
         meeting_url: string | null;
+        slug: string | null;
       }>;
       // Per-class student counts (best effort: count attendance rows)
       const upcomingClasses: UpcomingClass[] = await Promise.all(
@@ -245,6 +247,7 @@ export const useTeacherDashboard = (): TeacherDashboardData => {
             starts_at: c.starts_at,
             status: c.status,
             meeting_url: c.meeting_url,
+            slug: c.slug ?? null,
           };
         }),
       );

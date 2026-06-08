@@ -17,7 +17,7 @@ alter table public.courses
   add column if not exists course_end_date     date,
   add column if not exists target              text,
   add column if not exists "class"             text,
-  add column if not exists language            text not null default 'Hindi',
+  add column if not exists language            text not null default 'Hinglish',
   add column if not exists mrp                 numeric(10,2) not null default 0,
   add column if not exists sale_price          numeric(10,2) not null default 0,
   add column if not exists show_price_with_gst boolean not null default false,
@@ -43,7 +43,7 @@ alter table public.courses
 alter table public.courses
   add constraint courses_target_check   check (target   in ('IIT-JEE', 'NEET', 'Foundation')),
   add constraint courses_class_check    check ("class"  in ('8', '9', '10', '11', '12', '12th_pass')),
-  add constraint courses_language_check check (language in ('Hindi', 'English')),
+  add constraint courses_language_check check (language in ('Hinglish', 'English')),
   add constraint courses_free_price_check check (
     not is_course_free or (mrp = 0 and sale_price = 0)
   );

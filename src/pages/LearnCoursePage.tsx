@@ -122,15 +122,24 @@ function ContentViewer({ item }: { item: ContentItem }) {
           )}
         </div>
         {item.zoom_link && (
-          <a
-            href={item.zoom_link}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground hover:bg-primary/90"
-          >
-            <ExternalLink className="h-4 w-4" />
-            {past ? "Watch Recording" : "Join Class"}
-          </a>
+          item.zoom_link.startsWith("/") ? (
+            <Link
+              to={item.zoom_link}
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground hover:bg-primary/90"
+            >
+              {past ? "Watch Recording" : "Join Class"}
+            </Link>
+          ) : (
+            <a
+              href={item.zoom_link}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground hover:bg-primary/90"
+            >
+              <ExternalLink className="h-4 w-4" />
+              {past ? "Watch Recording" : "Join Class"}
+            </a>
+          )
         )}
         {!item.zoom_link && <p className="text-sm text-muted-foreground">Link not available yet.</p>}
       </div>

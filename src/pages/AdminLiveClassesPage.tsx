@@ -34,6 +34,8 @@ type AdminLive = {
   created_by: string | null;
   course_id?: string | null;
   cancellation_reason?: string | null;
+  zoom_meeting_id?: string | null;
+  zoom_meeting_password?: string | null;
 };
 
 type Teacher = { user_id: string; full_name: string | null };
@@ -366,10 +368,36 @@ const AdminLiveClassesPage = () => {
         if (error) throw error;
         toast.success("Live class updated");
       } else {
-        const { error } = await supabase
+        const { data: inserted, error } = await supabase
           .from("live_classes")
-          .insert({ ...payload, status: "scheduled" });
+          .insert({ ...payload, status: "scheduled" })
+          .select("id, slug")
+          .single();
         if (error) throw error;
+
+        // Create Zoom meeting and persist credentials
+        try {
+          const { data: zoomData, error: zoomErr } = await supabase.functions.invoke("zoom-create-meeting", {
+            body: {
+              title: form.title,
+              startTime: startsAt.toISOString(),
+              durationMinutes: form.duration_minutes,
+            },
+          });
+          if (!zoomErr && zoomData?.meetingId) {
+            await supabase.from("live_classes").update({
+              zoom_meeting_id: zoomData.meetingId,
+              zoom_meeting_password: zoomData.password ?? "",
+            }).eq("id", inserted.id);
+          } else {
+            console.warn("[Zoom] Meeting creation failed:", zoomErr?.message ?? "No meetingId returned");
+            toast.warning("Class scheduled, but Zoom meeting could not be created automatically. Configure it in Zoom dashboard.");
+          }
+        } catch (zoomEx) {
+          console.error("[Zoom] Exception:", zoomEx);
+          toast.warning("Class scheduled, but Zoom meeting setup failed. You can retry from admin.");
+        }
+
         toast.success("Live class scheduled");
       }
       closeForm();

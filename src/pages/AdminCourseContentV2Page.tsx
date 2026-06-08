@@ -163,6 +163,8 @@ const AdminCourseContentV2Page = () => {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const [courseName, setCourseName] = useState("");
+  const [courseSubject, setCourseSubject] = useState("");
+  const [teachers, setTeachers] = useState<{ id: string; full_name: string }[]>([]);
   const [folders, setFolders] = useState<FolderRow[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(new Set());
@@ -192,19 +194,42 @@ const AdminCourseContentV2Page = () => {
   const [fVideoSource, setFVideoSource] = useState<"s3" | "youtube">("youtube");
   const [fZoomLink, setFZoomLink] = useState("");
   const [fScheduledAt, setFScheduledAt] = useState("");
+  const [fTeacherId, setFTeacherId] = useState("");
   const [fTestId, setFTestId] = useState("");
   const [fIsFreePreview, setFIsFreePreview] = useState(false);
   const [testOptions, setTestOptions] = useState<TestOption[]>([]);
   const [savingItem, setSavingItem] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
-  // Load course name
+  // Load course name + subject
   useEffect(() => {
     if (!courseId) return;
-    supabase.from("courses").select("name").eq("id", courseId).maybeSingle().then(({ data }) => {
-      if (data) setCourseName((data as any).name);
+    supabase.from("courses").select("name, subject").eq("id", courseId).maybeSingle().then(({ data }) => {
+      if (data) {
+        setCourseName((data as any).name);
+        setCourseSubject((data as any).subject ?? "");
+      }
     });
   }, [courseId]);
+
+  // Load teachers for live class assignment
+  useEffect(() => {
+    supabase
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "teacher")
+      .then(async ({ data: roleRows }) => {
+        if (!roleRows?.length) return;
+        const ids = roleRows.map((r: any) => r.user_id);
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("user_id, full_name")
+          .in("user_id", ids);
+        setTeachers(
+          (profs ?? []).map((p: any) => ({ id: p.user_id, full_name: p.full_name ?? "Teacher" })),
+        );
+      });
+  }, []);
 
   // Load folders
   const loadFolders = useCallback(async () => {
@@ -369,7 +394,7 @@ const AdminCourseContentV2Page = () => {
   const resetForm = () => {
     setFTitle(""); setFDesc(""); setFFileUrl(""); setFVideoUrl("");
     setFVideoSource("youtube"); setFZoomLink(""); setFScheduledAt("");
-    setFTestId(""); setFIsFreePreview(false); setUploadProgress(null);
+    setFTeacherId(""); setFTestId(""); setFIsFreePreview(false); setUploadProgress(null);
   };
 
   const handleS3Upload = async (file: File, setUrl: (u: string) => void) => {
@@ -405,8 +430,74 @@ const AdminCourseContentV2Page = () => {
   const saveContentItem = async () => {
     if (!selectedFolderId || !courseId) return toast.error("Select a folder first");
     if (!fTitle.trim()) return toast.error("Title is required");
+    if (selectedType === "pdf" && !fFileUrl) return toast.error("Please upload or paste a PDF URL");
+    if (selectedType === "recorded_lecture" && !fFileUrl) return toast.error("Please upload the recorded lecture file");
+    if (selectedType === "video" && !fVideoUrl && !fFileUrl) return toast.error("Please add a video URL or upload a file");
+    if (selectedType === "live_class" && !editingItem) {
+      if (!fTeacherId) return toast.error("Please select the teacher for this live class");
+      if (!fScheduledAt) return toast.error("Please set the scheduled time for this live class");
+    }
+    if (selectedType === "test" && !fTestId) return toast.error("Please select a test");
 
     setSavingItem(true);
+
+    let resolvedZoomLink = fZoomLink || null;
+
+    // Auto-create Zoom meeting + live_classes record for new live class content items
+    if (selectedType === "live_class" && !editingItem) {
+      // 1. Generate slug
+      const slug =
+        fTitle.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") +
+        "-" +
+        Date.now();
+
+      // 2. Create Zoom meeting via edge function
+      let zoomMeetingId = "";
+      let zoomMeetingPassword = "";
+      try {
+        const { data: zoomData, error: zoomErr } = await supabase.functions.invoke(
+          "zoom-create-meeting",
+          {
+            body: {
+              title: fTitle.trim(),
+              startTime: new Date(fScheduledAt).toISOString(),
+              durationMinutes: 60,
+            },
+          },
+        );
+        if (zoomErr || !zoomData?.meetingId)
+          throw new Error(zoomErr?.message ?? "Zoom meeting creation failed");
+        zoomMeetingId = String(zoomData.meetingId);
+        zoomMeetingPassword = zoomData.password ?? "";
+      } catch (e: any) {
+        setSavingItem(false);
+        return toast.error("Failed to create Zoom meeting: " + (e.message ?? "unknown error"));
+      }
+
+      // 3. Insert live_classes record
+      const teacherName = teachers.find((t) => t.id === fTeacherId)?.full_name ?? "Teacher";
+      const { error: lcErr } = await supabase.from("live_classes").insert({
+        title: fTitle.trim(),
+        starts_at: new Date(fScheduledAt).toISOString(),
+        course_id: courseId,
+        created_by: fTeacherId,
+        educator_name: teacherName,
+        zoom_meeting_id: zoomMeetingId,
+        zoom_meeting_password: zoomMeetingPassword,
+        status: "scheduled",
+        slug,
+        subject: courseSubject || "General",
+        target_exam: null,
+        meeting_url: null,
+      });
+      if (lcErr) {
+        setSavingItem(false);
+        return toast.error("Failed to schedule live class: " + lcErr.message);
+      }
+
+      resolvedZoomLink = `/live-classes/${slug}`;
+    }
+
     const payload: Record<string, any> = {
       course_id: courseId,
       folder_id: selectedFolderId,
@@ -416,7 +507,7 @@ const AdminCourseContentV2Page = () => {
       file_url: fFileUrl || null,
       video_url: fVideoUrl || null,
       video_source: (selectedType === "video" || selectedType === "recorded_lecture") ? fVideoSource : null,
-      zoom_link: fZoomLink || null,
+      zoom_link: resolvedZoomLink,
       scheduled_at: fScheduledAt ? new Date(fScheduledAt).toISOString() : null,
       test_id: fTestId || null,
       is_free_preview: fIsFreePreview,
@@ -698,11 +789,38 @@ const AdminCourseContentV2Page = () => {
               {/* Type-specific fields */}
               {selectedType === "live_class" && (
                 <>
-                  <PanelField label="Zoom Link">
-                    <input value={fZoomLink} onChange={(e) => setFZoomLink(e.target.value)} className={panelInput} placeholder="https://zoom.us/j/..." />
-                  </PanelField>
+                  {editingItem ? (
+                    <PanelField label="Zoom Link">
+                      <p className="text-xs text-muted-foreground break-all px-1">
+                        {editingItem.zoom_link || "—"}
+                      </p>
+                    </PanelField>
+                  ) : (
+                    <>
+                      <PanelField label="Teacher">
+                        <select
+                          value={fTeacherId}
+                          onChange={(e) => setFTeacherId(e.target.value)}
+                          className={panelInput}
+                        >
+                          <option value="">— Select teacher —</option>
+                          {teachers.map((t) => (
+                            <option key={t.id} value={t.id}>{t.full_name}</option>
+                          ))}
+                        </select>
+                      </PanelField>
+                      <p className="text-[10px] text-muted-foreground px-1 -mt-1">
+                        Zoom link is auto-generated when you save.
+                      </p>
+                    </>
+                  )}
                   <PanelField label="Scheduled At">
-                    <input type="datetime-local" value={fScheduledAt} onChange={(e) => setFScheduledAt(e.target.value)} className={panelInput} />
+                    <input
+                      type="datetime-local"
+                      value={fScheduledAt}
+                      onChange={(e) => setFScheduledAt(e.target.value)}
+                      className={panelInput}
+                    />
                   </PanelField>
                 </>
               )}

@@ -169,3 +169,14 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* Prevent Tailwind preflight from collapsing Zoom Meeting SDK Component View layout */
+#meetingSDKElement,
+#meetingSDKElement * {
+  box-sizing: content-box;
+}
+#meetingSDKElement {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
