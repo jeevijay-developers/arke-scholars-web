@@ -232,8 +232,6 @@ const AdminUploadQuestionsPage = () => {
           <span className="font-semibold text-foreground">
             {questions.length} question{questions.length !== 1 ? "s" : ""} parsed
           </span>
-          <span className="text-muted-foreground">·</span>
-          <span className="text-muted-foreground">{skipped} skipped</span>
           {warnings.length > 0 && (
             <>
               <span className="text-muted-foreground">·</span>
