@@ -4,7 +4,6 @@ import {
   Play,
   CheckCircle2,
   Star,
-  Users,
   Clock,
   Heart,
   ChevronDown,
@@ -101,7 +100,7 @@ const CourseDetailPage = () => {
     .filter((l) => completedSlugs.has(l.slug))
     .reduce((s, l) => s + (l.duration_seconds || 0), 0);
   const totalMinutes = Math.round(totalSeconds / 60);
-  const totalHours = course?.duration_hours || Math.max(1, Math.floor(totalMinutes / 60));
+  const totalHours = Math.max(1, Math.floor(totalMinutes / 60));
   const completedHours = (completedSeconds / 3600).toFixed(1);
   const remainingHours = ((totalSeconds - completedSeconds) / 3600).toFixed(1);
   const progressPercent = enrollment ? (totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0) : 0;
@@ -125,9 +124,7 @@ const CourseDetailPage = () => {
     );
   }
 
-  const initials = course.educator_name
-    ? course.educator_name.split(" ").filter(Boolean).slice(0, 2).map((n) => n[0]?.toUpperCase()).join("")
-    : "ED";
+  const initials = "AR";
 
   const allNotes = [...pdfs, ...notes];
   const tabs = ["About", "Lectures", "Tests", "Notes"];
@@ -190,20 +187,17 @@ const CourseDetailPage = () => {
     setEnrollment(enr as EnrollmentInfo | null);
   };
 
-  const discount =
-    course.original_price && course.original_price > course.price
-      ? Math.round(((Number(course.original_price) - Number(course.price)) / Number(course.original_price)) * 100)
-      : course.discount_percent || 0;
+  const discount = Number(course.discount_percent ?? 0);
 
   return (
     <div className="bg-background pb-16">
       {course && (
         <SEO
-          title={`${course.name} – ${course.subject} for ${(course as { target_exam?: string }).target_exam ?? "JEE, NEET & Boards"}`}
+          title={`${course.name} – ${course.target} · Class ${course.class}`}
           description={
             course.description
               ? course.description.slice(0, 155)
-              : `Master ${course.subject} for ${(course as { target_exam?: string }).target_exam ?? "JEE, NEET & Boards"} with ARKE Scholars. Video lectures, chapter tests & PDF notes by expert educators.`
+              : `Master ${course.target} with ARKE Scholars. Video lectures, chapter tests & PDF notes by expert educators.`
           }
           canonical={`/courses/${slug}`}
           ogImage={course.thumbnail_url ?? undefined}
@@ -212,29 +206,27 @@ const CourseDetailPage = () => {
               "@context": "https://schema.org",
               "@type": "Course",
               "name": course.name,
-              "description": course.description ?? `${course.subject} course for ${(course as { target_exam?: string }).target_exam ?? "JEE, NEET & Boards"}`,
+              "description": course.description ?? `${course.target} course for Class ${course.class}`,
               "url": `https://arke.pro/courses/${slug}`,
               "image": course.thumbnail_url ?? "https://arke.pro/og-default.png",
               "provider": { "@type": "Organization", "name": "ARKE Scholars", "url": "https://arke.pro" },
-              "instructor": course.educator_name ? { "@type": "Person", "name": course.educator_name } : undefined,
               "educationalLevel": "HighSchool",
-              "about": course.subject,
-              "teaches": (course as { target_exam?: string }).target_exam ?? "JEE, NEET & Boards",
+              "teaches": course.target,
               "courseMode": "online",
-              "inLanguage": "en",
+              "inLanguage": course.language ?? "en",
               "offers": {
                 "@type": "Offer",
-                "price": String(course.price ?? 0),
+                "price": course.is_course_free ? "0" : String(course.sale_price ?? 0),
                 "priceCurrency": "INR",
                 "availability": "https://schema.org/InStock",
                 "url": `https://arke.pro/courses/${slug}`
               },
-              ...(course.rating && course.total_enrolled && course.total_enrolled > 0
+              ...(course.rating && reviewCount > 0
                 ? {
                     "aggregateRating": {
                       "@type": "AggregateRating",
                       "ratingValue": String(Number(course.rating).toFixed(1)),
-                      "ratingCount": String(course.total_enrolled),
+                      "ratingCount": String(reviewCount),
                       "bestRating": "5",
                       "worstRating": "1"
                     }
@@ -277,8 +269,7 @@ const CourseDetailPage = () => {
 
             <div className="flex-1 min-w-0">
               <p className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase mb-2">
-                {course.subject}
-                {course.target_exam ? ` · ${course.target_exam}` : ""}
+                {course.target} · Class {course.class} · {course.language}
               </p>
               <h1 className="font-display text-3xl md:text-4xl font-black text-foreground leading-tight">
                 {course.name}
@@ -292,10 +283,6 @@ const CourseDetailPage = () => {
                   <Star className="h-3.5 w-3.5 fill-primary text-primary" />
                   <strong className="text-foreground">{course.rating ? Number(course.rating).toFixed(1) : "N/A"}</strong>
                   <span>({reviewCount.toLocaleString()} reviews)</span>
-                </span>
-                <span className="flex items-center gap-1">
-                  <Users className="h-3.5 w-3.5 text-primary" />
-                  {(course.total_enrolled ?? 0).toLocaleString()} enrolled
                 </span>
                 <span className="flex items-center gap-1">
                   <Clock className="h-3.5 w-3.5 text-primary" />
@@ -320,7 +307,7 @@ const CourseDetailPage = () => {
                 <p className="text-xs text-muted-foreground">
                   By <span className="font-semibold text-foreground">{course.educator_name}</span>
                   {" · "}
-                  <span>{course.subject} Department</span>
+                  <span>ARKE Scholars</span>
                 </p>
               </div>
             </div>
@@ -663,18 +650,27 @@ const CourseDetailPage = () => {
             ) : (
               <>
                 <div className="flex items-baseline gap-2 flex-wrap">
-                  <span className="font-display text-3xl font-black text-foreground">
-                    ₹{Number(course.price).toLocaleString()}
-                  </span>
-                  {course.original_price && course.original_price > course.price && (
-                    <span className="text-sm text-muted-foreground line-through">
-                      ₹{Number(course.original_price).toLocaleString()}
-                    </span>
-                  )}
-                  {discount > 0 && (
-                    <span className="ml-auto rounded-full bg-secondary/10 px-2 py-0.5 text-[11px] font-bold text-secondary">
-                      {discount}% OFF
-                    </span>
+                  {course.is_course_free ? (
+                    <span className="font-display text-3xl font-black text-secondary">Free</span>
+                  ) : (
+                    <>
+                      <span className="font-display text-3xl font-black text-foreground">
+                        ₹{Number(course.sale_price).toLocaleString()}
+                        {course.show_price_with_gst && (
+                          <span className="text-sm font-normal text-muted-foreground ml-1">+ 18% GST</span>
+                        )}
+                      </span>
+                      {course.mrp > course.sale_price && (
+                        <span className="text-sm text-muted-foreground line-through">
+                          ₹{Number(course.mrp).toLocaleString()}
+                        </span>
+                      )}
+                      {discount > 0 && (
+                        <span className="ml-auto rounded-full bg-secondary/10 px-2 py-0.5 text-[11px] font-bold text-secondary">
+                          {discount}% OFF
+                        </span>
+                      )}
+                    </>
                   )}
                 </div>
 
@@ -682,7 +678,7 @@ const CourseDetailPage = () => {
                   onClick={handleEnrollClick}
                   className="w-full rounded-xl bg-foreground py-3 text-sm font-bold text-background hover:opacity-90 transition-opacity"
                 >
-                  Enroll Now →
+                  {course.is_course_free ? "Enroll Free →" : "Enroll Now →"}
                 </button>
 
                 <button
@@ -719,7 +715,7 @@ const CourseDetailPage = () => {
         onClose={() => setEnrollOpen(false)}
         courseId={course.id}
         courseName={course.name}
-        coursePrice={Number(course.price)}
+        coursePrice={course.is_course_free ? 0 : Number(course.sale_price)}
         onEnrolled={handleEnrolled}
       />
     </div>
