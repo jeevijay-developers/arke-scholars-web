@@ -298,13 +298,17 @@ function parseDocument(
       // ── Extract topic embedded in stem via <br/> line break ───────────────
       // Word sometimes puts "Topic: Kinematics" as a soft line-break inside the
       // same paragraph as the question stem instead of a separate <w:p>.
-      if (!a.topic) {
+      // Also handles <strong>Topic: ...</strong> bold runs within a paragraph.
+      {
         const stemLines = stemHtml.split(/<br\s*\/?>/i);
         const kept: string[] = [];
         for (const line of stemLines) {
-          const plain = line.replace(/<[^>]+>/g, " ").replace(/ /g, " ").trim();
-          if (/^topic\b/i.test(plain)) {
-            a.topic = plain.replace(/^topic\s*[:\-–—\t]\s*/i, "").trim() || a.topic;
+          // Strip all HTML tags, decode &nbsp;, and trim to get plain text
+          const plain = line.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/ /g, " ").trim();
+          if (/^topic\s*[:\-–—\t]/i.test(plain)) {
+            if (!a.topic) {
+              a.topic = plain.replace(/^topic\s*[:\-–—\t]\s*/i, "").trim() || null;
+            }
           } else {
             kept.push(line);
           }
