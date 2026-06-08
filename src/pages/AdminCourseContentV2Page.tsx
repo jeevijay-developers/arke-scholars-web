@@ -469,7 +469,7 @@ const AdminCourseContentV2Page = () => {
   ];
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
+    <div className="flex flex-col" style={{ height: "calc(100vh - 56px)" }}>
       {ConfirmDialog}
 
       {/* Header */}
@@ -488,8 +488,31 @@ const AdminCourseContentV2Page = () => {
 
         {/* ── Left: Folder Tree ──────────────────────────────────────────── */}
         <aside className="w-64 shrink-0 border-r border-border bg-card flex flex-col overflow-hidden">
-          <div className="px-3 pt-3 pb-1 shrink-0">
+          <div className="px-3 pt-3 pb-2 border-b border-border shrink-0 space-y-2">
             <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1">Folders</p>
+            {addingFolder?.parentId === null ? (
+              <div className="flex items-center gap-1">
+                <input
+                  autoFocus
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") createFolder(); if (e.key === "Escape") setAddingFolder(null); }}
+                  placeholder="Folder name"
+                  className="flex-1 text-xs rounded border border-border bg-background px-2 py-1 outline-none focus:border-primary"
+                />
+                <button onClick={createFolder} disabled={savingFolder} className="text-primary text-xs font-semibold">
+                  {savingFolder ? "…" : "Add"}
+                </button>
+                <button onClick={() => setAddingFolder(null)}><X className="h-3 w-3 text-muted-foreground" /></button>
+              </div>
+            ) : (
+              <button
+                onClick={() => { setAddingFolder({ parentId: null }); setNewFolderName(""); }}
+                className="flex items-center gap-1.5 text-xs font-semibold text-primary w-full"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add Folder
+              </button>
+            )}
           </div>
 
           <div className="flex-1 overflow-y-auto px-2 py-1">
@@ -587,32 +610,6 @@ const AdminCourseContentV2Page = () => {
             )}
           </div>
 
-          {/* Add top-level folder */}
-          <div className="border-t border-border p-2 shrink-0">
-            {addingFolder?.parentId === null ? (
-              <div className="flex items-center gap-1">
-                <input
-                  autoFocus
-                  value={newFolderName}
-                  onChange={(e) => setNewFolderName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") createFolder(); if (e.key === "Escape") setAddingFolder(null); }}
-                  placeholder="Folder name"
-                  className="flex-1 text-xs rounded border border-border bg-background px-2 py-1 outline-none focus:border-primary"
-                />
-                <button onClick={createFolder} disabled={savingFolder} className="text-primary text-xs font-semibold">
-                  {savingFolder ? "…" : "Add"}
-                </button>
-                <button onClick={() => setAddingFolder(null)}><X className="h-3 w-3 text-muted-foreground" /></button>
-              </div>
-            ) : (
-              <button
-                onClick={() => { setAddingFolder({ parentId: null }); setNewFolderName(""); }}
-                className="flex items-center gap-1.5 text-xs font-semibold text-primary w-full"
-              >
-                <Plus className="h-3.5 w-3.5" /> Add Folder
-              </button>
-            )}
-          </div>
         </aside>
 
         {/* ── Center: Content List ───────────────────────────────────────── */}

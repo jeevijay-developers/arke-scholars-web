@@ -21,7 +21,7 @@ type ExamOption = {
 const EXAM_OPTIONS: ExamOption[] = [
   { label: "All",        value: "All",       classes: [] },
   {
-    label: "JEE",        value: "IIT-JEE",
+    label: "JEE",        value: "JEE",
     children: ["MAINS", "Advance"],
     classes: [
       { label: "Class 11",  value: "11" },

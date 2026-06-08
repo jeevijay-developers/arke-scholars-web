@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Search, Check, X, Eye, Loader2, Plus, Pencil, BookOpen, Trash2 } from "lucide-react";
+import { Search, Check, X, Eye, Loader2, Plus, Pencil, Trash2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,9 +38,7 @@ const AdminCoursesPage = () => {
     setLoading(false);
   };
 
-  useEffect(() => {
-    load();
-  }, []);
+  useEffect(() => { load(); }, []);
 
   const toggleActive = async (c: AdminCourse, active: boolean) => {
     if (!active) {
@@ -60,8 +58,7 @@ const AdminCoursesPage = () => {
   const deleteCourse = async (c: AdminCourse) => {
     const ok = await confirm({
       title: `Delete "${c.name}" permanently?`,
-      description:
-        "This will permanently remove the course, its folders, content items and resources. Existing enrollments may also be affected. This cannot be undone.",
+      description: "This will permanently remove the course, its folders, content items and resources. Existing enrollments may also be affected. This cannot be undone.",
       confirmLabel: "Delete course",
     });
     if (!ok) return;
@@ -134,7 +131,11 @@ const AdminCoursesPage = () => {
               </thead>
               <tbody>
                 {paged.map((c) => (
-                  <tr key={c.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                  <tr
+                    key={c.id}
+                    onClick={() => navigate(`/admin/courses/${c.id}/content`)}
+                    className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors cursor-pointer"
+                  >
                     <td className="px-4 py-3">
                       <p className="font-medium text-foreground">{c.internal_name || c.name}</p>
                       <p className="text-[11px] text-muted-foreground">{c.name}</p>
@@ -143,15 +144,11 @@ const AdminCoursesPage = () => {
                     <td className="px-4 py-3 text-center text-xs text-foreground">{c.class}</td>
                     <td className="px-4 py-3 text-center text-xs text-foreground">{c.priority}</td>
                     <td className="px-4 py-3 text-center">
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                          c.is_active ? "bg-secondary/20 text-secondary" : "bg-amber-500/20 text-amber-600"
-                        }`}
-                      >
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${c.is_active ? "bg-secondary/20 text-secondary" : "bg-amber-500/20 text-amber-600"}`}>
                         {c.is_active ? "Active" : "Inactive"}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-center gap-1">
                         <a
                           href={`/courses/${c.slug}`}
@@ -168,13 +165,6 @@ const AdminCoursesPage = () => {
                           title="Edit course"
                         >
                           <Pencil className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          onClick={() => navigate(`/admin/courses/${c.id}/content`)}
-                          className="rounded-md p-1.5 text-muted-foreground hover:bg-muted transition-colors"
-                          title="Manage content"
-                        >
-                          <BookOpen className="h-3.5 w-3.5" />
                         </button>
                         {!c.is_active ? (
                           <button

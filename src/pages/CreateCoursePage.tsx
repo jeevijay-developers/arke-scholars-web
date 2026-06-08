@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Upload, IndianRupee, Loader2, X, Tag } from "lucide-react";
+import { Upload, IndianRupee, Loader2, X, Tag } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,15 +15,17 @@ const slugify = (s: string) =>
 
 type TeacherOption = { id: string; full_name: string };
 
-const TARGET_OPTIONS = ["IIT-JEE", "NEET", "Foundation"] as const;
-const CLASS_OPTIONS = [
-  { label: "Class 8",  value: "8" },
-  { label: "Class 9",  value: "9" },
-  { label: "Class 10", value: "10" },
-  { label: "Class 11", value: "11" },
-  { label: "Class 12", value: "12" },
-  { label: "12th Pass", value: "12th_pass" },
-];
+const TARGET_OPTIONS = ["JEE", "NEET", "Foundation"] as const;
+
+const CLASS_OPTIONS_BY_TARGET: Record<string, { label: string; value: string }[]> = {
+  JEE:        [{ label: "Class 11", value: "11" }, { label: "Class 12", value: "12" }],
+  NEET:       [{ label: "Class 11", value: "11" }, { label: "Class 12", value: "12" }],
+  Foundation: [{ label: "Class 8", value: "8" }, { label: "Class 9", value: "9" }, { label: "Class 10", value: "10" }],
+};
+
+const DEFAULT_CLASS: Record<string, string> = {
+  JEE: "11", NEET: "11", Foundation: "8",
+};
 
 const CreateCoursePage = () => {
   const { user } = useAuth();
@@ -37,14 +39,12 @@ const CreateCoursePage = () => {
   const [description, setDescription] = useState("");
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [existingThumbnail, setExistingThumbnail] = useState<string | null>(null);
-  const [language, setLanguage] = useState<"Hindi" | "English">("Hindi");
+  const [language, setLanguage] = useState<"Hinglish" | "English">("Hinglish");
   const [assignedTeacherId, setAssignedTeacherId] = useState("");
-  const [teacherSearch, setTeacherSearch] = useState("");
-  const [teacherOptions, setTeacherOptions] = useState<TeacherOption[]>([]);
-  const [teacherDropdownOpen, setTeacherDropdownOpen] = useState(false);
+  const [teachers, setTeachers] = useState<TeacherOption[]>([]);
 
   // ── Targeting ───────────────────────────────────────────────────────────────
-  const [target, setTarget] = useState<string>("IIT-JEE");
+  const [target, setTarget] = useState<string>("JEE");
   const [selectedClass, setSelectedClass] = useState<string>("11");
   const [courseEndDate, setCourseEndDate] = useState("");
 
@@ -63,11 +63,6 @@ const CreateCoursePage = () => {
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
 
-  // ── Course Details ───────────────────────────────────────────────────────────
-  const [learnItems, setLearnItems] = useState<string[]>([]);
-  const [learnInput, setLearnInput] = useState("");
-  const [reqItems, setReqItems] = useState<string[]>([]);
-  const [reqInput, setReqInput] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(isEditMode);
@@ -77,7 +72,36 @@ const CreateCoursePage = () => {
       ? Math.round(((mrp - salePrice) / mrp) * 100)
       : 0;
 
-  // Load existing course
+  const availableClasses = CLASS_OPTIONS_BY_TARGET[target] ?? CLASS_OPTIONS_BY_TARGET.JEE;
+
+  // Reset selectedClass when target changes (keep selection if still valid)
+  useEffect(() => {
+    const valid = availableClasses.some((c) => c.value === selectedClass);
+    if (!valid) setSelectedClass(DEFAULT_CLASS[target] ?? availableClasses[0]?.value ?? "11");
+  }, [target]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load all teachers on mount
+  useEffect(() => {
+    const loadTeachers = async () => {
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "teacher");
+      const ids = (roles ?? []).map((r: any) => r.user_id);
+      if (ids.length === 0) return;
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, full_name")
+        .in("user_id", ids)
+        .order("full_name");
+      setTeachers(
+        ((profiles ?? []) as any[]).map((p) => ({ id: p.user_id, full_name: p.full_name ?? "—" })),
+      );
+    };
+    loadTeachers();
+  }, []);
+
+  // Load existing course for edit mode
   useEffect(() => {
     if (!isEditMode || !courseId) return;
     const load = async () => {
@@ -96,9 +120,9 @@ const CreateCoursePage = () => {
       setInternalName((course as any).internal_name ?? "");
       setDescription(course.description ?? "");
       setExistingThumbnail(course.thumbnail_url ?? null);
-      setLanguage(((course as any).language ?? "Hindi") as "Hindi" | "English");
+      setLanguage(((course as any).language ?? "Hinglish") as "Hinglish" | "English");
       setAssignedTeacherId((course as any).assigned_teacher_id ?? "");
-      setTarget((course as any).target ?? "IIT-JEE");
+      setTarget((course as any).target ?? "JEE");
       setSelectedClass((course as any).class ?? "11");
       setCourseEndDate((course as any).course_end_date ?? "");
       setIsCourseFree((course as any).is_course_free ?? false);
@@ -111,61 +135,12 @@ const CreateCoursePage = () => {
       setIsFeatured(course.is_featured ?? false);
       setBadge(course.badge ?? "");
       setTags((course.tags ?? []) as string[]);
-      setLearnItems((course.what_youll_learn ?? []) as string[]);
-      setReqItems((course.requirements ?? []) as string[]);
-
-      // Load teacher name if set
-      if ((course as any).assigned_teacher_id) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("full_name")
-          .eq("user_id", (course as any).assigned_teacher_id)
-          .maybeSingle();
-        if (profile) setTeacherSearch((profile as any).full_name ?? "");
-      }
       setLoading(false);
     };
     load();
   }, [isEditMode, courseId]);
 
-  // Teacher search
-  useEffect(() => {
-    if (!teacherSearch.trim() || teacherSearch.length < 2) {
-      setTeacherOptions([]);
-      return;
-    }
-    const search = async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("user_id, full_name")
-        .ilike("full_name", `%${teacherSearch}%`)
-        .limit(8);
-      setTeacherOptions(
-        ((data ?? []) as any[]).map((p) => ({ id: p.user_id, full_name: p.full_name })),
-      );
-    };
-    const t = setTimeout(search, 300);
-    return () => clearTimeout(t);
-  }, [teacherSearch]);
-
-  const addLearn = () => {
-    const v = learnInput.trim();
-    if (!v) return;
-    setLearnItems([...learnItems, v]);
-    setLearnInput("");
-  };
-  const addReq = () => {
-    const v = reqInput.trim();
-    if (!v) return;
-    setReqItems([...reqItems, v]);
-    setReqInput("");
-  };
-  const addTag = () => {
-    const v = tagInput.trim().toLowerCase();
-    if (!v || tags.includes(v)) return;
-    setTags([...tags, v]);
-    setTagInput("");
-  };
+  const addTag = () => { const v = tagInput.trim().toLowerCase(); if (!v || tags.includes(v)) return; setTags([...tags, v]); setTagInput(""); };
 
   const submit = async (publish: boolean) => {
     if (!user) return toast.error("Please sign in");
@@ -178,15 +153,10 @@ const CreateCoursePage = () => {
     if (thumbnailFile) {
       const path = `${user.id}/${Date.now()}-${thumbnailFile.name}`;
       const { error: upErr } = await supabase.storage.from("educator-uploads").upload(path, thumbnailFile);
-      if (upErr) {
-        toast.error("Thumbnail upload failed");
-        setSubmitting(false);
-        return;
-      }
+      if (upErr) { toast.error("Thumbnail upload failed"); setSubmitting(false); return; }
       thumbnailUrl = supabase.storage.from("educator-uploads").getPublicUrl(path).data.publicUrl;
     }
 
-    const effectiveIsActive = publish ? true : isActive;
     const payload = {
       name: name.trim(),
       internal_name: internalName.trim(),
@@ -202,36 +172,20 @@ const CreateCoursePage = () => {
       sale_price: isCourseFree ? 0 : salePrice,
       show_price_with_gst: showPriceWithGst,
       max_usage_days: isCourseFree && maxUsageDays !== "" ? Number(maxUsageDays) : null,
-      is_active: effectiveIsActive,
+      is_active: publish ? true : isActive,
       priority,
       is_featured: isFeatured,
       badge: badge.trim() || null,
       tags,
-      what_youll_learn: learnItems,
-      requirements: reqItems,
     };
 
     if (!isEditMode) {
       const baseSlug = slugify(name) || `course-${Date.now()}`;
-      const slug = `${baseSlug}-${Date.now().toString(36)}`;
-      const { error } = await supabase
-        .from("courses")
-        .insert({ ...payload, slug, created_by: user.id });
-      if (error) {
-        toast.error(error.message);
-        setSubmitting(false);
-        return;
-      }
+      const { error } = await supabase.from("courses").insert({ ...payload, slug: `${baseSlug}-${Date.now().toString(36)}`, created_by: user.id });
+      if (error) { toast.error(error.message); setSubmitting(false); return; }
     } else {
-      const { error } = await supabase
-        .from("courses")
-        .update(payload)
-        .eq("id", courseId!);
-      if (error) {
-        toast.error(error.message);
-        setSubmitting(false);
-        return;
-      }
+      const { error } = await supabase.from("courses").update(payload).eq("id", courseId!);
+      if (error) { toast.error(error.message); setSubmitting(false); return; }
     }
 
     toast.success(isEditMode ? "Course updated" : publish ? "Course published!" : "Draft saved");
@@ -254,49 +208,24 @@ const CreateCoursePage = () => {
       {/* ── Basic Info ────────────────────────────────────────────────────── */}
       <Section title="Basic Info">
         <Field label="Course Title (shown to students)">
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className={inputCls}
-            placeholder="e.g. JEE Physics Booster 2027"
-          />
+          <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="e.g. JEE Physics Booster 2027" />
         </Field>
         <Field label="Internal Name (not visible to students)">
-          <input
-            value={internalName}
-            onChange={(e) => setInternalName(e.target.value)}
-            className={inputCls}
-            placeholder="e.g. PHY-JEE-2027-HINDI"
-          />
+          <input value={internalName} onChange={(e) => setInternalName(e.target.value)} className={inputCls} placeholder="e.g. PHY-JEE-2027-HINGLISH" />
         </Field>
         <Field label="Description">
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={4}
-            className={`${inputCls} resize-none`}
-            placeholder="Detailed course description..."
-          />
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className={`${inputCls} resize-none`} placeholder="Detailed course description..." />
         </Field>
 
         {/* Thumbnail */}
         <Field label="Thumbnail">
           {(existingThumbnail || thumbnailFile) && (
             <div className="aspect-video w-full overflow-hidden rounded-lg border border-border bg-muted mb-3">
-              <img
-                src={thumbnailFile ? URL.createObjectURL(thumbnailFile) : existingThumbnail!}
-                alt="Thumbnail preview"
-                className="h-full w-full object-cover"
-              />
+              <img src={thumbnailFile ? URL.createObjectURL(thumbnailFile) : existingThumbnail!} alt="Thumbnail" className="h-full w-full object-cover" />
             </div>
           )}
           <label className="block cursor-pointer">
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => setThumbnailFile(e.target.files?.[0] ?? null)}
-            />
+            <input type="file" accept="image/*" className="hidden" onChange={(e) => setThumbnailFile(e.target.files?.[0] ?? null)} />
             <div className="rounded-lg border-2 border-dashed border-border bg-background p-6 flex flex-col items-center justify-center hover:border-primary transition-colors">
               <Upload className="h-8 w-8 text-muted-foreground mb-2" />
               <p className="text-xs text-muted-foreground">
@@ -307,53 +236,30 @@ const CreateCoursePage = () => {
           </label>
         </Field>
 
-        {/* Teacher */}
+        {/* Teacher dropdown */}
         <Field label="Assigned Teacher">
-          <div className="relative">
-            <input
-              value={teacherSearch}
-              onChange={(e) => { setTeacherSearch(e.target.value); setTeacherDropdownOpen(true); }}
-              onFocus={() => setTeacherDropdownOpen(true)}
-              onBlur={() => setTimeout(() => setTeacherDropdownOpen(false), 150)}
-              className={inputCls}
-              placeholder="Search teacher name..."
-            />
-            {teacherDropdownOpen && teacherOptions.length > 0 && (
-              <div className="absolute z-20 left-0 top-full mt-1 w-full rounded-lg border border-border bg-card shadow-lg overflow-hidden">
-                {teacherOptions.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onMouseDown={() => {
-                      setAssignedTeacherId(t.id);
-                      setTeacherSearch(t.full_name);
-                      setTeacherDropdownOpen(false);
-                    }}
-                    className="w-full text-left px-3 py-2.5 text-sm hover:bg-muted/50 transition-colors"
-                  >
-                    {t.full_name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          {assignedTeacherId && (
-            <p className="mt-1 text-[10px] text-muted-foreground">ID: {assignedTeacherId}</p>
-          )}
+          <select
+            value={assignedTeacherId}
+            onChange={(e) => setAssignedTeacherId(e.target.value)}
+            className={inputCls}
+          >
+            <option value="">— Select a teacher —</option>
+            {teachers.map((t) => (
+              <option key={t.id} value={t.id}>{t.full_name}</option>
+            ))}
+          </select>
         </Field>
 
         {/* Language */}
         <Field label="Language">
           <div className="flex gap-2">
-            {(["Hindi", "English"] as const).map((lang) => (
+            {(["Hinglish", "English"] as const).map((lang) => (
               <button
                 key={lang}
                 type="button"
                 onClick={() => setLanguage(lang)}
                 className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${
-                  language === lang
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "border-border text-foreground hover:bg-muted/30"
+                  language === lang ? "bg-primary text-primary-foreground border-primary" : "border-border text-foreground hover:bg-muted/30"
                 }`}
               >
                 {lang}
@@ -369,13 +275,7 @@ const CreateCoursePage = () => {
           <div className="flex gap-3 flex-wrap">
             {TARGET_OPTIONS.map((t) => (
               <label key={t} className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  value={t}
-                  checked={target === t}
-                  onChange={() => setTarget(t)}
-                  className="accent-primary"
-                />
+                <input type="radio" value={t} checked={target === t} onChange={() => setTarget(t)} className="accent-primary" />
                 <span className="text-sm font-medium text-foreground">{t}</span>
               </label>
             ))}
@@ -383,15 +283,13 @@ const CreateCoursePage = () => {
         </Field>
         <Field label="Class">
           <div className="flex gap-2 flex-wrap">
-            {CLASS_OPTIONS.map((cls) => (
+            {availableClasses.map((cls) => (
               <button
                 key={cls.value}
                 type="button"
                 onClick={() => setSelectedClass(cls.value)}
                 className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
-                  selectedClass === cls.value
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "border-border text-foreground hover:bg-muted/30"
+                  selectedClass === cls.value ? "bg-primary text-primary-foreground border-primary" : "border-border text-foreground hover:bg-muted/30"
                 }`}
               >
                 {cls.label}
@@ -400,12 +298,7 @@ const CreateCoursePage = () => {
           </div>
         </Field>
         <Field label="Course End Date (optional)">
-          <input
-            type="date"
-            value={courseEndDate}
-            onChange={(e) => setCourseEndDate(e.target.value)}
-            className={inputCls}
-          />
+          <input type="date" value={courseEndDate} onChange={(e) => setCourseEndDate(e.target.value)} className={inputCls} />
         </Field>
       </Section>
 
@@ -415,15 +308,9 @@ const CreateCoursePage = () => {
           <button
             type="button"
             onClick={() => setIsCourseFree((v) => !v)}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              isCourseFree ? "bg-primary" : "bg-muted"
-            }`}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isCourseFree ? "bg-primary" : "bg-muted"}`}
           >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                isCourseFree ? "translate-x-6" : "translate-x-1"
-              }`}
-            />
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${isCourseFree ? "translate-x-6" : "translate-x-1"}`} />
           </button>
           <span className="text-sm font-medium text-foreground">Free Course</span>
         </div>
@@ -444,27 +331,13 @@ const CreateCoursePage = () => {
             <Field label="MRP">
               <div className="flex items-center rounded-lg border border-border bg-background">
                 <IndianRupee className="h-4 w-4 text-muted-foreground ml-3 shrink-0" />
-                <input
-                  type="number"
-                  value={mrp || ""}
-                  onChange={(e) => setMrp(Number(e.target.value) || 0)}
-                  className="flex-1 bg-transparent px-2 py-2 text-sm outline-none"
-                  placeholder="2500"
-                  min={0}
-                />
+                <input type="number" value={mrp || ""} onChange={(e) => setMrp(Number(e.target.value) || 0)} className="flex-1 bg-transparent px-2 py-2 text-sm outline-none" placeholder="2500" min={0} />
               </div>
             </Field>
             <Field label="Sale Price">
               <div className="flex items-center rounded-lg border border-border bg-background">
                 <IndianRupee className="h-4 w-4 text-muted-foreground ml-3 shrink-0" />
-                <input
-                  type="number"
-                  value={salePrice || ""}
-                  onChange={(e) => setSalePrice(Number(e.target.value) || 0)}
-                  className="flex-1 bg-transparent px-2 py-2 text-sm outline-none"
-                  placeholder="1299"
-                  min={0}
-                />
+                <input type="number" value={salePrice || ""} onChange={(e) => setSalePrice(Number(e.target.value) || 0)} className="flex-1 bg-transparent px-2 py-2 text-sm outline-none" placeholder="1299" min={0} />
               </div>
             </Field>
             <Field label="Discount (auto-computed)">
@@ -473,16 +346,8 @@ const CreateCoursePage = () => {
               </div>
             </Field>
             <div className="flex items-center gap-3 pt-6">
-              <input
-                id="gst"
-                type="checkbox"
-                checked={showPriceWithGst}
-                onChange={(e) => setShowPriceWithGst(e.target.checked)}
-                className="accent-primary h-4 w-4"
-              />
-              <label htmlFor="gst" className="text-sm font-medium text-foreground cursor-pointer">
-                Show price with 18% GST
-              </label>
+              <input id="gst" type="checkbox" checked={showPriceWithGst} onChange={(e) => setShowPriceWithGst(e.target.checked)} className="accent-primary h-4 w-4" />
+              <label htmlFor="gst" className="text-sm font-medium text-foreground cursor-pointer">Show price with 18% GST</label>
             </div>
           </div>
         )}
@@ -501,76 +366,45 @@ const CreateCoursePage = () => {
             <button
               type="button"
               onClick={() => setIsActive((v) => !v)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                isActive ? "bg-primary" : "bg-muted"
-              }`}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isActive ? "bg-primary" : "bg-muted"}`}
             >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                  isActive ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${isActive ? "translate-x-6" : "translate-x-1"}`} />
             </button>
             <span className="text-sm font-medium text-foreground">Active (visible in store)</span>
           </div>
           <div className="flex items-center gap-3">
-            <input
-              id="featured"
-              type="checkbox"
-              checked={isFeatured}
-              onChange={(e) => setIsFeatured(e.target.checked)}
-              className="accent-primary h-4 w-4"
-            />
+            <input id="featured" type="checkbox" checked={isFeatured} onChange={(e) => setIsFeatured(e.target.checked)} className="accent-primary h-4 w-4" />
             <label htmlFor="featured" className="text-sm font-medium text-foreground cursor-pointer">Featured</label>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Priority (lower = shown first)">
+          <Field label="Priority (lower = shown first, decimals allowed)">
             <input
               type="number"
               value={priority}
-              onChange={(e) => setPriority(Number(e.target.value))}
+              onChange={(e) => setPriority(parseFloat(e.target.value) || 0)}
               className={inputCls}
               min={0}
+              step={0.1}
             />
           </Field>
           <Field label="Badge text (optional)">
-            <input
-              value={badge}
-              onChange={(e) => setBadge(e.target.value)}
-              className={inputCls}
-              placeholder="e.g. Bestseller"
-            />
+            <input value={badge} onChange={(e) => setBadge(e.target.value)} className={inputCls} placeholder="e.g. Bestseller" />
           </Field>
         </div>
         <Field label="Tags">
           <div className="flex gap-2 mb-2">
-            <input
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }}
-              className={`flex-1 ${inputCls}`}
-              placeholder="Add tag..."
-            />
-            <button
-              type="button"
-              onClick={addTag}
-              className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
-            >
+            <input value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }} className={`flex-1 ${inputCls}`} placeholder="Add tag..." />
+            <button type="button" onClick={addTag} className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground">
               <Tag className="h-3 w-3" />
             </button>
           </div>
           {tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {tags.map((t) => (
-                <span
-                  key={t}
-                  className="flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-xs font-medium text-foreground"
-                >
+                <span key={t} className="flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-xs font-medium text-foreground">
                   {t}
-                  <button type="button" onClick={() => setTags(tags.filter((x) => x !== t))}>
-                    <X className="h-3 w-3 text-muted-foreground hover:text-destructive" />
-                  </button>
+                  <button type="button" onClick={() => setTags(tags.filter((x) => x !== t))}><X className="h-3 w-3 text-muted-foreground hover:text-destructive" /></button>
                 </span>
               ))}
             </div>
@@ -578,61 +412,12 @@ const CreateCoursePage = () => {
         </Field>
       </Section>
 
-      {/* ── Course Details ────────────────────────────────────────────────── */}
-      <Section title="What You'll Learn">
-        <div className="flex gap-2">
-          <input
-            value={learnInput}
-            onChange={(e) => setLearnInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLearn(); } }}
-            className={`flex-1 ${inputCls}`}
-            placeholder="e.g. Core fundamentals and theory"
-          />
-          <button
-            type="button"
-            onClick={addLearn}
-            className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground flex items-center gap-1"
-          >
-            <Plus className="h-3 w-3" />
-          </button>
-        </div>
-        <DynamicList items={learnItems} onRemove={(i) => setLearnItems(learnItems.filter((_, j) => j !== i))} />
-      </Section>
-
-      <Section title="Requirements">
-        <div className="flex gap-2">
-          <input
-            value={reqInput}
-            onChange={(e) => setReqInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addReq(); } }}
-            className={`flex-1 ${inputCls}`}
-            placeholder="e.g. Basic algebra and calculus"
-          />
-          <button
-            type="button"
-            onClick={addReq}
-            className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground flex items-center gap-1"
-          >
-            <Plus className="h-3 w-3" />
-          </button>
-        </div>
-        <DynamicList items={reqItems} onRemove={(i) => setReqItems(reqItems.filter((_, j) => j !== i))} />
-      </Section>
-
       {/* ── Actions ──────────────────────────────────────────────────────── */}
       <div className="flex gap-3">
-        <button
-          disabled={submitting}
-          onClick={() => submit(false)}
-          className="flex-1 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground disabled:opacity-50"
-        >
+        <button disabled={submitting} onClick={() => submit(false)} className="flex-1 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground disabled:opacity-50">
           {submitting ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : "Save Draft"}
         </button>
-        <button
-          disabled={submitting}
-          onClick={() => submit(true)}
-          className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
-        >
+        <button disabled={submitting} onClick={() => submit(true)} className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50">
           {submitting ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : isEditMode ? "Save & Publish" : "Publish Course"}
         </button>
       </div>
@@ -660,24 +445,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <label className="text-xs font-semibold text-foreground mb-1 block">{label}</label>
       {children}
     </div>
-  );
-}
-
-function DynamicList({ items, onRemove }: { items: string[]; onRemove: (i: number) => void }) {
-  if (!items.length) return null;
-  return (
-    <ul className="space-y-1.5">
-      {items.map((item, i) => (
-        <li key={i} className="flex items-center justify-between rounded-lg bg-background px-3 py-2 text-sm text-foreground">
-          <span className="flex items-start gap-2">
-            <span className="text-muted-foreground">—</span>{item}
-          </span>
-          <button type="button" onClick={() => onRemove(i)} className="text-muted-foreground hover:text-destructive ml-2 shrink-0">
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </li>
-      ))}
-    </ul>
   );
 }
 
