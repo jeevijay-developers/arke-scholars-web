@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { ArrowLeft, Phone, Check, Sparkles, Loader2, RefreshCw } from "lucide-react";
@@ -13,7 +13,21 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get("redirect");
-  const { session, user, isStaff, isTeacher, isMentor, isLeadManager, roleReady, loading } = useAuth();
+  const { session, user, isStaff, isLeadManager, roleReady, loading } = useAuth();
+
+  const [step, setStep] = useState<Step>("phone");
+  const [phone, setPhone] = useState("");
+  const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(""));
+  const [sending, setSending] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const fullPhone = `+91${phone}`;
+  const otp = digits.join("");
 
   useEffect(() => {
     if (loading || !session || !roleReady) return;
@@ -40,6 +54,30 @@ const LoginPage = () => {
       navigate("/admin/dashboard", { replace: true });
       return;
     }
+    if (redirectTo) {
+      navigate(redirectTo, { replace: true });
+      return;
+    }
+    navigate("/my-courses", { replace: true });
+  }, [loading, session, user, roleReady, isStaff, isLeadManager, navigate, redirectTo]);
+
+  useEffect(() => () => { if (cooldownRef.current) clearInterval(cooldownRef.current); }, []);
+
+  const startCooldown = useCallback(() => {
+    setCooldown(30);
+    if (cooldownRef.current) clearInterval(cooldownRef.current);
+    cooldownRef.current = setInterval(() => {
+      setCooldown((c) => {
+        if (c <= 1) { clearInterval(cooldownRef.current!); return 0; }
+        return c - 1;
+      });
+    }, 1000);
+  }, []);
+
+  const focusNext = (idx: number) => inputRefs.current[idx + 1]?.focus();
+  const focusPrev = (idx: number) => inputRefs.current[idx - 1]?.focus();
+
+  const handleDigitChange = (idx: number, val: string) => {
     const digit = val.replace(/\D/g, "");
     const next = [...digits];
     next[idx] = digit;
@@ -51,8 +89,6 @@ const LoginPage = () => {
     if (e.key === "Backspace" && !digits[idx]) focusPrev(idx);
   };
 
-  const otp = digits.join("");
-
   const handleSendOtp = async () => {
     if (!phone || phone.length < 10) {
       toast.error("Enter a valid 10-digit phone number");
@@ -61,31 +97,16 @@ const LoginPage = () => {
     setSending(true);
     const { error } = await supabase.auth.signInWithOtp({ phone: fullPhone });
     setSending(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    if (redirectTo) {
-      navigate(redirectTo, { replace: true });
-      return;
-    }
-    navigate("/my-courses", { replace: true });
-  }, [loading, session, user, roleReady, isStaff, isTeacher, isMentor, isLeadManager, navigate, redirectTo]);
-
-  const [submitting, setSubmitting] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+    if (error) { toast.error(error.message); return; }
+    setStep("otp");
+    startCooldown();
+  };
 
   const handleResend = async () => {
     setResending(true);
     const { error } = await supabase.auth.signInWithOtp({ phone: fullPhone });
     setResending(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
+    if (error) { toast.error(error.message); return; }
     toast.success("New OTP sent");
     startCooldown();
     setDigits(Array(OTP_LENGTH).fill(""));
@@ -97,17 +118,17 @@ const LoginPage = () => {
     setVerifying(true);
     const { error } = await supabase.auth.verifyOtp({ phone: fullPhone, token: otp, type: "sms" });
     setVerifying(false);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
+    if (error) { toast.error(error.message); return; }
     // Session established — auth context useEffect above handles redirect
   };
 
   return (
     <div className="flex min-h-screen">
       {/* Left Panel */}
-      <div className="hidden w-[60%] p-12 lg:flex lg:flex-col lg:justify-center" style={{ background: "linear-gradient(135deg, hsl(222 47% 11%) 0%, hsl(222 47% 18%) 50%, hsl(222 47% 15%) 100%)" }}>
+      <div
+        className="hidden w-[60%] p-12 lg:flex lg:flex-col lg:justify-center"
+        style={{ background: "linear-gradient(135deg, hsl(222 47% 11%) 0%, hsl(222 47% 18%) 50%, hsl(222 47% 15%) 100%)" }}
+      >
         <div className="mx-auto max-w-md animate-fade-in-up">
           <div className="flex items-center gap-3 mb-8">
             <img src={logoLight} alt="ARKE Logo" className="h-14 rounded-xl" />
@@ -160,7 +181,11 @@ const LoginPage = () => {
                     </div>
                   </div>
                 </div>
-                <button onClick={handleSendOtp} disabled={sending} className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent py-3 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-60 transition-opacity">
+                <button
+                  onClick={handleSendOtp}
+                  disabled={sending}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent py-3 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-60 transition-opacity"
+                >
                   {sending ? <><Loader2 className="h-4 w-4 animate-spin" /> Sending OTP...</> : "Send OTP"}
                 </button>
               </div>
@@ -174,7 +199,10 @@ const LoginPage = () => {
           {/* Step 2 — OTP */}
           {step === "otp" && (
             <>
-              <button onClick={() => setStep("phone")} className="inline-flex items-center gap-1.5 mb-4 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              <button
+                onClick={() => setStep("phone")}
+                className="inline-flex items-center gap-1.5 mb-4 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
                 <ArrowLeft className="h-4 w-4" /> Change number
               </button>
               <h2 className="text-2xl font-black font-display text-foreground">Verify Phone</h2>
@@ -198,10 +226,18 @@ const LoginPage = () => {
                   />
                 ))}
               </div>
-              <button onClick={handleVerifyOtp} disabled={verifying || otp.length < OTP_LENGTH} className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent py-3 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-60 transition-opacity">
+              <button
+                onClick={handleVerifyOtp}
+                disabled={verifying || otp.length < OTP_LENGTH}
+                className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent py-3 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-60 transition-opacity"
+              >
                 {verifying ? <><Loader2 className="h-4 w-4 animate-spin" /> Logging in...</> : "Verify & Login"}
               </button>
-              <button onClick={handleResend} disabled={resending || cooldown > 0} className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-border py-2.5 text-sm font-semibold text-foreground hover:bg-muted disabled:opacity-60 transition-colors">
+              <button
+                onClick={handleResend}
+                disabled={resending || cooldown > 0}
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-border py-2.5 text-sm font-semibold text-foreground hover:bg-muted disabled:opacity-60 transition-colors"
+              >
                 <RefreshCw className={`h-4 w-4 ${resending ? "animate-spin" : ""}`} />
                 {cooldown > 0 ? `Resend in ${cooldown}s` : resending ? "Sending..." : "Resend OTP"}
               </button>
