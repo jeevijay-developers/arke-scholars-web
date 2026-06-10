@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Arke Scholars — Question Paper Author Guide</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  :root {
+    --primary: #1a3a7a;
+    --green:   #1a7a3c;
+    --purple:  #6a1a7a;
+    --orange:  #c05000;
+    --teal:    #0a6a6a;
+    --gray:    #555;
+    --light:   #f5f7fa;
+    --border:  #dde3ef;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    color: #1a1a2e;
+    background: #fff;
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 40px 32px 80px;
+  }
+
+  h1 { font-size: 26px; color: var(--primary); margin-bottom: 4px; }
+  h2 { font-size: 17px; color: var(--primary); margin: 36px 0 12px; border-bottom: 2px solid var(--border); padding-bottom: 6px; }
+  h3 { font-size: 13px; color: var(--gray); margin: 20px 0 8px; text-transform: uppercase; letter-spacing: .05em; }
+  p  { line-height: 1.65; margin-bottom: 10px; color: #333; }
+  ul { padding-left: 20px; margin-bottom: 10px; }
+  li { margin-bottom: 5px; line-height: 1.6; }
+  code { font-family: 'JetBrains Mono', monospace; font-size: 12px; background: #f0f2f8; border-radius: 4px; padding: 1px 5px; }
+
+  .subtitle { color: var(--gray); margin-bottom: 32px; font-size: 13px; }
+
+  /* Style cards */
+  .style-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; margin: 16px 0; }
+  .style-card { border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; background: var(--light); }
+  .style-name { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .style-desc { font-size: 12px; color: var(--gray); margin-bottom: 6px; }
+  .style-example { font-size: 12px; background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; }
+
+  .chip-Q-Number   .style-name { color: var(--primary); }
+  .chip-Q-Stem     .style-name { color: #222; }
+  .chip-Q-Option   .style-name { color: var(--orange); }
+  .chip-Q-Answer   .style-name { color: var(--green); }
+  .chip-Q-Solution .style-name { color: var(--purple); }
+  .chip-Q-Topic    .style-name { color: var(--gray); }
+
+  /* Example block */
+  .example-block { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin: 20px 0; }
+  .example-row { display: flex; align-items: stretch; }
+  .example-label {
+    width: 110px; min-width: 110px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 600;
+    display: flex; align-items: center;
+    padding: 8px 12px;
+    border-right: 1px solid var(--border);
+    color: #fff;
+  }
+  .example-text { padding: 8px 14px; flex: 1; font-size: 13px; line-height: 1.5; display: flex; align-items: center; }
+  .example-row + .example-row { border-top: 1px solid var(--border); }
+
+  .bg-number   { background: var(--primary); }
+  .bg-stem     { background: #4a5568; }
+  .bg-option   { background: var(--orange); }
+  .bg-answer   { background: var(--green); }
+  .bg-solution { background: var(--purple); }
+  .bg-topic    { background: var(--gray); }
+  .bg-table    { background: var(--teal); }
+
+  /* Match table preview */
+  .match-table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 8px 0; }
+  .match-table th { background: #e8edf5; font-weight: 600; padding: 6px 12px; border: 1px solid var(--border); text-align: left; }
+  .match-table td { padding: 6px 12px; border: 1px solid var(--border); }
+
+  /* Steps */
+  .steps { counter-reset: steps; }
+  .step  { display: flex; gap: 16px; margin-bottom: 20px; }
+  .step-num {
+    counter-increment: steps;
+    background: var(--primary); color: #fff;
+    border-radius: 50%;
+    width: 28px; height: 28px; min-width: 28px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; margin-top: 2px;
+  }
+  .step-body { flex: 1; }
+  .step-body strong { display: block; margin-bottom: 4px; }
+
+  /* Tips */
+  .tip  { background: #fffbea; border: 1px solid #f0d060; border-radius: 8px; padding: 12px 16px; margin: 16px 0; font-size: 13px; }
+  .tip strong { color: #856400; }
+  .warn { background: #fff1f0; border-color: #f0a0a0; }
+  .warn strong { color: #a00; }
+  .info { background: #f0f6ff; border-color: #a0c0f0; }
+  .info strong { color: #1a3a7a; }
+
+  kbd { background: #eee; border: 1px solid #ccc; border-radius: 4px; padding: 1px 6px; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+
+  /* Equation modes */
+  .eq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+  .eq-card { border: 1px solid var(--border); border-radius: 10px; padding: 16px; background: var(--light); }
+  .eq-card h3 { margin-top: 0; color: var(--primary); }
+  .eq-example { font-family: 'JetBrains Mono', monospace; font-size: 12px; background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; margin: 8px 0; line-height: 1.8; }
+
+  /* FAQ */
+  details { border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin-bottom: 8px; }
+  summary { font-weight: 600; cursor: pointer; font-size: 13px; }
+  details p, details ul { margin-top: 8px; font-size: 13px; }
+
+  @media print {
+    body { padding: 20px; font-size: 12px; }
+    h2 { page-break-before: always; }
+    h2:first-of-type { page-break-before: avoid; }
+    .example-block, .eq-grid { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Arke Scholars — Question Paper Author Guide</h1>
+<p class="subtitle">How to write and format question papers using the Arke template so they import correctly — including equations, images, and match-the-following questions.</p>
+
+<!-- ─── 1. Paragraph Styles ────────────────────────────────────────────── -->
+<h2>1. What are Paragraph Styles?</h2>
+<p>In Microsoft Word, every paragraph carries a <strong>Style</strong> — a named tag that tells the Arke system what each paragraph <em>is</em> (question number, stem text, option, answer, etc.), not just how it looks. Applying a style is one click and makes imports accurate every time.</p>
+<p>If you skip styles, the parser falls back to guessing from formatting — which works for simple papers but is less reliable with equations and complex layouts. Always use styles.</p>
+
+<!-- ─── 2. The 6 Styles ────────────────────────────────────────────────── -->
+<h2>2. The Six Arke Styles</h2>
+<div class="style-grid">
+  <div class="style-card chip-Q-Number">
+    <div class="style-name">Q-Number</div>
+    <div class="style-desc">Bold question number. One per question. Apply to the number line only.</div>
+    <div class="style-example"><strong>1.</strong></div>
+  </div>
+  <div class="style-card chip-Q-Stem">
+    <div class="style-name">Q-Stem</div>
+    <div class="style-desc">The question text. Can span multiple paragraphs. Equations live here.</div>
+    <div class="style-example">A particle with mass $m$ moves with velocity $v$. Find its KE.</div>
+  </div>
+  <div class="style-card chip-Q-Option">
+    <div class="style-name">Q-Option</div>
+    <div class="style-desc">One answer option per paragraph. Label with (1) (2) (3) (4).</div>
+    <div class="style-example">(1) $\frac{1}{2}mv^2$ &nbsp;&nbsp; (2) $mv^2$ &nbsp;&nbsp; (3) $2mv^2$ &nbsp;&nbsp; (4) $mv$</div>
+  </div>
+  <div class="style-card chip-Q-Answer">
+    <div class="style-name">Q-Answer</div>
+    <div class="style-desc">Correct answer. Must start with "Answer:". One per question.</div>
+    <div class="style-example">Answer: (1)</div>
+  </div>
+  <div class="style-card chip-Q-Solution">
+    <div class="style-name">Q-Solution</div>
+    <div class="style-desc">Full solution / explanation. Can be multiple paragraphs.</div>
+    <div class="style-example">$KE = \frac{1}{2}mv^2$ by the work-energy theorem.</div>
+  </div>
+  <div class="style-card chip-Q-Topic">
+    <div class="style-name">Q-Topic</div>
+    <div class="style-desc">Optional. Placed before Q-Number. Format: "Topic: &lt;name&gt;"</div>
+    <div class="style-example">Topic: Kinematics</div>
+  </div>
+</div>
+
+<!-- ─── 3. Full Examples ───────────────────────────────────────────────── -->
+<h2>3. Full Question Examples</h2>
+
+<h3>Single / Multiple Correct (SCQ / MCQ)</h3>
+<div class="example-block">
+  <div class="example-row"><div class="example-label bg-topic">Q-Topic</div><div class="example-text" style="color:#666;font-style:italic;">Topic: Oscillations</div></div>
+  <div class="example-row"><div class="example-label bg-number">Q-Number</div><div class="example-text"><strong>1.</strong></div></div>
+  <div class="example-row"><div class="example-label bg-stem">Q-Stem</div><div class="example-text">In damped SHM the displacement is $x = a_0 e^{-bt/2m}\sin(\omega t+\alpha)$. Which statements are correct?</div></div>
+  <div class="example-row"><div class="example-label bg-option">Q-Option</div><div class="example-text">(1) Dimensions of $b/m$ are the same as $T^{-1}$</div></div>
+  <div class="example-row"><div class="example-label bg-option">Q-Option</div><div class="example-text">(2) Dimensions of $a_0\omega$ are $[LT^{-1}]$</div></div>
+  <div class="example-row"><div class="example-label bg-option">Q-Option</div><div class="example-text">(3) Dimensions of $1/b$ are $[MT^{-1}]^{-1}$</div></div>
+  <div class="example-row"><div class="example-label bg-option">Q-Option</div><div class="example-text">(4) Amplitude decays as $e^{-bt/2m}$</div></div>
+  <div class="example-row"><div class="example-label bg-answer">Q-Answer</div><div class="example-text" style="color:#1a7a3c;font-weight:600;">Answer: (1), (2), (4)</div></div>
+  <div class="example-row"><div class="example-label bg-solution">Q-Solution</div><div class="example-text" style="color:#444;font-style:italic;">From $bt/2m$ being dimensionless: $[b]=[MT^{-1}]$, so $[b/m]=[T^{-1}]$ ✓. $[a_0\omega]=[LT^{-1}]$ ✓. $[1/b]=[M^{-1}T]\ne[MT^{-1}]^{-1}$, so (3) is wrong.</div></div>
+</div>
+
+<h3>Integer Answer Type</h3>
+<div class="example-block">
+  <div class="example-row"><div class="example-label bg-topic">Q-Topic</div><div class="example-text" style="color:#666;font-style:italic;">Topic: Kinematics</div></div>
+  <div class="example-row"><div class="example-label bg-number">Q-Number</div><div class="example-text"><strong>2.</strong></div></div>
+  <div class="example-row"><div class="example-label bg-stem">Q-Stem</div><div class="example-text">A particle starts from rest with acceleration $a=2t$ m/s². The distance (in m) covered in the first 3 s is:</div></div>
+  <div class="example-row"><div class="example-label bg-answer">Q-Answer</div><div class="example-text" style="color:#1a7a3c;font-weight:600;">Answer: 9</div></div>
+  <div class="example-row"><div class="example-label bg-solution">Q-Solution</div><div class="example-text" style="color:#444;font-style:italic;">$v=\int 2t\,dt=t^2$. Distance $s=\int_0^3 t^2\,dt=[t^3/3]_0^3=9$ m.</div></div>
+</div>
+
+<h3>Match the Following</h3>
+<p>After the <strong>Q-Stem</strong> paragraph, insert a two-column Word table. The header row must say <strong>Column A</strong> and <strong>Column B</strong>. Each data row uses the format <code>(A) item</code> in the left cell and <code>(P) item</code> in the right cell.</p>
+<div class="example-block">
+  <div class="example-row"><div class="example-label bg-topic">Q-Topic</div><div class="example-text" style="color:#666;font-style:italic;">Topic: Thermodynamics</div></div>
+  <div class="example-row"><div class="example-label bg-number">Q-Number</div><div class="example-text"><strong>3.</strong></div></div>
+  <div class="example-row"><div class="example-label bg-stem">Q-Stem</div><div class="example-text">Match each quantity in Column A with its SI unit in Column B.</div></div>
+  <div class="example-row"><div class="example-label bg-table">Table</div>
+    <div class="example-text" style="display:block;padding:12px 14px;">
+      <table class="match-table">
+        <tr><th>Column A</th><th>Column B</th></tr>
+        <tr><td>(A) Energy</td><td>(P) Pascal (Pa)</td></tr>
+        <tr><td>(B) Power</td><td>(Q) Joule (J)</td></tr>
+        <tr><td>(C) Pressure</td><td>(R) Coulomb (C)</td></tr>
+        <tr><td>(D) Electric charge</td><td>(S) Watt (W)</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="example-row"><div class="example-label bg-answer">Q-Answer</div><div class="example-text" style="color:#1a7a3c;font-weight:600;">Answer: A-Q, B-S, C-P, D-R</div></div>
+  <div class="example-row"><div class="example-label bg-solution">Q-Solution</div><div class="example-text" style="color:#444;font-style:italic;">Energy → Joule; Power → Watt; Pressure → Pascal; Charge → Coulomb.</div></div>
+</div>
+
+<div class="tip info">
+  <strong>Match table rules:</strong> The header row must contain the words "Column A" and "Column B" (or "Column I" / "Column II"). Keys in Column A use letters A, B, C, D and keys in Column B use letters P, Q, R, S. The answer format is <code>Answer: A-Q, B-S, C-P, D-R</code> using hyphens or arrows.
+</div>
+
+<!-- ─── 4. Step-by-Step ────────────────────────────────────────────────── -->
+<h2>4. Step-by-Step: Creating a Question Paper</h2>
+<div class="steps">
+
+  <div class="step">
+    <div class="step-num"></div>
+    <div class="step-body">
+      <strong>Download the template</strong>
+      Admin panel → Upload Questions → click <em>"Download Template"</em>. Opens <code>arke-question-template.docx</code>.
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num"></div>
+    <div class="step-body">
+      <strong>Open and save as your paper</strong>
+      Double-click the downloaded file. Immediately do File → Save As → <code>YourPaper.docx</code>. The template itself stays unmodified.
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num"></div>
+    <div class="step-body">
+      <strong>Show the Styles panel</strong>
+      Home tab → click the small arrow at the bottom-right of the <em>Styles</em> group. The 6 Arke styles appear in the panel on the right.
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num"></div>
+    <div class="step-body">
+      <strong>Type and tag each question</strong>
+      <ol style="margin-top:8px;padding-left:20px;">
+        <li>Optionally type <code>Topic: Waves</code> → select → click <strong>Q-Topic</strong>.</li>
+        <li>Type <code>1.</code> → select → click <strong>Q-Number</strong>.</li>
+        <li>Type the question text → select → click <strong>Q-Stem</strong>.</li>
+        <li>For options: type <code>(1) option text</code> on its own line → <strong>Q-Option</strong>. Repeat for (2)(3)(4).</li>
+        <li>For match-the-following: instead of option lines, insert a table (see Section 6).</li>
+        <li>Type <code>Answer: (2)</code> → select → click <strong>Q-Answer</strong>.</li>
+        <li>Type the solution → select → click <strong>Q-Solution</strong>.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num"></div>
+    <div class="step-body">
+      <strong>Save as .docx and upload</strong>
+      File → Save As → format <strong>Word Document (.docx)</strong>. Upload on the Arke Admin → Upload Questions page.
+    </div>
+  </div>
+
+</div>
+
+<!-- ─── 5. Keyboard Shortcuts ─────────────────────────────────────────── -->
+<h2>5. Speed Tip — Keyboard Shortcuts for Styles</h2>
+<p>Right-click any style in the panel → <em>Modify</em> → <em>Format</em> → <em>Shortcut key</em>. Suggested bindings:</p>
+<ul>
+  <li><kbd>Alt+1</kbd> → Q-Number</li>
+  <li><kbd>Alt+2</kbd> → Q-Stem</li>
+  <li><kbd>Alt+3</kbd> → Q-Option</li>
+  <li><kbd>Alt+4</kbd> → Q-Answer</li>
+  <li><kbd>Alt+5</kbd> → Q-Solution</li>
+  <li><kbd>Alt+6</kbd> → Q-Topic</li>
+</ul>
+<p>With shortcuts you can tag an entire question in seconds without touching the mouse.</p>
+
+<!-- ─── 6. Equations ──────────────────────────────────────────────────── -->
+<h2>6. Equations</h2>
+<p>Two methods are supported. Both import correctly — use whichever is faster for you.</p>
+
+<div class="eq-grid">
+  <div class="eq-card">
+    <h3>Method 1 — Type LaTeX directly</h3>
+    <p>Wrap inline math in <code>$...$</code> and display math in <code>$$...$$</code>. Type it as plain text anywhere inside a Q-Stem, Q-Option, or Q-Solution paragraph.</p>
+    <div class="eq-example">
+      Stem:&nbsp; $x = a_0 e^{-bt/2m}\sin(\omega t)$<br><br>
+      Option:&nbsp; (1) $\frac{1}{2}mv^2$<br><br>
+      Display:&nbsp; $$\int_0^\infty e^{-x^2}\,dx = \frac{\sqrt{\pi}}{2}$$
+    </div>
+    <p style="font-size:12px;color:#666;">Fastest approach. No special Word setup needed. Renders with KaTeX on the Arke platform.</p>
+  </div>
+  <div class="eq-card">
+    <h3>Method 2 — Word Equation Editor</h3>
+    <p>Press <kbd>Alt</kbd>+<kbd>=</kbd> to insert a Word equation object. Type LaTeX inside the box and press <kbd>Space</kbd> to render it. The Arke parser extracts the LaTeX automatically.</p>
+    <div class="eq-example">
+      1. Click inside a Q-Stem paragraph.<br>
+      2. Press Alt + = (inserts equation box).<br>
+      3. Type: \frac{bt}{2m}<br>
+      4. Press Space — Word renders it.<br>
+      5. Click outside to return to text.
+    </div>
+    <p style="font-size:12px;color:#666;">Better for complex multi-line expressions. Requires no additional setup in recent Word versions.</p>
+  </div>
+</div>
+
+<div class="tip">
+  <strong>Tip — LaTeX input mode in Word:</strong> If pressing Space doesn't render the equation, enable Math AutoCorrect: File → Options → Proofing → AutoCorrect → Math AutoCorrect → check <em>"Use Math AutoCorrect rules outside of math regions"</em>.
+</div>
+<div class="tip warn">
+  <strong>Avoid MathType for new papers.</strong> MathType OLE objects are imported as images (the EMF preview), which cannot be searched or edited on the platform. Use Word's built-in editor (<kbd>Alt</kbd>+<kbd>=</kbd>) or plain <code>$...$</code> LaTeX instead.
+</div>
+
+<!-- ─── 7. Match the Following — Detailed ─────────────────────────────── -->
+<h2>7. Match the Following — Detailed Instructions</h2>
+<div class="steps">
+  <div class="step">
+    <div class="step-num"></div>
+    <div class="step-body">
+      <strong>Write the stem</strong>
+      Type the introductory text (e.g. "Match the following") and apply <strong>Q-Stem</strong>.
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num"></div>
+    <div class="step-body">
+      <strong>Insert a 2-column table</strong>
+      Place your cursor on the line immediately after the stem. Go to Insert → Table → 2 columns, as many rows as you need (1 header + N data rows).
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num"></div>
+    <div class="step-body">
+      <strong>Fill the header row</strong>
+      Type <strong>Column A</strong> in the left cell and <strong>Column B</strong> in the right cell. This is required — the parser detects match tables by the header text.
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num"></div>
+    <div class="step-body">
+      <strong>Fill data rows</strong>
+      Each row: left cell = <code>(A) item text</code>, right cell = <code>(P) item text</code>. Use A/B/C/D for Column A and P/Q/R/S for Column B. You can include <code>$...$</code> LaTeX inside cells.
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num"></div>
+    <div class="step-body">
+      <strong>Write the answer</strong>
+      Apply <strong>Q-Answer</strong> to a line like: <code>Answer: A-Q, B-S, C-P, D-R</code>
+    </div>
+  </div>
+</div>
+
+<!-- ─── 8. Images ─────────────────────────────────────────────────────── -->
+<h2>8. Images and Diagrams</h2>
+<p>Images are supported in the question stem, inside options, and in solutions.</p>
+<ul>
+  <li><strong>Stem image:</strong> Insert → Pictures at any point inside or after Q-Stem paragraphs.</li>
+  <li><strong>Option image:</strong> After typing the option text paragraph, insert the image as a new paragraph immediately below it (still before the next option). The parser pairs the image with the preceding option automatically.</li>
+  <li><strong>Solution image:</strong> Insert anywhere inside a Q-Solution paragraph or as a separate paragraph within the solution block.</li>
+</ul>
+<div class="tip">
+  <strong>Image formats:</strong> PNG, JPEG, GIF, SVG, WMF, EMF are all supported. Avoid copy-pasting from PDF viewers — use proper screenshots or exported vector files. Do not use HD Photo (.wdp) format — it is not supported by browsers.
+</div>
+
+<!-- ─── 9. Answer Formats ──────────────────────────────────────────────── -->
+<h2>9. Answer Line Formats</h2>
+<p>The answer line must begin with <code>Answer:</code> (capital A, colon). The format after the colon depends on question type:</p>
+<ul>
+  <li><strong>Single correct (SCQ):</strong> <code>Answer: (3)</code></li>
+  <li><strong>Multiple correct (MCQ):</strong> <code>Answer: (1), (2), (4)</code> &nbsp;or&nbsp; <code>Answer: (1) and (3)</code></li>
+  <li><strong>Integer:</strong> <code>Answer: 42</code> &nbsp;or&nbsp; <code>Answer: -6</code> &nbsp;or&nbsp; <code>Answer: 3.5</code></li>
+  <li><strong>Match the following:</strong> <code>Answer: A-Q, B-S, C-P, D-R</code></li>
+</ul>
+
+<!-- ─── 10. Common Mistakes ───────────────────────────────────────────── -->
+<h2>10. Common Mistakes</h2>
+<div class="tip warn">
+  <strong>Do not leave question parts in Normal style.</strong> Without Arke styles, the system falls back to heuristic detection which is less reliable. Always apply a style to every paragraph.
+</div>
+<div class="tip warn">
+  <strong>Answer line must start with "Answer:".</strong> Don't write "Ans:", "A:", "Correct:", or leave it blank.
+</div>
+<div class="tip warn">
+  <strong>Match table header must say "Column A" and "Column B".</strong> Other names like "List I / List II" or "Item / Match" will not be detected as a match table.
+</div>
+<div class="tip warn">
+  <strong>Do not split a paper across multiple files.</strong> One upload = one paper. All questions must be in a single .docx file.
+</div>
+<div class="tip warn">
+  <strong>Option labels must be (1) (2) (3) (4).</strong> Using A/B/C/D as option labels for MCQ/SCQ questions will confuse the answer parser. Reserve A/B/C/D for match-the-following Column A.
+</div>
+
+<!-- ─── 11. FAQ ────────────────────────────────────────────────────────── -->
+<h2>11. Frequently Asked Questions</h2>
+<details>
+  <summary>I have an existing paper — do I have to retype everything?</summary>
+  <p>No. Open your existing paper and the template side by side. Copy paragraphs from your paper into the template document, then apply the Arke styles. You can also open the Styles pane in your existing doc, click "Manage Styles" → Import/Export, and import the Arke styles from the template file directly.</p>
+</details>
+<details>
+  <summary>Can I mix $...$ LaTeX and Word equation objects in the same paper?</summary>
+  <p>Yes. Both formats are parsed independently and rendered the same way on the platform. Use whichever is convenient per question.</p>
+</details>
+<details>
+  <summary>What if the system shows "needs review" for some questions?</summary>
+  <p>The admin review page flags questions where the parser wasn't fully confident — usually a missing answer, an unrecognised option format, or a question with no text stem. Click each flagged card to confirm or correct the stem, options, and answer before saving.</p>
+</details>
+<details>
+  <summary>Can each option have its own image?</summary>
+  <p>Yes. Type the option text paragraph (e.g. <code>(1) See diagram</code> with Q-Option style), then on the very next line insert the image (Insert → Pictures). The parser automatically assigns the image to option (1). Repeat for each option that has an image.</p>
+</details>
+<details>
+  <summary>What if an option is entirely an image with no text?</summary>
+  <p>Type just <code>(1)</code> as the option text, apply Q-Option, then insert the image on the next line. The label is still needed so the parser knows which option slot the image belongs to.</p>
+</details>
+<details>
+  <summary>My match table has more than 4 rows — is that OK?</summary>
+  <p>Yes. The table can have any number of data rows. The parser reads all rows below the header. Just make sure each left cell starts with <code>(A)</code>, <code>(B)</code>, etc. and each right cell with <code>(P)</code>, <code>(Q)</code>, etc.</p>
+</details>
+<details>
+  <summary>Can I use LaTeX inside match table cells?</summary>
+  <p>Yes. Type <code>(A) $\frac{1}{2}mv^2$</code> directly in the cell. The system parses <code>$...$</code> expressions inside table cells the same as in stem or option paragraphs.</p>
+</details>
+<details>
+  <summary>Q-Solution is optional?</summary>
+  <p>Yes. If you skip Q-Solution, the question imports without a solution. You can add solutions later from the admin question editor on the platform.</p>
+</details>
+
+<hr style="margin:40px 0;border:none;border-top:1px solid var(--border)"/>
+<p style="font-size:12px;color:#999;text-align:center;">Arke Scholars — Internal Author Reference &nbsp;·&nbsp; v2.0</p>
+
+</body>
+</html>
