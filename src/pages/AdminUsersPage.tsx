@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback } from "react";
-import { Search, UserPlus, Download, X, ChevronLeft, ChevronRight, Loader2, ShieldOff, ShieldCheck } from "lucide-react";
+import { Search, UserPlus, Download, X, ChevronLeft, ChevronRight, Loader2, ShieldOff, ShieldCheck, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { List, type RowComponentProps } from "react-window";
 import { supabase } from "@/integrations/supabase/client";
@@ -162,9 +162,8 @@ const AdminUsersPage = () => {
   const [drawerUser, setDrawerUser] = useState<AdminUserRow | null>(null);
   const [bulkBody, setBulkBody] = useState("");
   const [showBulk, setShowBulk] = useState(false);
-  const [pendingRole, setPendingRole] = useState<AdminUserRow["role"] | null>(null);
-  const [savingRole, setSavingRole] = useState(false);
-
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const { rows, total, loading, pageSize, reload } = useAdminUsers(filter, search, page);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -183,22 +182,23 @@ const AdminUsersPage = () => {
     reload();
   };
 
-  const confirmChangeRole = async () => {
-    if (!drawerUser || !pendingRole) return;
-    setSavingRole(true);
-    const { error } = await supabase.rpc("admin_set_user_role", {
-      _user_id: drawerUser.user_id,
-      _role: pendingRole,
-    });
-    setSavingRole(false);
-    if (error) {
-      toast.error("Could not update role", { description: error.message });
-      return;
+  const bulkDelete = async () => {
+    setDeleting(true);
+    const selectedRows = rows.filter((r) => selected.includes(r.user_id));
+    const errors: string[] = [];
+    for (const u of selectedRows) {
+      const fn = (u.role === "admin" || u.role === "super_admin") ? "manage-admin" : "manage-student";
+      const { error } = await supabase.functions.invoke(fn, {
+        body: { action: "delete", user_id: u.user_id },
+      });
+      if (error) errors.push(u.full_name ?? u.user_id);
     }
-    toast.success(`Role updated to ${pendingRole}`);
-    setPendingRole(null);
-    setDrawerUser(null);
+    setDeleting(false);
+    setShowDeleteConfirm(false);
+    setSelected([]);
     reload();
+    if (errors.length) toast.error(`Failed to delete: ${errors.join(", ")}`);
+    else toast.success(`${selectedRows.length} user${selectedRows.length === 1 ? "" : "s"} deleted`);
   };
 
   const sendBulkNotification = async () => {
@@ -265,6 +265,12 @@ const AdminUsersPage = () => {
             className="rounded-lg bg-background border border-border px-3 py-1 text-[10px] font-medium text-muted-foreground"
           >
             Send Notification
+          </button>
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-1 text-[10px] font-medium text-destructive flex items-center gap-1 ml-auto"
+          >
+            <Trash2 className="h-3 w-3" /> Delete ({selected.length})
           </button>
         </div>
       )}
@@ -342,26 +348,6 @@ const AdminUsersPage = () => {
                 <p className="text-[11px] text-muted-foreground leading-relaxed mb-3">
                   {ROLE_DESCRIPTIONS[drawerUser.role]}
                 </p>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5">Change role to</p>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {(["student", "teacher", "mentor", "admin", "super_admin"] as const).map((r) => {
-                    const isCurrent = drawerUser.role === r;
-                    const label = r === "super_admin" ? "Super Admin" : r;
-                    return (
-                      <button
-                        key={r}
-                        onClick={() => setPendingRole(r)}
-                        disabled={isCurrent}
-                        className={`rounded-lg border px-3 py-2 text-[11px] font-semibold capitalize transition-colors ${isCurrent
-                            ? "border-primary/30 bg-primary/5 text-primary cursor-not-allowed"
-                            : "border-border text-foreground hover:bg-muted/40"
-                          }`}
-                      >
-                        {isCurrent ? `${label} (current)` : label}
-                      </button>
-                    );
-                  })}
-                </div>
               </div>
 
               <button
@@ -370,53 +356,6 @@ const AdminUsersPage = () => {
                   }`}
               >
                 {drawerUser.is_suspended ? "Unsuspend user" : "Suspend user"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {pendingRole && drawerUser && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50" onClick={() => !savingRole && setPendingRole(null)} />
-          <div className="relative w-full max-w-md rounded-2xl bg-card p-5 border border-border shadow-xl space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 shrink-0">
-                <ShieldCheck className="h-5 w-5 text-primary" />
-              </div>
-              <div className="min-w-0">
-                <h2 className="text-sm font-bold text-foreground">Confirm role change</h2>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Change <span className="font-semibold text-foreground">{drawerUser.full_name || "this user"}</span>'s
-                  role from <span className="capitalize font-semibold text-foreground">{drawerUser.role}</span> to{" "}
-                  <span className="capitalize font-semibold text-primary">{pendingRole}</span>?
-                </p>
-              </div>
-            </div>
-            <div className="rounded-lg bg-muted/40 p-3 text-[11px] text-muted-foreground leading-relaxed">
-              <p className="font-semibold text-foreground capitalize mb-1">{pendingRole} access</p>
-              {ROLE_DESCRIPTIONS[pendingRole]}
-            </div>
-            {(pendingRole === "admin" || pendingRole === "super_admin") && drawerUser.role === "student" && (
-              <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-[11px] text-destructive">
-                <strong>Heads up:</strong> Granting {pendingRole.replace("_", " ")} access removes student-portal access for this user. They will be redirected to the admin dashboard on their next sign-in.
-              </div>
-            )}
-            <div className="flex justify-end gap-2">
-              <button
-                disabled={savingRole}
-                onClick={() => setPendingRole(null)}
-                className="rounded-lg border border-border px-3 py-2 text-xs font-medium text-muted-foreground disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                disabled={savingRole}
-                onClick={confirmChangeRole}
-                className="rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-60 inline-flex items-center gap-1.5"
-              >
-                {savingRole && <Loader2 className="h-3 w-3 animate-spin" />}
-                Confirm change
               </button>
             </div>
           </div>
@@ -441,6 +380,42 @@ const AdminUsersPage = () => {
               </button>
               <button onClick={sendBulkNotification} className="rounded-lg bg-primary px-3 py-2 text-xs font-bold text-primary-foreground">
                 Send
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => !deleting && setShowDeleteConfirm(false)} />
+          <div className="relative w-full max-w-md rounded-2xl bg-card p-5 border border-border shadow-xl space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10 shrink-0">
+                <Trash2 className="h-5 w-5 text-destructive" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-foreground">Delete {selected.length} user{selected.length === 1 ? "" : "s"}?</h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  This permanently removes their accounts, data, and access. This action cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                disabled={deleting}
+                onClick={() => setShowDeleteConfirm(false)}
+                className="rounded-lg border border-border px-3 py-2 text-xs font-medium text-muted-foreground disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={deleting}
+                onClick={bulkDelete}
+                className="rounded-lg bg-destructive px-4 py-2 text-xs font-bold text-white hover:bg-destructive/90 disabled:opacity-60 inline-flex items-center gap-1.5"
+              >
+                {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                {deleting ? "Deleting…" : "Delete"}
               </button>
             </div>
           </div>
