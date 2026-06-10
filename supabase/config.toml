@@ -35,3 +35,12 @@ verify_jwt = true
 
 [functions.get-video-url]
 verify_jwt = true
+
+[functions.zoom-create-meeting]
+verify_jwt = false
+
+[functions.zoom-signature]
+verify_jwt = false
+
+[functions.zoom-webhook]
+verify_jwt = false

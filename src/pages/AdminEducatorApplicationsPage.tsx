@@ -310,7 +310,6 @@ const AdminEducatorApplicationsPage = () => {
                 <tr className="border-b border-border bg-muted/40">
                   <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3 whitespace-nowrap">Candidate</th>
                   <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3 whitespace-nowrap">Subject</th>
-                  <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3 whitespace-nowrap">Classes</th>
                   <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3 whitespace-nowrap">Exp.</th>
                   <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3 whitespace-nowrap">Expected CTC</th>
                   <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3 whitespace-nowrap">Applied</th>
@@ -344,19 +343,6 @@ const AdminEducatorApplicationsPage = () => {
                         <span className="font-medium text-foreground flex items-center gap-1">
                           <GraduationCap className="h-3.5 w-3.5 text-primary shrink-0" />{a.subject}
                         </span>
-                      </td>
-                      {/* Classes */}
-                      <td className="px-4 py-3 max-w-[160px]">
-                        {classLevels.length > 0 ? (
-                          <div className="flex flex-wrap gap-1">
-                            {classLevels.slice(0, 3).map((cl) => (
-                              <span key={cl} className="inline-block rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground whitespace-nowrap">{cl}</span>
-                            ))}
-                            {classLevels.length > 3 && (
-                              <span className="inline-block rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">+{classLevels.length - 3}</span>
-                            )}
-                          </div>
-                        ) : <span className="text-muted-foreground text-xs">—</span>}
                       </td>
                       {/* Experience */}
                       <td className="px-4 py-3 whitespace-nowrap font-medium text-foreground">{a.total_experience} yrs</td>

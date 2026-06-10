@@ -3,7 +3,10 @@ import { Link } from "react-router-dom";
 import SEO from "@/components/SEO";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import { BookOpen, Play, Clock, Star, ArrowRight, Sparkles, GraduationCap, Trophy, Zap, FlaskConical, Compass, Atom, Loader2 } from "lucide-react";
+import {
+  BookOpen, Play, Clock, Star, ArrowRight, Sparkles,
+  GraduationCap, Trophy, Zap, Loader2,
+} from "lucide-react";
 import SectionHeader from "@/components/SectionHeader";
 import { toast } from "sonner";
 
@@ -12,13 +15,12 @@ type Course = {
   slug: string;
   name: string;
   description: string | null;
-  subject: string;
-  educator_name: string;
+  target: string;
+  class: string;
   thumbnail_url: string | null;
-  rating: number;
-  total_lessons: number;
-  duration_hours: number;
+  rating: number | null;
   badge: string | null;
+  is_course_free: boolean;
 };
 
 type Enrollment = {
@@ -31,22 +33,6 @@ type Enrollment = {
   course: Course;
 };
 
-const subjectIcon: Record<string, React.ElementType> = {
-  Physics: Zap,
-  Chemistry: FlaskConical,
-  Maths: Compass,
-  Biology: Atom,
-  All: GraduationCap,
-};
-
-const subjectGradient: Record<string, string> = {
-  Physics: "from-primary to-primary-dark",
-  Chemistry: "from-secondary to-secondary-dark",
-  Maths: "from-accent to-primary",
-  Biology: "from-secondary to-accent",
-  All: "from-primary to-accent",
-};
-
 const MyCoursesPage = () => {
   const { user } = useAuth();
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -54,23 +40,20 @@ const MyCoursesPage = () => {
 
   useEffect(() => {
     const load = async () => {
-      if (!user) {
-        setLoading(false);
-        return;
-      }
+      if (!user) { setLoading(false); return; }
       const { data, error } = await supabase
         .from("enrollments")
-        .select("id, course_id, progress_percent, completed_lessons, last_lesson_title, last_accessed_at, course:courses(*)")
+        .select(`
+          id, course_id, progress_percent, completed_lessons,
+          last_lesson_title, last_accessed_at,
+          course:courses(id, slug, name, description, target, class, thumbnail_url, rating, badge, is_course_free)
+        `)
         .eq("user_id", user.id)
         .eq("is_active", true)
         .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
         .order("last_accessed_at", { ascending: false, nullsFirst: false });
 
-      if (error) {
-        toast.error("Could not load your courses");
-        setLoading(false);
-        return;
-      }
+      if (error) { toast.error("Could not load your courses"); setLoading(false); return; }
       setEnrollments((data ?? []) as unknown as Enrollment[]);
       setLoading(false);
     };
@@ -123,34 +106,10 @@ const MyCoursesPage = () => {
         {/* Stats strip */}
         {enrollments.length > 0 && (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 stagger-children">
-            <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><BookOpen className="h-5 w-5" /></div>
-              <div>
-                <p className="font-display text-xl font-black text-foreground">{enrollments.length}</p>
-                <p className="text-[11px] text-muted-foreground">Enrolled</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent"><Play className="h-5 w-5" /></div>
-              <div>
-                <p className="font-display text-xl font-black text-foreground">{inProgress.length}</p>
-                <p className="text-[11px] text-muted-foreground">In Progress</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary/10 text-secondary"><Trophy className="h-5 w-5" /></div>
-              <div>
-                <p className="font-display text-xl font-black text-foreground">{completed.length}</p>
-                <p className="text-[11px] text-muted-foreground">Completed</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><Sparkles className="h-5 w-5" /></div>
-              <div>
-                <p className="font-display text-xl font-black text-foreground">{avgProgress}%</p>
-                <p className="text-[11px] text-muted-foreground">Avg Progress</p>
-              </div>
-            </div>
+            <StatCard icon={<BookOpen className="h-5 w-5" />} value={enrollments.length} label="Enrolled" color="bg-primary/10 text-primary" />
+            <StatCard icon={<Play className="h-5 w-5" />} value={inProgress.length} label="In Progress" color="bg-accent/10 text-accent" />
+            <StatCard icon={<Trophy className="h-5 w-5" />} value={completed.length} label="Completed" color="bg-secondary/10 text-secondary" />
+            <StatCard icon={<Sparkles className="h-5 w-5" />} value={`${avgProgress}%`} label="Avg Progress" color="bg-primary/10 text-primary" />
           </div>
         )}
 
@@ -159,44 +118,9 @@ const MyCoursesPage = () => {
           <section className="animate-fade-in-up">
             <SectionHeader title="Continue Learning" />
             <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 stagger-children">
-              {continueLearning.map((e, idx) => {
-                const Icon = subjectIcon[e.course.subject] ?? BookOpen;
-                const gradient = subjectGradient[e.course.subject] ?? "from-primary to-accent";
-                return (
-                  <Link
-                    key={e.id}
-                    to={`/courses/${e.course.slug}/learn`}
-                    className="group overflow-hidden rounded-2xl border border-border bg-card hover-lift"
-                  >
-                    <div className={`relative flex h-32 items-center justify-center bg-gradient-to-br ${gradient}`}>
-                      <Icon className="h-12 w-12 text-white/40" />
-                      {idx === 0 && (
-                        <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
-                          <Zap className="h-3 w-3" /> Resume
-                        </span>
-                      )}
-                      <div className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/40 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
-                        {e.progress_percent}%
-                      </div>
-                    </div>
-                    <div className="p-4">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{e.course.subject}</p>
-                      <h3 className="mt-0.5 line-clamp-2 font-display text-sm font-bold text-foreground group-hover:text-primary transition-colors">{e.course.name}</h3>
-                      <p className="mt-1 text-xs text-muted-foreground">{e.course.educator_name}</p>
-                      {e.last_lesson_title && (
-                        <p className="mt-1 truncate text-[10px] text-muted-foreground">Up next: {e.last_lesson_title}</p>
-                      )}
-                      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
-                        <div className="h-full rounded-full bg-gradient-to-r from-primary to-accent transition-all" style={{ width: `${e.progress_percent}%` }} />
-                      </div>
-                      <div className="mt-1.5 flex items-center justify-between text-[10px]">
-                        <span className="font-bold text-primary">{e.progress_percent}% complete</span>
-                        <span className="text-muted-foreground">{e.completed_lessons}/{e.course.total_lessons} lessons</span>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
+              {continueLearning.map((e, idx) => (
+                <CourseCard key={e.id} enrollment={e} isFirst={idx === 0} />
+              ))}
             </div>
           </section>
         )}
@@ -215,51 +139,7 @@ const MyCoursesPage = () => {
             </div>
           ) : (
             <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 stagger-children">
-              {allEnrolled.map((e) => {
-                const Icon = subjectIcon[e.course.subject] ?? BookOpen;
-                const gradient = subjectGradient[e.course.subject] ?? "from-primary to-accent";
-                const isDone = e.progress_percent >= 100;
-                return (
-                  <Link
-                    key={e.id}
-                    to={`/courses/${e.course.slug}/learn`}
-                    className="group overflow-hidden rounded-2xl border border-border bg-card hover-lift"
-                  >
-                    <div className={`relative flex h-32 items-center justify-center bg-gradient-to-br ${gradient}`}>
-                      <Icon className="h-12 w-12 text-white/40" />
-                      {e.course.badge && (
-                        <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-bold text-foreground">
-                          {e.course.badge}
-                        </span>
-                      )}
-                      <div className={`absolute right-3 top-3 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold backdrop-blur-sm ${isDone ? "bg-secondary text-secondary-foreground" : "bg-black/40 text-white"}`}>
-                        {isDone && <Trophy className="h-3 w-3" />} {e.progress_percent}%
-                      </div>
-                    </div>
-                    <div className="p-4">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{e.course.subject}</p>
-                      <h3 className="mt-0.5 line-clamp-2 font-display text-sm font-bold text-foreground group-hover:text-primary transition-colors">
-                        {e.course.name}
-                      </h3>
-                      <p className="mt-1 text-xs text-muted-foreground">{e.course.educator_name}</p>
-                      <div className="mt-3 flex items-center gap-3 text-[10px] text-muted-foreground">
-                        <span className="inline-flex items-center gap-1">
-                          <Star className="h-3 w-3 fill-secondary text-secondary" /> {e.course.rating}
-                        </span>
-                        <span className="inline-flex items-center gap-1">
-                          <Clock className="h-3 w-3" /> {e.course.duration_hours}h
-                        </span>
-                        <span className="inline-flex items-center gap-1">
-                          <BookOpen className="h-3 w-3" /> {e.completed_lessons}/{e.course.total_lessons}
-                        </span>
-                      </div>
-                      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
-                        <div className="h-full rounded-full bg-gradient-to-r from-primary to-accent transition-all" style={{ width: `${e.progress_percent}%` }} />
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
+              {allEnrolled.map((e) => <CourseCard key={e.id} enrollment={e} />)}
             </div>
           )}
         </section>
@@ -267,5 +147,75 @@ const MyCoursesPage = () => {
     </div>
   );
 };
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function StatCard({ icon, value, label, color }: { icon: React.ReactNode; value: string | number; label: string; color: string }) {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
+      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${color}`}>{icon}</div>
+      <div>
+        <p className="font-display text-xl font-black text-foreground">{value}</p>
+        <p className="text-[11px] text-muted-foreground">{label}</p>
+      </div>
+    </div>
+  );
+}
+
+function CourseCard({ enrollment: e, isFirst }: { enrollment: Enrollment; isFirst?: boolean }) {
+  const isDone = e.progress_percent >= 100;
+  const thumb = e.course.thumbnail_url;
+
+  return (
+    <Link
+      to={`/learn/${e.course_id}`}
+      className="group overflow-hidden rounded-2xl border border-border bg-card hover-lift"
+    >
+      <div className="relative flex h-32 items-center justify-center bg-gradient-to-br from-primary to-accent overflow-hidden">
+        {thumb ? (
+          <img src={thumb} alt={e.course.name} className="absolute inset-0 h-full w-full object-cover" />
+        ) : (
+          <GraduationCap className="h-12 w-12 text-white/40" />
+        )}
+        {isFirst && (
+          <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary z-10">
+            <Zap className="h-3 w-3" /> Resume
+          </span>
+        )}
+        {e.course.is_course_free && (
+          <span className="absolute left-3 bottom-3 inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold text-secondary-foreground z-10">
+            FREE
+          </span>
+        )}
+        <div className={`absolute right-3 top-3 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold backdrop-blur-sm z-10 ${isDone ? "bg-secondary text-secondary-foreground" : "bg-black/40 text-white"}`}>
+          {isDone && <Trophy className="h-3 w-3" />} {e.progress_percent}%
+        </div>
+      </div>
+      <div className="p-4">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{e.course.target} · Class {e.course.class}</p>
+        <h3 className="mt-0.5 line-clamp-2 font-display text-sm font-bold text-foreground group-hover:text-primary transition-colors">{e.course.name}</h3>
+        {e.last_lesson_title && (
+          <p className="mt-1 truncate text-[10px] text-muted-foreground">Up next: {e.last_lesson_title}</p>
+        )}
+        <div className="mt-3 flex items-center gap-3 text-[10px] text-muted-foreground">
+          {e.course.rating != null && (
+            <span className="inline-flex items-center gap-1">
+              <Star className="h-3 w-3 fill-secondary text-secondary" /> {e.course.rating.toFixed(1)}
+            </span>
+          )}
+          <span className="inline-flex items-center gap-1">
+            <Clock className="h-3 w-3" /> {e.progress_percent}% done
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <BookOpen className="h-3 w-3" /> {e.completed_lessons} lessons
+          </span>
+        </div>
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
+          <div className="h-full rounded-full bg-gradient-to-r from-primary to-accent transition-all" style={{ width: `${e.progress_percent}%` }} />
+        </div>
+      </div>
+    </Link>
+  );
+}
 
 export default MyCoursesPage;

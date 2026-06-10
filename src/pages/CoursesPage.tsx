@@ -1,45 +1,85 @@
 import { useEffect, useRef, useState } from "react";
 import SEO from "@/components/SEO";
-import { Star, Users, Loader2, GraduationCap, ArrowRight, ChevronDown } from "lucide-react";
+import { Star, Loader2, GraduationCap, ArrowRight, ChevronDown } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useCourses, type CourseRow } from "@/hooks/useCourses";
 import { useCourseBanners, type CourseBanner } from "@/hooks/useCourseBanners";
 import { useAppStore } from "@/store/useAppStore";
 import EnrollmentModal from "@/components/EnrollmentModal";
-import coursePhysics from "@/assets/course-physics.png";
-import courseChemistry from "@/assets/course-chemistry.png";
-import courseMaths from "@/assets/course-maths.png";
-import courseBiology from "@/assets/course-biology.png";
 
 // ── Filter config ─────────────────────────────────────────────────────────────
 
+type ClassOption = { label: string; value: string };
+
 type ExamOption = {
-  label: string;         // shown in pill
-  value: string;         // passed to useCourses as targetExam ("All" | "JEE Main" | …)
-  children?: string[];   // sub-options shown on hover
-  classes: string[];     // class-level pills shown when this exam is active
+  label: string;
+  value: string;
+  children?: string[];
+  classes: ClassOption[];
 };
 
 const EXAM_OPTIONS: ExamOption[] = [
-  { label: "All",        value: "All",          classes: [] },
+  { label: "All",        value: "All",       classes: [] },
   {
     label: "JEE",        value: "JEE",
     children: ["MAINS", "Advance"],
-    classes: ["Class 11", "Class 12"],
+    classes: [
+      { label: "Class 11",  value: "11" },
+      { label: "Class 12",  value: "12" },
+      { label: "12th Pass", value: "12th_pass" },
+    ],
   },
-  { label: "NEET",       value: "NEET",         classes: ["Class 11", "Class 12"] },
-  { label: "Foundation", value: "Foundation",   classes: ["Class 8", "Class 9", "Class 10"] },
+  {
+    label: "NEET",       value: "NEET",
+    classes: [
+      { label: "Class 11",  value: "11" },
+      { label: "Class 12",  value: "12" },
+      { label: "12th Pass", value: "12th_pass" },
+    ],
+  },
+  {
+    label: "Foundation", value: "Foundation",
+    classes: [
+      { label: "Class 8",  value: "8"  },
+      { label: "Class 9",  value: "9"  },
+      { label: "Class 10", value: "10" },
+    ],
+  },
 ];
 
-// Subject filters removed — we no longer show subject capsules
+// ── Price display helper ───────────────────────────────────────────────────────
 
-const courseImages: Record<string, string> = {
-  Physics: coursePhysics,
-  Chemistry: courseChemistry,
-  Maths: courseMaths,
-  Biology: courseBiology,
-};
-
+function CoursePrice({ course }: { course: CourseRow }) {
+  if (course.is_course_free) {
+    return <span className="text-sm font-bold text-secondary">Free</span>;
+  }
+  const displayPrice = course.show_price_with_gst
+    ? Math.round(course.sale_price * 1.18)
+    : course.sale_price;
+  const displayMrp = course.show_price_with_gst
+    ? Math.round(course.mrp * 1.18)
+    : course.mrp;
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      {displayMrp > displayPrice && (
+        <span className="text-xs line-through text-muted-foreground">
+          ₹{displayMrp.toLocaleString()}
+        </span>
+      )}
+      <span className="text-sm font-bold text-foreground">
+        ₹{displayPrice.toLocaleString()}
+        {course.show_price_with_gst && (
+          <span className="text-[10px] font-normal text-muted-foreground"> incl. GST</span>
+        )}
+      </span>
+      {!!course.discount_percent && Number(course.discount_percent) > 0 && (
+        <span className="rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-bold text-secondary">
+          {Number(course.discount_percent).toFixed(0)}% OFF
+        </span>
+      )}
+    </div>
+  );
+}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -48,24 +88,17 @@ const CoursesPage = () => {
   const { user } = useAppStore();
   const navigate = useNavigate();
 
-  // Which top-level exam option is active (index into EXAM_OPTIONS)
   const [activeExamIdx, setActiveExamIdx] = useState(0);
-  // When a JEE sub-option is chosen ("JEE Main" | "JEE Advanced" | null)
   const [activeSub, setActiveSub] = useState<string | null>(null);
-  // Class level filter ("" = All classes)
   const [activeClass, setActiveClass] = useState("");
-  // Subject filter removed
-  // JEE hover dropdown open
   const [jeeOpen, setJeeOpen] = useState(false);
   const jeeRef = useRef<HTMLDivElement>(null);
   const [enrollFor, setEnrollFor] = useState<CourseRow | null>(null);
   const { banners } = useCourseBanners();
 
-  // Derived: what value to pass to useCourses
   const activeExam = EXAM_OPTIONS[activeExamIdx];
-  const examFilter = activeSub ?? (activeExam.value === "JEE" ? "JEE" : activeExam.value);
+  const targetFilter = activeExam.value;
 
-  // Close JEE dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (jeeRef.current && !jeeRef.current.contains(e.target as Node)) setJeeOpen(false);
@@ -74,21 +107,18 @@ const CoursesPage = () => {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Deep-link: ?exam=jee / ?exam=neet / ?exam=foundation
   useEffect(() => {
     const p = searchParams.get("exam")?.toLowerCase();
     if (!p) return;
     if (p.includes("foundation")) { setActiveExamIdx(3); setActiveSub(null); }
     else if (p.includes("neet"))  { setActiveExamIdx(2); setActiveSub(null); }
-    else if (p.includes("advanced")) { setActiveExamIdx(1); setActiveSub("Advance"); }
-    else if (p.includes("jee"))   { setActiveExamIdx(1); setActiveSub("MAINS"); }
+    else if (p.includes("jee"))   { setActiveExamIdx(1); setActiveSub(null); }
     setActiveClass("");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   const { courses, loading } = useCourses(
-    examFilter,
-    undefined,
+    targetFilter === "All" ? undefined : targetFilter,
     activeClass || undefined,
   );
 
@@ -104,13 +134,6 @@ const CoursesPage = () => {
     setJeeOpen(false);
   };
 
-  const selectSub = (sub: string) => {
-    setActiveSub(sub);
-    setActiveClass("");
-    setJeeOpen(false);
-  };
-
-  // Show selected sub-option in the button label when active
   const jeeLabel = activeSub ? `JEE ${activeSub}` : "JEE";
   const classOptions = activeExam.classes;
 
@@ -122,10 +145,8 @@ const CoursesPage = () => {
         canonical="/courses"
       />
 
-      {/* Banner — same as Home page */}
       <BannerCarousel banners={banners} />
 
-      {/* Listing */}
       <section className="container mx-auto px-4 py-12 md:py-16">
         <div className="flex flex-wrap items-end justify-between gap-3 animate-fade-in-up">
           <div>
@@ -145,7 +166,7 @@ const CoursesPage = () => {
         </div>
 
         <div className="mt-6 space-y-3">
-          {/* Row 1: Exam filters — overflow must be visible so the JEE dropdown isn't clipped */}
+          {/* Exam filter row */}
           <div className="flex gap-2 flex-wrap items-center">
             {EXAM_OPTIONS.map((opt, i) => {
               const isActive = i === activeExamIdx;
@@ -177,7 +198,7 @@ const CoursesPage = () => {
                           {opt.children!.map((sub) => (
                             <button
                               key={sub}
-                              onClick={() => { selectExam(i); selectSub(sub); }}
+                              onClick={() => { selectExam(i); setActiveSub(sub); setJeeOpen(false); }}
                               className={`w-full text-left px-4 py-2.5 text-xs font-semibold transition-colors hover:bg-muted/50 ${
                                 activeSub === sub && isActive ? "text-primary" : "text-foreground"
                               }`}
@@ -208,7 +229,7 @@ const CoursesPage = () => {
             })}
           </div>
 
-          {/* Row 2: Class level pills — only when an exam is selected */}
+          {/* Class filter row */}
           {classOptions.length > 0 && (
             <div className="flex gap-2 overflow-x-auto no-scrollbar">
               <button
@@ -223,21 +244,19 @@ const CoursesPage = () => {
               </button>
               {classOptions.map((cls) => (
                 <button
-                  key={cls}
-                  onClick={() => setActiveClass(cls === activeClass ? "" : cls)}
+                  key={cls.value}
+                  onClick={() => setActiveClass(cls.value === activeClass ? "" : cls.value)}
                   className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
-                    activeClass === cls
+                    activeClass === cls.value
                       ? "bg-foreground text-background"
                       : "text-muted-foreground hover:bg-muted/50"
                   }`}
                 >
-                  {cls}
+                  {cls.label}
                 </button>
               ))}
             </div>
           )}
-
-          {/* Subject capsules removed */}
         </div>
 
         {loading ? (
@@ -248,82 +267,65 @@ const CoursesPage = () => {
           <div className="mt-8 rounded-2xl border border-dashed border-border bg-card p-10 text-center">
             <GraduationCap className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
             <h3 className="font-display text-lg font-bold text-foreground">No courses match these filters</h3>
-            <p className="mt-1 text-sm text-muted-foreground">Try a different exam or subject combination.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Try a different exam or class combination.</p>
           </div>
         ) : (
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 stagger-children">
-            {courses.map((c) => {
-              const img = c.thumbnail_url || courseImages[c.subject] || coursePhysics;
-              return (
-                <div
-                  key={c.id}
-                  className="rounded-2xl border border-border bg-card overflow-hidden hover-lift group flex flex-col"
-                >
-                  <Link to={`/courses/${c.slug}`} className="block">
-                    <div className="aspect-video relative overflow-hidden bg-gradient-to-br from-primary to-accent">
-                      {c.thumbnail_url ? (
-                        <img src={c.thumbnail_url} alt={c.name} loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
-                      ) : (
-                        <img src={img} alt={c.subject} loading="lazy" className="absolute inset-0 h-full w-full object-contain p-6 opacity-60" />
-                      )}
-                      {c.badge && (
-                        <span className="absolute top-3 left-3 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-bold text-foreground">
-                          {c.badge}
-                        </span>
-                      )}
-                      <div className="absolute bottom-3 left-3 flex items-center gap-2">
-                        <div className="h-7 w-7 rounded-full bg-black/30 flex items-center justify-center text-[10px] font-bold text-white backdrop-blur-sm">
-                          {c.educator_name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
-                        </div>
-                        <span className="text-[10px] text-white drop-shadow">{c.educator_name}</span>
+            {courses.map((c) => (
+              <div
+                key={c.id}
+                className="rounded-2xl border border-border bg-card overflow-hidden hover-lift group flex flex-col"
+              >
+                <Link to={`/courses/${c.slug}`} className="block">
+                  <div className="aspect-video relative overflow-hidden bg-gradient-to-br from-primary to-accent">
+                    {c.thumbnail_url ? (
+                      <img src={c.thumbnail_url} alt={c.name} loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <GraduationCap className="h-12 w-12 text-white/30" />
                       </div>
-                    </div>
+                    )}
+                    {c.badge && (
+                      <span className="absolute top-3 left-3 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-bold text-foreground">
+                        {c.badge}
+                      </span>
+                    )}
+                    <span className="absolute top-3 right-3 rounded-full bg-black/40 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
+                      {c.target} · Class {c.class}
+                    </span>
+                  </div>
+                </Link>
+                <div className="p-4 flex flex-col flex-1">
+                  <p className="text-[10px] font-bold text-primary uppercase">{c.target}</p>
+                  <Link to={`/courses/${c.slug}`} className="block">
+                    <p className="text-sm font-bold text-foreground mt-1 line-clamp-2 hover:text-primary transition-colors">{c.name}</p>
                   </Link>
-                  <div className="p-4 flex flex-col flex-1">
-                    <p className="text-[10px] font-bold text-primary uppercase">{c.subject}</p>
-                    <Link to={`/courses/${c.slug}`} className="block">
-                      <p className="text-sm font-bold text-foreground mt-1 line-clamp-2 hover:text-primary transition-colors">{c.name}</p>
+                  {c.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{c.description}</p>}
+                  {c.rating != null && (
+                    <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+                      <Star className="h-3 w-3 text-accent fill-accent" /> {Number(c.rating).toFixed(1)}
+                    </div>
+                  )}
+                  <div className="mt-3">
+                    <CoursePrice course={c} />
+                  </div>
+                  <div className="mt-auto pt-3 flex gap-2">
+                    <Link
+                      to={`/courses/${c.slug}`}
+                      className="flex-1 rounded-xl border border-primary py-2 text-xs font-bold text-primary text-center hover:bg-primary/5 transition-colors"
+                    >
+                      View Details
                     </Link>
-                    {c.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{c.description}</p>}
-                    <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-0.5">
-                        <Star className="h-3 w-3 text-accent fill-accent" /> {Number(c.rating).toFixed(1)}
-                      </span>
-                      <span className="flex items-center gap-0.5">
-                        <Users className="h-3 w-3" /> {(c.total_enrolled ?? 0).toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 mt-3 flex-wrap">
-                      {c.original_price && c.original_price > c.price && (
-                        <span className="text-xs line-through text-muted-foreground">
-                          ₹{Number(c.original_price).toLocaleString()}
-                        </span>
-                      )}
-                      <span className="text-sm font-bold text-foreground">₹{Number(c.price).toLocaleString()}</span>
-                      {!!c.discount_percent && c.discount_percent > 0 && (
-                        <span className="rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-bold text-secondary">
-                          {c.discount_percent}% OFF
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-auto pt-3 flex gap-2">
-                      <Link
-                        to={`/courses/${c.slug}`}
-                        className="flex-1 rounded-xl border border-primary py-2 text-xs font-bold text-primary text-center hover:bg-primary/5 transition-colors"
-                      >
-                        View Details
-                      </Link>
-                      <button
-                        onClick={() => handleEnroll(c)}
-                        className="flex-1 rounded-xl bg-gradient-to-r from-primary to-accent py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity"
-                      >
-                        Enroll Now
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => handleEnroll(c)}
+                      className="flex-1 rounded-xl bg-gradient-to-r from-primary to-accent py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity"
+                    >
+                      {c.is_course_free ? "Enroll Free" : "Enroll Now"}
+                    </button>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         )}
       </section>
@@ -334,7 +336,7 @@ const CoursesPage = () => {
           onClose={() => setEnrollFor(null)}
           courseId={enrollFor.id}
           courseName={enrollFor.name}
-          coursePrice={Number(enrollFor.price)}
+          coursePrice={enrollFor.is_course_free ? 0 : Number(enrollFor.sale_price)}
           onEnrolled={() => navigate("/my-courses")}
         />
       )}
@@ -342,7 +344,7 @@ const CoursesPage = () => {
   );
 };
 
-// ── Banner components (same as LandingPage) ───────────────────────────────────
+// ── Banner components ─────────────────────────────────────────────────────────
 
 function BannerImage({ banner }: { banner: CourseBanner }) {
   const img = (

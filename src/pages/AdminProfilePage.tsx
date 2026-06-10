@@ -190,16 +190,17 @@ const AdminProfilePage = () => {
           <Field label="Full Name" value={form.full_name} onChange={(v) => setForm({ ...form, full_name: v })} />
           <Field label="Email" value={authUser?.email || ""} disabled />
           <Field label="Phone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
-          <div className="sm:col-span-2">
-            <CityStateFields
-              city={form.city}
-              state={form.state}
-              country={form.country}
-              onCityChange={(v) => setForm((f) => ({ ...f, city: v }))}
-              onStateChange={(v) => setForm((f) => ({ ...f, state: v }))}
-              onCountryChange={(v) => setForm((f) => ({ ...f, country: v }))}
-            />
-          </div>
+          <CityStateFields
+            city={form.city}
+            state={form.state}
+            country={form.country}
+            onCityChange={(v) => setForm((f) => ({ ...f, city: v }))}
+            onStateChange={(v) => setForm((f) => ({ ...f, state: v }))}
+            onCountryChange={(v) => setForm((f) => ({ ...f, country: v }))}
+            hideStateCountry
+          />
+          <Field label="State" value={form.state} onChange={(v) => setForm({ ...form, state: v })} />
+          <Field label="Country" value={form.country} onChange={(v) => setForm({ ...form, country: v })} />
         </div>
         <button
           onClick={handleSave}

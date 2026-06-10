@@ -5,10 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 
 const GOALS = [
-  { value: "IIT JEE", label: "IIT JEE", desc: "Engineering aspirant" },
+  { value: "JEE", label: "JEE", desc: "Engineering aspirant" },
   { value: "NEET", label: "NEET", desc: "Medical aspirant" },
-  { value: "Class 11", label: "Class 11", desc: "Boards & foundation" },
-  { value: "Class 12", label: "Class 12", desc: "Boards & entrance prep" },
+  { value: "Foundation", label: "Foundation", desc: "Class 8–10 prep" },
 ];
 
 const DISMISS_KEY = "arke:goal_card_dismissed_v1";

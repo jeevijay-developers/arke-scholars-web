@@ -101,9 +101,9 @@ export const useCourseDetail = (slug: string | undefined) => {
         .eq("resource_type", "pdf")
         .eq("is_published", true)
         .order("position");
-      setPdfs(((pdfResourceData ?? []) as any[]).map(p => ({
+      setPdfs(((pdfResourceData ?? []) as any[]).map((p) => ({
         ...p,
-        size_bytes: p.file_size_bytes
+        size_bytes: p.file_size_bytes,
       })) as CoursePdfRow[]);
 
       const { data: resourceData } = await supabase
@@ -113,15 +113,16 @@ export const useCourseDetail = (slug: string | undefined) => {
         .in("resource_type", ["pdf", "notes"])
         .eq("is_published", true)
         .order("position");
-      const resourceNotes = (resourceData ?? []).map((r: any) => ({
-        id: r.id,
-        course_id: r.course_id,
-        title: r.title,
-        file_url: r.file_url,
-        size_bytes: r.file_size_bytes,
-        position: r.position,
-      }));
-      setNotes(resourceNotes as NoteRow[]);
+      setNotes(
+        ((resourceData ?? []) as any[]).map((r) => ({
+          id: r.id,
+          course_id: r.course_id,
+          title: r.title,
+          file_url: r.file_url,
+          size_bytes: r.file_size_bytes,
+          position: r.position,
+        })) as NoteRow[],
+      );
 
       const { data: testData } = await supabase
         .from("tests")

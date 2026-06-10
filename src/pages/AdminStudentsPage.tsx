@@ -236,7 +236,7 @@ const AdminStudentsPage = () => {
           </button>
           <button
             onClick={() => setAddOpen(true)}
-            className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-primary to-accent px-3 py-2 text-xs font-semibold text-primary-foreground cursor-pointer transition-opacity hover:opacity-90"
+            className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground cursor-pointer transition-opacity hover:opacity-90"
           >
             <UserPlus className="h-3.5 w-3.5" /> Add Student
           </button>

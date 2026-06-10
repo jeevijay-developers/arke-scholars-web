@@ -70,6 +70,8 @@ import AdminLoginPage from "./pages/AdminLoginPage";
 import StaffDashboardPage from "./pages/StaffDashboardPage";
 import AdminEnquiriesPage from "./pages/AdminEnquiriesPage";
 import AdminCourseContentPage from "./pages/AdminCourseContentPage";
+import AdminCourseContentV2Page from "./pages/AdminCourseContentV2Page";
+import LearnCoursePage from "./pages/LearnCoursePage";
 import AdminReportsPage from "./pages/AdminReportsPage";
 import AdminProfilePage from "./pages/AdminProfilePage";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
@@ -193,6 +195,7 @@ const App = () => (
                 <Route path="/leaderboard" element={<LeaderboardPage />} />
                 <Route path="/analytics" element={<AnalyticsPage />} />
                 <Route path="/my-courses" element={<MyCoursesPage />} />
+                <Route path="/learn/:courseId" element={<LearnCoursePage />} />
                 <Route path="/favourite-courses" element={<FavouriteCoursesPage />} />
                 <Route path="/explore-courses" element={<StorePage />} />
                 <Route path="/profile" element={<ProfilePage />} />
@@ -272,6 +275,7 @@ const App = () => (
 
               <Route path="/admin/courses/new" element={<CreateCoursePage />} />
               <Route path="/admin/courses/:courseId/edit" element={<CreateCoursePage />} />
+              <Route path="/admin/courses/:courseId/content" element={<AdminCourseContentV2Page />} />
               <Route path="/admin/live-classes" element={<AdminLiveClassesPage />} />
               <Route path="/admin/tests" element={<AdminTestsPage />} />
               <Route path="/admin/tests/new" element={<CreateTestPage />} />

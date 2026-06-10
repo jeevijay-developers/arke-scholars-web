@@ -4,7 +4,6 @@ import {
   Play,
   CheckCircle2,
   Star,
-  Users,
   Clock,
   Heart,
   ChevronDown,
@@ -101,7 +100,7 @@ const CourseDetailPage = () => {
     .filter((l) => completedSlugs.has(l.slug))
     .reduce((s, l) => s + (l.duration_seconds || 0), 0);
   const totalMinutes = Math.round(totalSeconds / 60);
-  const totalHours = course?.duration_hours || Math.max(1, Math.floor(totalMinutes / 60));
+  const totalHours = Math.max(1, Math.floor(totalMinutes / 60));
   const completedHours = (completedSeconds / 3600).toFixed(1);
   const remainingHours = ((totalSeconds - completedSeconds) / 3600).toFixed(1);
   const progressPercent = enrollment ? (totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0) : 0;
@@ -125,28 +124,26 @@ const CourseDetailPage = () => {
     );
   }
 
-  const initials = course.educator_name
-    ? course.educator_name.split(" ").filter(Boolean).slice(0, 2).map((n) => n[0]?.toUpperCase()).join("")
-    : "ED";
+  const initials = "AR";
 
   const allNotes = [...pdfs, ...notes];
   const tabs = ["About", "Lectures", "Tests", "Notes"];
 
   const stats = enrolled
     ? [
-        { value: String(totalLessons), label: "Lectures" },
-        { value: String(tests.length), label: "Tests" },
-        { value: String(allNotes.length), label: "Notes" },
-        { value: `${totalHours}h`, label: "Total Time" },
-        { value: `${progressPercent}%`, label: "Progress" },
-      ]
+      { value: String(totalLessons), label: "Lectures" },
+      { value: String(tests.length), label: "Tests" },
+      { value: String(allNotes.length), label: "Notes" },
+      { value: `${totalHours}h`, label: "Total Time" },
+      { value: `${progressPercent}%`, label: "Progress" },
+    ]
     : [
-        { value: String(totalLessons), label: "Lectures" },
-        { value: String(tests.length), label: "Tests" },
-        { value: String(allNotes.length), label: "Notes" },
-        { value: `${totalHours}h`, label: "Total Time" },
-        { value: `${course.rating ? Number(course.rating).toFixed(1) : "N/A"}★`, label: "Rating" },
-      ];
+      { value: String(totalLessons), label: "Lectures" },
+      { value: String(tests.length), label: "Tests" },
+      { value: String(allNotes.length), label: "Notes" },
+      { value: `${totalHours}h`, label: "Total Time" },
+      { value: `${course.rating ? Number(course.rating).toFixed(1) : "N/A"}★`, label: "Rating" },
+    ];
 
   const courseAny = course as unknown as { what_youll_learn?: string[] | null; requirements?: string[] | null };
   const whatYoullLearn = (courseAny.what_youll_learn && courseAny.what_youll_learn.length > 0)
@@ -171,7 +168,7 @@ const CourseDetailPage = () => {
       return;
     }
     if (enrolled) {
-      navigate(`/courses/${course.slug}/learn`);
+      navigate(`/learn/${course.id}`);
       return;
     }
     setEnrollOpen(true);
@@ -190,20 +187,17 @@ const CourseDetailPage = () => {
     setEnrollment(enr as EnrollmentInfo | null);
   };
 
-  const discount =
-    course.original_price && course.original_price > course.price
-      ? Math.round(((Number(course.original_price) - Number(course.price)) / Number(course.original_price)) * 100)
-      : course.discount_percent || 0;
+  const discount = Number(course.discount_percent ?? 0);
 
   return (
-    <div className="bg-background pb-16">
+    <div className="bg-background pb-28 lg:pb-16">
       {course && (
         <SEO
-          title={`${course.name} – ${course.subject} for ${(course as { target_exam?: string }).target_exam ?? "JEE, NEET & Boards"}`}
+          title={`${course.name} – ${course.target} · Class ${course.class}`}
           description={
             course.description
               ? course.description.slice(0, 155)
-              : `Master ${course.subject} for ${(course as { target_exam?: string }).target_exam ?? "JEE, NEET & Boards"} with ARKE Scholars. Video lectures, chapter tests & PDF notes by expert educators.`
+              : `Master ${course.target} with ARKE Scholars. Video lectures, chapter tests & PDF notes by expert educators.`
           }
           canonical={`/courses/${slug}`}
           ogImage={course.thumbnail_url ?? undefined}
@@ -212,33 +206,31 @@ const CourseDetailPage = () => {
               "@context": "https://schema.org",
               "@type": "Course",
               "name": course.name,
-              "description": course.description ?? `${course.subject} course for ${(course as { target_exam?: string }).target_exam ?? "JEE, NEET & Boards"}`,
+              "description": course.description ?? `${course.target} course for Class ${course.class}`,
               "url": `https://arke.pro/courses/${slug}`,
               "image": course.thumbnail_url ?? "https://arke.pro/og-default.png",
               "provider": { "@type": "Organization", "name": "ARKE Scholars", "url": "https://arke.pro" },
-              "instructor": course.educator_name ? { "@type": "Person", "name": course.educator_name } : undefined,
               "educationalLevel": "HighSchool",
-              "about": course.subject,
-              "teaches": (course as { target_exam?: string }).target_exam ?? "JEE, NEET & Boards",
+              "teaches": course.target,
               "courseMode": "online",
-              "inLanguage": "en",
+              "inLanguage": course.language ?? "en",
               "offers": {
                 "@type": "Offer",
-                "price": String(course.price ?? 0),
+                "price": course.is_course_free ? "0" : String(course.sale_price ?? 0),
                 "priceCurrency": "INR",
                 "availability": "https://schema.org/InStock",
                 "url": `https://arke.pro/courses/${slug}`
               },
-              ...(course.rating && course.total_enrolled && course.total_enrolled > 0
+              ...(course.rating && reviewCount > 0
                 ? {
-                    "aggregateRating": {
-                      "@type": "AggregateRating",
-                      "ratingValue": String(Number(course.rating).toFixed(1)),
-                      "ratingCount": String(course.total_enrolled),
-                      "bestRating": "5",
-                      "worstRating": "1"
-                    }
+                  "aggregateRating": {
+                    "@type": "AggregateRating",
+                    "ratingValue": String(Number(course.rating).toFixed(1)),
+                    "ratingCount": String(reviewCount),
+                    "bestRating": "5",
+                    "worstRating": "1"
                   }
+                }
                 : {})
             },
             {
@@ -277,8 +269,7 @@ const CourseDetailPage = () => {
 
             <div className="flex-1 min-w-0">
               <p className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase mb-2">
-                {course.subject}
-                {course.target_exam ? ` · ${course.target_exam}` : ""}
+                {course.target} · Class {course.class} · {course.language}
               </p>
               <h1 className="font-display text-3xl md:text-4xl font-black text-foreground leading-tight">
                 {course.name}
@@ -292,10 +283,6 @@ const CourseDetailPage = () => {
                   <Star className="h-3.5 w-3.5 fill-primary text-primary" />
                   <strong className="text-foreground">{course.rating ? Number(course.rating).toFixed(1) : "N/A"}</strong>
                   <span>({reviewCount.toLocaleString()} reviews)</span>
-                </span>
-                <span className="flex items-center gap-1">
-                  <Users className="h-3.5 w-3.5 text-primary" />
-                  {(course.total_enrolled ?? 0).toLocaleString()} enrolled
                 </span>
                 <span className="flex items-center gap-1">
                   <Clock className="h-3.5 w-3.5 text-primary" />
@@ -312,17 +299,6 @@ const CourseDetailPage = () => {
                   </span>
                 )}
               </div>
-
-              <div className="mt-4 flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-[10px] font-black text-primary-foreground">
-                  {initials}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  By <span className="font-semibold text-foreground">{course.educator_name}</span>
-                  {" · "}
-                  <span>{course.subject} Department</span>
-                </p>
-              </div>
             </div>
           </div>
         </div>
@@ -336,11 +312,10 @@ const CourseDetailPage = () => {
               <button
                 key={tab}
                 onClick={() => setActiveTab(i)}
-                className={`pb-3 text-sm font-semibold whitespace-nowrap transition-colors ${
-                  i === activeTab
+                className={`pb-3 text-sm font-semibold whitespace-nowrap transition-colors ${i === activeTab
                     ? "text-primary border-b-2 border-primary"
                     : "text-muted-foreground hover:text-foreground"
-                }`}
+                  }`}
               >
                 {tab}
               </button>
@@ -421,7 +396,7 @@ const CourseDetailPage = () => {
                       </p>
                     </div>
                     <button
-                      onClick={() => navigate(`/courses/${course.slug}/learn`)}
+                      onClick={() => navigate(`/learn/${course.id}`)}
                       className="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground hover:bg-primary-dark transition-colors shrink-0"
                     >
                       Continue Learning <ArrowRight className="h-3.5 w-3.5" />
@@ -605,7 +580,7 @@ const CourseDetailPage = () => {
                   )}
 
                   <button
-                    onClick={() => navigate(`/courses/${course.slug}/learn`)}
+                    onClick={() => navigate(`/learn/${course.id}`)}
                     className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground hover:bg-primary-dark transition-colors"
                   >
                     Continue Learning <ArrowRight className="h-4 w-4" />
@@ -618,8 +593,8 @@ const CourseDetailPage = () => {
           )}
         </div>
 
-        {/* Sticky purchase / progress card */}
-        <aside className="lg:sticky lg:top-24 self-start">
+        {/* Sticky purchase / progress card — desktop only */}
+        <aside className="hidden lg:block lg:sticky lg:top-24 self-start">
           <div className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-sm">
             <div className="aspect-video rounded-xl border-2 border-dashed border-border bg-muted/30 flex items-center justify-center text-xs text-muted-foreground overflow-hidden">
               {course.thumbnail_url ? (
@@ -647,7 +622,7 @@ const CourseDetailPage = () => {
                 </div>
 
                 <button
-                  onClick={() => navigate(`/courses/${course.slug}/learn`)}
+                  onClick={() => navigate(`/learn/${course.id}`)}
                   className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-foreground py-3 text-sm font-bold text-background hover:opacity-90 transition-opacity"
                 >
                   Continue Learning <ArrowRight className="h-4 w-4" />
@@ -663,18 +638,27 @@ const CourseDetailPage = () => {
             ) : (
               <>
                 <div className="flex items-baseline gap-2 flex-wrap">
-                  <span className="font-display text-3xl font-black text-foreground">
-                    ₹{Number(course.price).toLocaleString()}
-                  </span>
-                  {course.original_price && course.original_price > course.price && (
-                    <span className="text-sm text-muted-foreground line-through">
-                      ₹{Number(course.original_price).toLocaleString()}
-                    </span>
-                  )}
-                  {discount > 0 && (
-                    <span className="ml-auto rounded-full bg-secondary/10 px-2 py-0.5 text-[11px] font-bold text-secondary">
-                      {discount}% OFF
-                    </span>
+                  {course.is_course_free ? (
+                    <span className="font-display text-3xl font-black text-secondary">Free</span>
+                  ) : (
+                    <>
+                      <span className="font-display text-3xl font-black text-foreground">
+                        ₹{Number(course.sale_price).toLocaleString()}
+                        {course.show_price_with_gst && (
+                          <span className="text-sm font-normal text-muted-foreground ml-1">+ 18% GST</span>
+                        )}
+                      </span>
+                      {course.mrp > course.sale_price && (
+                        <span className="text-sm text-muted-foreground line-through">
+                          ₹{Number(course.mrp).toLocaleString()}
+                        </span>
+                      )}
+                      {discount > 0 && (
+                        <span className="ml-auto rounded-full bg-secondary/10 px-2 py-0.5 text-[11px] font-bold text-secondary">
+                          {discount}% OFF
+                        </span>
+                      )}
+                    </>
                   )}
                 </div>
 
@@ -682,16 +666,15 @@ const CourseDetailPage = () => {
                   onClick={handleEnrollClick}
                   className="w-full rounded-xl bg-foreground py-3 text-sm font-bold text-background hover:opacity-90 transition-opacity"
                 >
-                  Enroll Now →
+                  {course.is_course_free ? "Enroll Free →" : "Enroll Now →"}
                 </button>
 
                 <button
                   onClick={() => toggleFav(course.id)}
-                  className={`w-full rounded-xl border py-3 text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
-                    favouriteIds.has(course.id)
+                  className={`w-full rounded-xl border py-3 text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${favouriteIds.has(course.id)
                       ? "border-rose-500 bg-rose-500/10 text-rose-500 hover:bg-rose-500/20"
                       : "border-border text-foreground hover:bg-muted/30"
-                  }`}
+                    }`}
                 >
                   <Heart className={`h-4 w-4 ${favouriteIds.has(course.id) ? "fill-rose-500" : ""}`} />
                   {favouriteIds.has(course.id) ? "Saved to Favourites" : "Add to Favourite"}
@@ -714,12 +697,48 @@ const CourseDetailPage = () => {
         </aside>
       </div>
 
+      {/* Mobile sticky bottom CTA */}
+      <div className="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-background/95 backdrop-blur-sm border-t border-border px-4 py-3 flex items-center gap-3 shadow-[0_-4px_24px_rgba(0,0,0,0.08)]">
+        {enrolled ? (
+          <button
+            onClick={() => navigate(`/learn/${course.id}`)}
+            className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-foreground py-3.5 text-sm font-bold text-background hover:opacity-90 transition-opacity"
+          >
+            Continue Learning <ArrowRight className="h-4 w-4" />
+          </button>
+        ) : (
+          <>
+            <div className="flex flex-col min-w-0">
+              {course.is_course_free ? (
+                <span className="font-display text-lg font-black text-secondary">Free</span>
+              ) : (
+                <span className="font-display text-lg font-black text-foreground">
+                  ₹{Number(course.sale_price).toLocaleString()}
+                  {discount > 0 && (
+                    <span className="ml-1.5 text-xs font-bold text-secondary">{discount}% OFF</span>
+                  )}
+                </span>
+              )}
+              {!course.is_course_free && course.mrp > course.sale_price && (
+                <span className="text-xs text-muted-foreground line-through">₹{Number(course.mrp).toLocaleString()}</span>
+              )}
+            </div>
+            <button
+              onClick={handleEnrollClick}
+              className="flex-1 rounded-xl bg-foreground py-3.5 text-sm font-bold text-background hover:opacity-90 transition-opacity"
+            >
+              {course.is_course_free ? "Enroll Free →" : "Enroll Now →"}
+            </button>
+          </>
+        )}
+      </div>
+
       <EnrollmentModal
         open={enrollOpen}
         onClose={() => setEnrollOpen(false)}
         courseId={course.id}
         courseName={course.name}
-        coursePrice={Number(course.price)}
+        coursePrice={course.is_course_free ? 0 : Number(course.sale_price)}
         onEnrolled={handleEnrolled}
       />
     </div>

@@ -121,7 +121,7 @@ const AdminStudentDetailPage = () => {
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      setEnrollments((data ?? []) as EnrollmentRow[]);
+      setEnrollments((data ?? []) as unknown as EnrollmentRow[]);
     } catch (e: any) {
       toast.error("Failed to load enrollments", { description: e.message });
     } finally {

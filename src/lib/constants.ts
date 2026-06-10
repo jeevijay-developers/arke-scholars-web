@@ -39,12 +39,11 @@ export const ADMIN_PAGE_KEYS = [
   { key: "course-banners", label: "Course Banners" },
   { key: "educator-applications", label: "Educator Applications" },
   { key: "enquiries", label: "Enquiries" },
-  { key: "course-content", label: "Course Content" },
   { key: "student-reports", label: "Student Analysis" },
   { key: "reports", label: "Reports" },
   { key: "notifications", label: "Notifications" },
+  { key: "staff-roles", label: "Staff Management" },
   { key: "payments", label: "Payments & Revenue" },
-  { key: "moderation", label: "Moderation" },
   { key: "settings", label: "Platform Settings" },
 ] as const;
 

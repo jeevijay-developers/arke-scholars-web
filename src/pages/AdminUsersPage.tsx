@@ -219,12 +219,6 @@ const AdminUsersPage = () => {
           <h1 className="text-lg font-bold text-foreground">Users</h1>
           <p className="text-xs text-muted-foreground">{total} total · live data</p>
         </div>
-        <button
-          onClick={() => toast.info("Invite flow coming soon")}
-          className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-primary to-accent px-3 py-2 text-xs font-semibold text-primary-foreground"
-        >
-          <UserPlus className="h-3.5 w-3.5" /> Invite User
-        </button>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
@@ -248,9 +242,8 @@ const AdminUsersPage = () => {
                 setFilter(f);
                 setPage(0);
               }}
-              className={`rounded-lg px-3 py-2 text-xs font-medium capitalize ${
-                filter === f ? "bg-primary text-primary-foreground" : "bg-background border border-border text-muted-foreground"
-              }`}
+              className={`rounded-lg px-3 py-2 text-xs font-medium capitalize ${filter === f ? "bg-primary text-primary-foreground" : "bg-background border border-border text-muted-foreground"
+                }`}
             >
               {f === "all" ? "All" : f === "super_admin" ? "Super Admins" : `${f}s`}
             </button>
@@ -359,11 +352,10 @@ const AdminUsersPage = () => {
                         key={r}
                         onClick={() => setPendingRole(r)}
                         disabled={isCurrent}
-                        className={`rounded-lg border px-3 py-2 text-[11px] font-semibold capitalize transition-colors ${
-                          isCurrent
+                        className={`rounded-lg border px-3 py-2 text-[11px] font-semibold capitalize transition-colors ${isCurrent
                             ? "border-primary/30 bg-primary/5 text-primary cursor-not-allowed"
                             : "border-border text-foreground hover:bg-muted/40"
-                        }`}
+                          }`}
                       >
                         {isCurrent ? `${label} (current)` : label}
                       </button>
@@ -374,9 +366,8 @@ const AdminUsersPage = () => {
 
               <button
                 onClick={() => toggleSuspend(drawerUser)}
-                className={`w-full rounded-lg border px-3 py-2 text-xs font-medium ${
-                  drawerUser.is_suspended ? "border-secondary/30 text-secondary" : "border-destructive/30 text-destructive"
-                }`}
+                className={`w-full rounded-lg border px-3 py-2 text-xs font-medium ${drawerUser.is_suspended ? "border-secondary/30 text-secondary" : "border-destructive/30 text-destructive"
+                  }`}
               >
                 {drawerUser.is_suspended ? "Unsuspend user" : "Suspend user"}
               </button>

@@ -9,7 +9,7 @@ import CityStateFields from "@/components/CityStateFields";
 import { useExams } from "@/hooks/useExams";
 
 const tabItems = ["Personal Info"];
-const CLASS_LEVELS = ["6","7","8","9","10","11","12","12th pass"];
+const CLASS_LEVELS = ["8", "9", "10", "11", "12", "12th pass"];
 type SchoolOption = { id: string; name: string; city: string | null };
 
 const ProfilePage = () => {

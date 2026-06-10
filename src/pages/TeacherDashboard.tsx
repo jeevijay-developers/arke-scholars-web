@@ -1,8 +1,7 @@
-import { MessageCircle, Video, Clock, ArrowRight, AlertCircle, ExternalLink } from "lucide-react";
-import { Link } from "react-router-dom";
+import { MessageCircle, Video, Clock, ArrowRight, AlertCircle } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { useTeacherDashboard } from "@/hooks/useTeacherDashboard";
 import { Skeleton } from "@/components/ui/skeleton";
-import { supabase } from "@/integrations/supabase/client";
 
 const greeting = () => {
   const h = new Date().getHours();
@@ -41,14 +40,12 @@ const formatRelativeTime = (iso: string) => {
  * management was moved to the admin portal.
  */
 const TeacherDashboard = () => {
+  const navigate = useNavigate();
   const { loading, greetingName, stats, upcomingClasses, pendingDoubts } = useTeacherDashboard();
 
-  const openMeeting = async (cls: typeof upcomingClasses[number]) => {
-    if (!cls.meeting_url) return;
-    if (cls.status !== "live") {
-      await supabase.from("live_classes").update({ status: "live" }).eq("id", cls.id);
-    }
-    window.open(cls.meeting_url, "_blank", "noopener,noreferrer");
+  const openMeeting = (cls: typeof upcomingClasses[number]) => {
+    if (!cls.slug) return;
+    navigate(`/teacher/live-classes/${cls.slug}`);
   };
 
   // Two-stat layout reflecting the trimmed role: live classes + doubts.
@@ -132,13 +129,12 @@ const TeacherDashboard = () => {
                       <p className="text-xs font-medium text-foreground">{formatTime(c.starts_at)}</p>
                       <p className="text-[10px] text-muted-foreground">{formatRelativeDay(c.starts_at)}</p>
                     </div>
-                    {isLive && c.meeting_url ? (
-                      <button onClick={(e) => { e.preventDefault(); openMeeting(c); }} className="shrink-0 rounded-lg bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground hover:opacity-90 inline-flex items-center gap-1">
-                        <Video className="h-3 w-3" /> Join Live
-                      </button>
-                    ) : c.meeting_url ? (
-                      <button onClick={(e) => { e.preventDefault(); openMeeting(c); }} className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 inline-flex items-center gap-1">
-                        <ExternalLink className="h-3 w-3" /> Start
+                    {c.slug ? (
+                      <button
+                        onClick={(e) => { e.preventDefault(); openMeeting(c); }}
+                        className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold hover:opacity-90 inline-flex items-center gap-1 ${isLive ? "bg-secondary text-secondary-foreground" : "bg-primary text-primary-foreground"}`}
+                      >
+                        <Video className="h-3 w-3" /> {isLive ? "Join Live" : "Start"}
                       </button>
                     ) : null}
                   </Link>

@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
-import { Plus, GripVertical, Trash2, Upload, Video, IndianRupee, Loader2, X } from "lucide-react";
-import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { Upload, IndianRupee, Loader2, X, Tag } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import { useExams } from "@/hooks/useExams";
 
 const slugify = (s: string) =>
   s
@@ -14,39 +13,95 @@ const slugify = (s: string) =>
     .replace(/^-|-$/g, "")
     .slice(0, 60);
 
-type DraftLecture = { id?: string; title: string; durationMin: number };
-type DraftChapter = { id?: string; title: string; lectures: DraftLecture[] };
+type TeacherOption = { id: string; full_name: string };
+
+const TARGET_OPTIONS = ["JEE", "NEET", "Foundation"] as const;
+
+const CLASS_OPTIONS_BY_TARGET: Record<string, { label: string; value: string }[]> = {
+  JEE:        [{ label: "Class 11", value: "11" }, { label: "Class 12", value: "12" }],
+  NEET:       [{ label: "Class 11", value: "11" }, { label: "Class 12", value: "12" }],
+  Foundation: [{ label: "Class 8", value: "8" }, { label: "Class 9", value: "9" }, { label: "Class 10", value: "10" }],
+};
+
+const DEFAULT_CLASS: Record<string, string> = {
+  JEE: "11", NEET: "11", Foundation: "8",
+};
 
 const CreateCoursePage = () => {
-  const { examNames } = useExams();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { courseId } = useParams<{ courseId?: string }>();
-  const location = useLocation();
-  const isAdminContext = location.pathname.startsWith("/admin");
   const isEditMode = Boolean(courseId);
 
+  // ── Basic Info ──────────────────────────────────────────────────────────────
   const [name, setName] = useState("");
-  const [shortDesc, setShortDesc] = useState("");
+  const [internalName, setInternalName] = useState("");
   const [description, setDescription] = useState("");
-  const [exam, setExam] = useState("JEE");
-  const [subject, setSubject] = useState("Physics");
-  const [educatorName, setEducatorName] = useState("");
-  const [price, setPrice] = useState<number>(0);
-  const [originalPrice, setOriginalPrice] = useState<number>(0);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [existingThumbnail, setExistingThumbnail] = useState<string | null>(null);
+  const [language, setLanguage] = useState<"Hinglish" | "English">("Hinglish");
+  const [assignedTeacherId, setAssignedTeacherId] = useState("");
+  const [teachers, setTeachers] = useState<TeacherOption[]>([]);
+
+  // ── Targeting ───────────────────────────────────────────────────────────────
+  const [target, setTarget] = useState<string>("JEE");
+  const [selectedClass, setSelectedClass] = useState<string>("11");
+  const [courseEndDate, setCourseEndDate] = useState("");
+
+  // ── Pricing ─────────────────────────────────────────────────────────────────
+  const [isCourseFree, setIsCourseFree] = useState(false);
+  const [mrp, setMrp] = useState<number>(0);
+  const [salePrice, setSalePrice] = useState<number>(0);
+  const [showPriceWithGst, setShowPriceWithGst] = useState(false);
+  const [maxUsageDays, setMaxUsageDays] = useState<number | "">("");
+
+  // ── Publishing ──────────────────────────────────────────────────────────────
+  const [isActive, setIsActive] = useState(false);
+  const [priority, setPriority] = useState<number>(0);
+  const [isFeatured, setIsFeatured] = useState(false);
+  const [badge, setBadge] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
+
+
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(isEditMode);
-  const [chapters, setChapters] = useState<DraftChapter[]>([
-    { title: "Chapter 1", lectures: [{ title: "Introduction", durationMin: 15 }] },
-  ]);
-  const [learnItems, setLearnItems] = useState<string[]>([]);
-  const [learnInput, setLearnInput] = useState("");
-  const [reqItems, setReqItems] = useState<string[]>([]);
-  const [reqInput, setReqInput] = useState("");
 
-  // Load existing course in edit mode
+  const discountPercent =
+    !isCourseFree && mrp > 0 && salePrice < mrp
+      ? Math.round(((mrp - salePrice) / mrp) * 100)
+      : 0;
+
+  const availableClasses = CLASS_OPTIONS_BY_TARGET[target] ?? CLASS_OPTIONS_BY_TARGET.JEE;
+
+  // Reset selectedClass when target changes (keep selection if still valid)
+  useEffect(() => {
+    const valid = availableClasses.some((c) => c.value === selectedClass);
+    if (!valid) setSelectedClass(DEFAULT_CLASS[target] ?? availableClasses[0]?.value ?? "11");
+  }, [target]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load all teachers on mount
+  useEffect(() => {
+    const loadTeachers = async () => {
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "teacher");
+      const ids = (roles ?? []).map((r: any) => r.user_id);
+      if (ids.length === 0) return;
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, full_name")
+        .in("user_id", ids)
+        .order("full_name");
+      setTeachers(
+        ((profiles ?? []) as any[]).map((p) => ({ id: p.user_id, full_name: p.full_name ?? "—" })),
+      );
+    };
+    loadTeachers();
+  }, []);
+
+  // Load existing course for edit mode
   useEffect(() => {
     if (!isEditMode || !courseId) return;
     const load = async () => {
@@ -62,73 +117,35 @@ const CreateCoursePage = () => {
         return;
       }
       setName(course.name ?? "");
-      setShortDesc("");
+      setInternalName((course as any).internal_name ?? "");
       setDescription(course.description ?? "");
-      setExam(course.target_exam ?? "JEE");
-      setSubject(course.subject ?? "Physics");
-      setEducatorName(course.educator_name ?? "");
-      setPrice(Number(course.price ?? 0));
-      setOriginalPrice(Number(course.original_price ?? 0));
       setExistingThumbnail(course.thumbnail_url ?? null);
-      setLearnItems((course.what_youll_learn ?? []) as string[]);
-      setReqItems((course.requirements ?? []) as string[]);
-
-      const { data: chs } = await supabase
-        .from("chapters")
-        .select("id, title, position")
-        .eq("course_id", courseId)
-        .order("position");
-      const chapterIds = (chs ?? []).map((c) => c.id);
-      const { data: lessons } = chapterIds.length
-        ? await supabase
-            .from("lessons")
-            .select("id, chapter_id, title, position, duration_seconds")
-            .in("chapter_id", chapterIds)
-            .order("position")
-        : { data: [] as { id: string; chapter_id: string; title: string; position: number; duration_seconds: number }[] };
-      const grouped: DraftChapter[] = (chs ?? []).map((c) => ({
-        id: c.id,
-        title: c.title,
-        lectures: (lessons ?? [])
-          .filter((l) => l.chapter_id === c.id)
-          .map((l) => ({ id: l.id, title: l.title, durationMin: Math.max(1, Math.round(l.duration_seconds / 60)) })),
-      }));
-      if (grouped.length) setChapters(grouped);
+      setLanguage(((course as any).language ?? "Hinglish") as "Hinglish" | "English");
+      setAssignedTeacherId((course as any).assigned_teacher_id ?? "");
+      setTarget((course as any).target ?? "JEE");
+      setSelectedClass((course as any).class ?? "11");
+      setCourseEndDate((course as any).course_end_date ?? "");
+      setIsCourseFree((course as any).is_course_free ?? false);
+      setMrp(Number((course as any).mrp ?? 0));
+      setSalePrice(Number((course as any).sale_price ?? 0));
+      setShowPriceWithGst((course as any).show_price_with_gst ?? false);
+      setMaxUsageDays((course as any).max_usage_days ?? "");
+      setIsActive((course as any).is_active ?? false);
+      setPriority(Number((course as any).priority ?? 0));
+      setIsFeatured(course.is_featured ?? false);
+      setBadge(course.badge ?? "");
+      setTags((course.tags ?? []) as string[]);
       setLoading(false);
     };
     load();
   }, [isEditMode, courseId]);
 
-  const addLearn = () => {
-    const v = learnInput.trim();
-    if (!v) return;
-    setLearnItems([...learnItems, v]);
-    setLearnInput("");
-  };
-  const addReq = () => {
-    const v = reqInput.trim();
-    if (!v) return;
-    setReqItems([...reqItems, v]);
-    setReqInput("");
-  };
-
-  const addChapter = () => setChapters([...chapters, { title: `Chapter ${chapters.length + 1}`, lectures: [] }]);
-  const removeChapter = (i: number) => setChapters(chapters.filter((_, j) => j !== i));
-  const addLecture = (ci: number) => {
-    const c = [...chapters];
-    c[ci].lectures.push({ title: "New lecture", durationMin: 10 });
-    setChapters(c);
-  };
-  const removeLecture = (ci: number, li: number) => {
-    const c = [...chapters];
-    c[ci].lectures.splice(li, 1);
-    setChapters(c);
-  };
+  const addTag = () => { const v = tagInput.trim().toLowerCase(); if (!v || tags.includes(v)) return; setTags([...tags, v]); setTagInput(""); };
 
   const submit = async (publish: boolean) => {
     if (!user) return toast.error("Please sign in");
     if (!name.trim()) return toast.error("Course title is required");
-    if (isEditMode && chapters.length === 0) return toast.error("Add at least one chapter");
+    if (!internalName.trim()) return toast.error("Internal name is required");
 
     setSubmitting(true);
 
@@ -136,134 +153,44 @@ const CreateCoursePage = () => {
     if (thumbnailFile) {
       const path = `${user.id}/${Date.now()}-${thumbnailFile.name}`;
       const { error: upErr } = await supabase.storage.from("educator-uploads").upload(path, thumbnailFile);
-      if (upErr) {
-        toast.error("Thumbnail upload failed");
-        setSubmitting(false);
-        return;
-      }
+      if (upErr) { toast.error("Thumbnail upload failed"); setSubmitting(false); return; }
       thumbnailUrl = supabase.storage.from("educator-uploads").getPublicUrl(path).data.publicUrl;
     }
 
-    const resolvedEducatorName =
-      educatorName.trim() ||
-      ((user.user_metadata?.full_name as string | undefined) ?? user.email?.split("@")[0] ?? "Educator").trim();
-
-    let workingCourseId = courseId;
+    const payload = {
+      name: name.trim(),
+      internal_name: internalName.trim(),
+      description: description || null,
+      thumbnail_url: thumbnailUrl,
+      language,
+      assigned_teacher_id: assignedTeacherId || null,
+      target,
+      class: selectedClass,
+      course_end_date: courseEndDate || null,
+      is_course_free: isCourseFree,
+      mrp: isCourseFree ? 0 : mrp,
+      sale_price: isCourseFree ? 0 : salePrice,
+      show_price_with_gst: showPriceWithGst,
+      max_usage_days: isCourseFree && maxUsageDays !== "" ? Number(maxUsageDays) : null,
+      is_active: publish ? true : isActive,
+      priority,
+      is_featured: isFeatured,
+      badge: badge.trim() || null,
+      tags,
+    };
 
     if (!isEditMode) {
       const baseSlug = slugify(name) || `course-${Date.now()}`;
-      const slug = `${baseSlug}-${Date.now().toString(36)}`;
-
-      const { data: course, error: courseErr } = await supabase
-        .from("courses")
-        .insert({
-          name,
-          slug,
-          description: description || shortDesc,
-          subject,
-          target_exam: exam,
-          educator_name: resolvedEducatorName,
-          price,
-          original_price: originalPrice || null,
-          discount_percent: originalPrice > price ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0,
-          thumbnail_url: thumbnailUrl,
-          is_published: publish,
-          created_by: user.id,
-          what_youll_learn: learnItems,
-          requirements: reqItems,
-        })
-        .select("id, slug")
-        .single();
-
-      if (courseErr || !course) {
-        console.error(courseErr);
-        toast.error(courseErr?.message ?? "Could not create course");
-        setSubmitting(false);
-        return;
-      }
-      workingCourseId = course.id;
+      const { error } = await supabase.from("courses").insert({ ...payload, slug: `${baseSlug}-${Date.now().toString(36)}`, created_by: user.id });
+      if (error) { toast.error(error.message); setSubmitting(false); return; }
     } else {
-      const { error: updErr } = await supabase
-        .from("courses")
-        .update({
-          name,
-          description: description || shortDesc,
-          subject,
-          target_exam: exam,
-          educator_name: resolvedEducatorName,
-          price,
-          original_price: originalPrice || null,
-          discount_percent: originalPrice > price ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0,
-          thumbnail_url: thumbnailUrl,
-          is_published: publish,
-          what_youll_learn: learnItems,
-          requirements: reqItems,
-        })
-        .eq("id", courseId!);
-      if (updErr) {
-        toast.error(updErr.message);
-        setSubmitting(false);
-        return;
-      }
-    }
-
-    if (!workingCourseId) {
-      setSubmitting(false);
-      return;
-    }
-
-    // Curriculum (chapters + lessons) is only managed during edit; on create,
-    // admins build the curriculum afterwards from the Course Content page.
-    if (isEditMode) {
-      const { data: oldChs } = await supabase.from("chapters").select("id").eq("course_id", workingCourseId);
-      const oldIds = (oldChs ?? []).map((c) => c.id);
-      if (oldIds.length) {
-        await supabase.from("lessons").delete().in("chapter_id", oldIds);
-        await supabase.from("chapters").delete().in("id", oldIds);
-      }
-
-      let totalSecs = 0;
-      let totalLessons = 0;
-      for (let ci = 0; ci < chapters.length; ci++) {
-        const ch = chapters[ci];
-        const { data: chapterRow, error: chapterErr } = await supabase
-          .from("chapters")
-          .insert({ course_id: workingCourseId, title: ch.title || `Chapter ${ci + 1}`, position: ci })
-          .select("id")
-          .single();
-        if (chapterErr || !chapterRow) {
-          toast.error("Failed creating chapter");
-          setSubmitting(false);
-          return;
-        }
-        const lessonRows = ch.lectures.map((l, li) => ({
-          course_id: workingCourseId!,
-          chapter_id: chapterRow.id,
-          slug: `${ci}-${li}-${slugify(l.title) || "lesson"}`,
-          title: l.title || `Lesson ${li + 1}`,
-          position: li,
-          duration_seconds: Math.max(60, l.durationMin * 60),
-          is_free_preview: ci === 0 && li === 0,
-          type: "video",
-        }));
-        lessonRows.forEach((l) => {
-          totalSecs += l.duration_seconds;
-          totalLessons += 1;
-        });
-        if (lessonRows.length) {
-          await supabase.from("lessons").insert(lessonRows);
-        }
-      }
-
-      await supabase
-        .from("courses")
-        .update({ total_lessons: totalLessons, duration_hours: Math.max(1, Math.round(totalSecs / 3600)) })
-        .eq("id", workingCourseId);
+      const { error } = await supabase.from("courses").update(payload).eq("id", courseId!);
+      if (error) { toast.error(error.message); setSubmitting(false); return; }
     }
 
     toast.success(isEditMode ? "Course updated" : publish ? "Course published!" : "Draft saved");
     setSubmitting(false);
-    navigate(isAdminContext ? "/admin/courses" : "/teacher/courses");
+    navigate("/admin/courses");
   };
 
   if (loading) {
@@ -278,263 +205,247 @@ const CreateCoursePage = () => {
     <div className="p-4 lg:p-6 pb-24 lg:pb-6 max-w-3xl mx-auto space-y-6">
       <h1 className="text-xl font-bold text-foreground">{isEditMode ? "Edit Course" : "Create New Course"}</h1>
 
-      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-        <h2 className="text-sm font-bold text-foreground">Basic Information</h2>
-        <div>
-          <label className="text-xs font-semibold text-foreground">Course Title</label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-            placeholder="e.g. JEE Physics Booster 2027"
-          />
+      {/* ── Basic Info ────────────────────────────────────────────────────── */}
+      <Section title="Basic Info">
+        <Field label="Course Title (shown to students)">
+          <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="e.g. JEE Physics Booster 2027" />
+        </Field>
+        <Field label="Internal Name (not visible to students)">
+          <input value={internalName} onChange={(e) => setInternalName(e.target.value)} className={inputCls} placeholder="e.g. PHY-JEE-2027-HINGLISH" />
+        </Field>
+        <Field label="Description">
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className={`${inputCls} resize-none`} placeholder="Detailed course description..." />
+        </Field>
+
+        {/* Thumbnail */}
+        <Field label="Thumbnail">
+          {(existingThumbnail || thumbnailFile) && (
+            <div className="aspect-video w-full overflow-hidden rounded-lg border border-border bg-muted mb-3">
+              <img src={thumbnailFile ? URL.createObjectURL(thumbnailFile) : existingThumbnail!} alt="Thumbnail" className="h-full w-full object-cover" />
+            </div>
+          )}
+          <label className="block cursor-pointer">
+            <input type="file" accept="image/*" className="hidden" onChange={(e) => setThumbnailFile(e.target.files?.[0] ?? null)} />
+            <div className="rounded-lg border-2 border-dashed border-border bg-background p-6 flex flex-col items-center justify-center hover:border-primary transition-colors">
+              <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+              <p className="text-xs text-muted-foreground">
+                {thumbnailFile ? thumbnailFile.name : existingThumbnail ? "Click to replace thumbnail" : "Click to upload thumbnail"}
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-1">Recommended: 16:9 · 1280×720px</p>
+            </div>
+          </label>
+        </Field>
+
+        {/* Teacher dropdown */}
+        <Field label="Assigned Teacher">
+          <select
+            value={assignedTeacherId}
+            onChange={(e) => setAssignedTeacherId(e.target.value)}
+            className={inputCls}
+          >
+            <option value="">— Select a teacher —</option>
+            {teachers.map((t) => (
+              <option key={t.id} value={t.id}>{t.full_name}</option>
+            ))}
+          </select>
+        </Field>
+
+        {/* Language */}
+        <Field label="Language">
+          <div className="flex gap-2">
+            {(["Hinglish", "English"] as const).map((lang) => (
+              <button
+                key={lang}
+                type="button"
+                onClick={() => setLanguage(lang)}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${
+                  language === lang ? "bg-primary text-primary-foreground border-primary" : "border-border text-foreground hover:bg-muted/30"
+                }`}
+              >
+                {lang}
+              </button>
+            ))}
+          </div>
+        </Field>
+      </Section>
+
+      {/* ── Targeting ────────────────────────────────────────────────────── */}
+      <Section title="Targeting">
+        <Field label="Target Exam">
+          <div className="flex gap-3 flex-wrap">
+            {TARGET_OPTIONS.map((t) => (
+              <label key={t} className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" value={t} checked={target === t} onChange={() => setTarget(t)} className="accent-primary" />
+                <span className="text-sm font-medium text-foreground">{t}</span>
+              </label>
+            ))}
+          </div>
+        </Field>
+        <Field label="Class">
+          <div className="flex gap-2 flex-wrap">
+            {availableClasses.map((cls) => (
+              <button
+                key={cls.value}
+                type="button"
+                onClick={() => setSelectedClass(cls.value)}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                  selectedClass === cls.value ? "bg-primary text-primary-foreground border-primary" : "border-border text-foreground hover:bg-muted/30"
+                }`}
+              >
+                {cls.label}
+              </button>
+            ))}
+          </div>
+        </Field>
+        <Field label="Course End Date (optional)">
+          <input type="date" value={courseEndDate} onChange={(e) => setCourseEndDate(e.target.value)} className={inputCls} />
+        </Field>
+      </Section>
+
+      {/* ── Pricing ──────────────────────────────────────────────────────── */}
+      <Section title="Pricing">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setIsCourseFree((v) => !v)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isCourseFree ? "bg-primary" : "bg-muted"}`}
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${isCourseFree ? "translate-x-6" : "translate-x-1"}`} />
+          </button>
+          <span className="text-sm font-medium text-foreground">Free Course</span>
         </div>
-        {!isEditMode && (
-          <div>
-            <label className="text-xs font-semibold text-foreground">Short Description</label>
+
+        {isCourseFree ? (
+          <Field label="Access Duration (days from enrollment)">
             <input
-              value={shortDesc}
-              onChange={(e) => setShortDesc(e.target.value)}
-              maxLength={150}
-              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none"
-              placeholder="150 chars max"
+              type="number"
+              value={maxUsageDays}
+              onChange={(e) => setMaxUsageDays(e.target.value ? Number(e.target.value) : "")}
+              className={inputCls}
+              placeholder="e.g. 90 (leave blank for unlimited)"
+              min={1}
             />
+          </Field>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="MRP">
+              <div className="flex items-center rounded-lg border border-border bg-background">
+                <IndianRupee className="h-4 w-4 text-muted-foreground ml-3 shrink-0" />
+                <input type="number" value={mrp || ""} onChange={(e) => setMrp(Number(e.target.value) || 0)} className="flex-1 bg-transparent px-2 py-2 text-sm outline-none" placeholder="2500" min={0} />
+              </div>
+            </Field>
+            <Field label="Sale Price">
+              <div className="flex items-center rounded-lg border border-border bg-background">
+                <IndianRupee className="h-4 w-4 text-muted-foreground ml-3 shrink-0" />
+                <input type="number" value={salePrice || ""} onChange={(e) => setSalePrice(Number(e.target.value) || 0)} className="flex-1 bg-transparent px-2 py-2 text-sm outline-none" placeholder="1299" min={0} />
+              </div>
+            </Field>
+            <Field label="Discount (auto-computed)">
+              <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+                {discountPercent > 0 ? `${discountPercent}% OFF` : "—"}
+              </div>
+            </Field>
+            <div className="flex items-center gap-3 pt-6">
+              <input id="gst" type="checkbox" checked={showPriceWithGst} onChange={(e) => setShowPriceWithGst(e.target.checked)} className="accent-primary h-4 w-4" />
+              <label htmlFor="gst" className="text-sm font-medium text-foreground cursor-pointer">Show price with 18% GST</label>
+            </div>
           </div>
         )}
-        <div>
-          <label className="text-xs font-semibold text-foreground">Full Description</label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={4}
-            className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none resize-none"
-            placeholder="Detailed course description..."
-          />
+
+        {showPriceWithGst && !isCourseFree && (
+          <p className="text-xs text-muted-foreground rounded-lg bg-muted/30 border border-border px-3 py-2">
+            Student sees: ₹{Math.round(salePrice * 1.18).toLocaleString()} (incl. 18% GST)
+          </p>
+        )}
+      </Section>
+
+      {/* ── Publishing ───────────────────────────────────────────────────── */}
+      <Section title="Publishing">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsActive((v) => !v)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isActive ? "bg-primary" : "bg-muted"}`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${isActive ? "translate-x-6" : "translate-x-1"}`} />
+            </button>
+            <span className="text-sm font-medium text-foreground">Active (visible in store)</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <input id="featured" type="checkbox" checked={isFeatured} onChange={(e) => setIsFeatured(e.target.checked)} className="accent-primary h-4 w-4" />
+            <label htmlFor="featured" className="text-sm font-medium text-foreground cursor-pointer">Featured</label>
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs font-semibold text-foreground">Exam</label>
-            <select value={exam} onChange={(e) => setExam(e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none">
-              {examNames.map((x) => <option key={x}>{x}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-foreground">Subject</label>
-            <select value={subject} onChange={(e) => setSubject(e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none">
-              <option>Physics</option>
-              <option>Chemistry</option>
-              <option>Maths</option>
-              <option>Biology</option>
-            </select>
-          </div>
-        </div>
-        {isAdminContext && (
-          <div>
-            <label className="text-xs font-semibold text-foreground">Educator Name</label>
+          <Field label="Priority (lower = shown first, decimals allowed)">
             <input
-              value={educatorName}
-              onChange={(e) => setEducatorName(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-              placeholder="e.g. Vikram Thapar"
+              type="number"
+              value={priority}
+              onChange={(e) => setPriority(parseFloat(e.target.value) || 0)}
+              className={inputCls}
+              min={0}
+              step={0.1}
             />
-          </div>
-        )}
-      </div>
-
-      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-        <h2 className="text-sm font-bold text-foreground">Thumbnail</h2>
-        {(existingThumbnail || thumbnailFile) && (
-          <div className="aspect-video w-full overflow-hidden rounded-lg border border-border bg-muted">
-            <img
-              src={thumbnailFile ? URL.createObjectURL(thumbnailFile) : existingThumbnail!}
-              alt="Thumbnail preview"
-              className="h-full w-full object-cover"
-            />
-          </div>
-        )}
-        <label className="block">
-          <input type="file" accept="image/*" className="hidden" onChange={(e) => setThumbnailFile(e.target.files?.[0] ?? null)} />
-          <div className="rounded-lg border-2 border-dashed border-border bg-background p-6 flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors">
-            <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-            <p className="text-xs text-muted-foreground">{thumbnailFile ? thumbnailFile.name : existingThumbnail ? "Click to replace thumbnail" : "Click to upload thumbnail"}</p>
-            <p className="text-[10px] text-muted-foreground mt-1">Recommended: 16:9 ratio · 1280×720px or larger</p>
-          </div>
-        </label>
-      </div>
-
-      {isEditMode && (
-      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-foreground">Curriculum</h2>
-          <button onClick={addChapter} className="flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground">
-            <Plus className="h-3 w-3" /> Add Chapter
-          </button>
+          </Field>
+          <Field label="Badge text (optional)">
+            <input value={badge} onChange={(e) => setBadge(e.target.value)} className={inputCls} placeholder="e.g. Bestseller" />
+          </Field>
         </div>
-
-        <div className="space-y-3">
-          {chapters.map((ch, ci) => (
-            <div key={ci} className="rounded-lg border border-border p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
-                <input
-                  value={ch.title}
-                  onChange={(e) => {
-                    const c = [...chapters];
-                    c[ci].title = e.target.value;
-                    setChapters(c);
-                  }}
-                  className="flex-1 text-sm font-semibold bg-transparent outline-none text-foreground"
-                  placeholder="Chapter title"
-                />
-                <Trash2 className="h-4 w-4 text-muted-foreground cursor-pointer hover:text-destructive shrink-0" onClick={() => removeChapter(ci)} />
-              </div>
-              <div className="ml-6 space-y-1.5">
-                {ch.lectures.map((lec, li) => (
-                  <div key={li} className="flex items-center gap-2 rounded-lg bg-background px-3 py-2 text-xs">
-                    <Video className="h-3.5 w-3.5 text-primary shrink-0" />
-                    <input
-                      value={lec.title}
-                      onChange={(e) => {
-                        const c = [...chapters];
-                        c[ci].lectures[li].title = e.target.value;
-                        setChapters(c);
-                      }}
-                      className="flex-1 bg-transparent outline-none text-foreground"
-                      placeholder="Lecture title"
-                    />
-                    <input
-                      type="number"
-                      value={lec.durationMin}
-                      onChange={(e) => {
-                        const c = [...chapters];
-                        c[ci].lectures[li].durationMin = Number(e.target.value) || 0;
-                        setChapters(c);
-                      }}
-                      className="w-14 bg-transparent outline-none text-muted-foreground text-right"
-                    />
-                    <span className="text-muted-foreground">min</span>
-                    <Trash2 className="h-3 w-3 text-muted-foreground cursor-pointer hover:text-destructive" onClick={() => removeLecture(ci, li)} />
-                  </div>
-                ))}
-                <button onClick={() => addLecture(ci)} className="flex items-center gap-1 text-[10px] font-semibold text-primary hover:underline ml-1">
-                  <Plus className="h-3 w-3" /> Add Lecture
-                </button>
-              </div>
+        <Field label="Tags">
+          <div className="flex gap-2 mb-2">
+            <input value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }} className={`flex-1 ${inputCls}`} placeholder="Add tag..." />
+            <button type="button" onClick={addTag} className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground">
+              <Tag className="h-3 w-3" />
+            </button>
+          </div>
+          {tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {tags.map((t) => (
+                <span key={t} className="flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-xs font-medium text-foreground">
+                  {t}
+                  <button type="button" onClick={() => setTags(tags.filter((x) => x !== t))}><X className="h-3 w-3 text-muted-foreground hover:text-destructive" /></button>
+                </span>
+              ))}
             </div>
-          ))}
-        </div>
-      </div>
-      )}
+          )}
+        </Field>
+      </Section>
 
-
-      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-        <h2 className="text-sm font-bold text-foreground">What You'll Learn</h2>
-        <p className="text-xs text-muted-foreground">Add learning outcomes students will gain from this course.</p>
-        <div className="flex gap-2">
-          <input
-            value={learnInput}
-            onChange={(e) => setLearnInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLearn(); } }}
-            className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-            placeholder="e.g. Core fundamentals and theory"
-          />
-          <button type="button" onClick={addLearn} className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground flex items-center gap-1">
-            <Plus className="h-3 w-3" /> Add
-          </button>
-        </div>
-        {learnItems.length > 0 && (
-          <ul className="space-y-1.5">
-            {learnItems.map((item, i) => (
-              <li key={i} className="flex items-center justify-between rounded-lg bg-background px-3 py-2 text-sm text-foreground">
-                <span className="flex items-start gap-2"><span className="text-muted-foreground">—</span>{item}</span>
-                <button type="button" onClick={() => setLearnItems(learnItems.filter((_, j) => j !== i))} className="text-muted-foreground hover:text-destructive">
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-        <h2 className="text-sm font-bold text-foreground">Requirements</h2>
-        <p className="text-xs text-muted-foreground">Add prerequisites or things students should know before starting.</p>
-        <div className="flex gap-2">
-          <input
-            value={reqInput}
-            onChange={(e) => setReqInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addReq(); } }}
-            className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-            placeholder="e.g. Basic algebra and calculus"
-          />
-          <button type="button" onClick={addReq} className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground flex items-center gap-1">
-            <Plus className="h-3 w-3" /> Add
-          </button>
-        </div>
-        {reqItems.length > 0 && (
-          <ul className="space-y-1.5">
-            {reqItems.map((item, i) => (
-              <li key={i} className="flex items-center justify-between rounded-lg bg-background px-3 py-2 text-sm text-foreground">
-                <span className="flex items-start gap-2"><span className="text-muted-foreground">—</span>{item}</span>
-                <button type="button" onClick={() => setReqItems(reqItems.filter((_, j) => j !== i))} className="text-muted-foreground hover:text-destructive">
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-        <h2 className="text-sm font-bold text-foreground">Pricing</h2>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs font-semibold text-foreground">Price</label>
-            <div className="mt-1 flex items-center rounded-lg border border-border bg-background">
-              <IndianRupee className="h-4 w-4 text-muted-foreground ml-3" />
-              <input
-                type="number"
-                value={price || ""}
-                onChange={(e) => setPrice(Number(e.target.value) || 0)}
-                className="flex-1 bg-transparent px-2 py-2 text-sm outline-none"
-                placeholder="1300"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-foreground">Original Price (optional)</label>
-            <div className="mt-1 flex items-center rounded-lg border border-border bg-background">
-              <IndianRupee className="h-4 w-4 text-muted-foreground ml-3" />
-              <input
-                type="number"
-                value={originalPrice || ""}
-                onChange={(e) => setOriginalPrice(Number(e.target.value) || 0)}
-                className="flex-1 bg-transparent px-2 py-2 text-sm outline-none"
-                placeholder="2500"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
+      {/* ── Actions ──────────────────────────────────────────────────────── */}
       <div className="flex gap-3">
-        <button
-          disabled={submitting}
-          onClick={() => submit(false)}
-          className="flex-1 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground disabled:opacity-50"
-        >
-          {submitting ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : isEditMode ? "Save as Draft" : "Save Draft"}
+        <button disabled={submitting} onClick={() => submit(false)} className="flex-1 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground disabled:opacity-50">
+          {submitting ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : "Save Draft"}
         </button>
-        <button
-          disabled={submitting}
-          onClick={() => submit(true)}
-          className="flex-1 rounded-lg bg-secondary px-4 py-2.5 text-sm font-semibold text-secondary-foreground disabled:opacity-50"
-        >
+        <button disabled={submitting} onClick={() => submit(true)} className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50">
           {submitting ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : isEditMode ? "Save & Publish" : "Publish Course"}
         </button>
       </div>
     </div>
   );
 };
+
+// ── Small helpers ─────────────────────────────────────────────────────────────
+
+const inputCls =
+  "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary placeholder:text-muted-foreground";
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+      <h2 className="text-sm font-bold text-foreground">{title}</h2>
+      {children}
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="text-xs font-semibold text-foreground mb-1 block">{label}</label>
+      {children}
+    </div>
+  );
+}
 
 export default CreateCoursePage;

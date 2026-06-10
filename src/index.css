@@ -73,6 +73,13 @@
   }
 }
 
+/* Admin panel primary color override */
+.admin-panel {
+  --primary: 222 46% 11%;
+  --primary-dark: 222 46% 8%;
+  --primary-light: 222 30% 95%;
+}
+
 /* Grid texture for hero sections */
 .grid-texture {
   background-image: 
@@ -168,4 +175,23 @@
 }
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+/* Prevent Tailwind preflight from collapsing Zoom Meeting SDK Component View layout */
+#meetingSDKElement,
+/* Protect Zoom Meeting SDK Component View from Tailwind preflight resets */
+#meetingSDKElement,
+#meetingSDKElement * {
+  box-sizing: content-box;
+}
+#meetingSDKElement {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+/* Prevent Tailwind border-0 base rule from collapsing Zoom UI borders */
+#meetingSDKElement img,
+#meetingSDKElement video {
+  display: inline;
+  border-style: solid;
 }

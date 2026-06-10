@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FileText, Upload, Loader2, BookOpen, Tag, Clock, GraduationCap,
-  AlertTriangle, CheckCircle2, ImageIcon, ChevronDown, ChevronUp, X,
+  AlertTriangle, CheckCircle2, ImageIcon, ChevronDown, ChevronUp, X, Download,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -401,10 +401,31 @@ const AdminUploadQuestionsPage = () => {
   return (
     <div className="p-4 lg:p-6 max-w-2xl">
       <div className="mb-6">
-        <h1 className="text-xl font-black font-display text-foreground">Upload Test</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Upload a .docx file — questions, options, answers and solutions are detected automatically.
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-xl font-black font-display text-foreground">Upload Test</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Upload a .docx file — questions, options, answers and solutions are detected automatically.
+            </p>
+          </div>
+          <div className="flex flex-col gap-1.5 shrink-0">
+            <a
+              href="/arke-question-template.docx"
+              download
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors"
+            >
+              <Download className="h-3.5 w-3.5" /> Download Template
+            </a>
+            <a
+              href="/question-paper-guide.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors"
+            >
+              <FileText className="h-3.5 w-3.5" /> Author Guide
+            </a>
+          </div>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">

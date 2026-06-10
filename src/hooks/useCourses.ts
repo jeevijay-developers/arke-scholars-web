@@ -5,23 +5,34 @@ export type CourseRow = {
   id: string;
   slug: string;
   name: string;
+  internal_name: string;
   description: string | null;
-  subject: string;
-  educator_name: string;
   thumbnail_url: string | null;
-  rating: number;
-  total_lessons: number;
-  duration_hours: number;
+  rating: number | null;
   badge: string | null;
-  price: number;
-  original_price: number | null;
+  is_featured: boolean;
+  is_active: boolean;
+  is_course_free: boolean;
+  mrp: number;
+  sale_price: number;
   discount_percent: number | null;
-  target_exam: string | null;
-  is_published: boolean;
-  total_enrolled: number | null;
+  show_price_with_gst: boolean;
+  target: string;
+  class: string;
+  language: string;
+  priority: number;
+  tags: string[] | null;
+  assigned_teacher_id: string | null;
+  what_youll_learn: string[] | null;
+  requirements: string[] | null;
+  course_end_date: string | null;
+  max_usage_days: number | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
 };
 
-export const useCourses = (targetExam?: string, subject?: string, level?: string) => {
+export const useCourses = (target?: string, classFilter?: string) => {
   const [courses, setCourses] = useState<CourseRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -31,27 +42,18 @@ export const useCourses = (targetExam?: string, subject?: string, level?: string
       let q = supabase
         .from("courses")
         .select("*")
-        .eq("is_published", true)
-        .order("created_at", { ascending: false });
+        .eq("is_active", true)
+        .order("priority", { ascending: true });
 
-      if (targetExam && targetExam !== "All") {
-        // Match exact label ("JEE Main") AND short prefix ("JEE") for legacy data.
-        const prefix = targetExam.split(" ")[0];
-        const filter =
-          prefix !== targetExam
-            ? `target_exam.eq.${targetExam},target_exam.eq.${prefix}`
-            : `target_exam.eq.${targetExam}`;
-        q = q.or(filter);
-      }
-      if (subject && subject !== "All") q = q.eq("subject", subject);
-      if (level && level !== "All") q = q.eq("level", level);
+      if (target && target !== "All") q = q.eq("target", target);
+      if (classFilter && classFilter !== "All") q = q.eq("class", classFilter);
 
       const { data } = await q;
       setCourses((data ?? []) as CourseRow[]);
       setLoading(false);
     };
     load();
-  }, [targetExam, subject, level]);
+  }, [target, classFilter]);
 
   return { courses, loading };
 };
