@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ElementType, type ReactNode } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   closestCenter,
@@ -53,7 +53,7 @@ type TestOption = { id: string; title: string; total_questions: number };
 
 // ── Type icons ────────────────────────────────────────────────────────────────
 
-const TYPE_META: Record<ContentType, { label: string; Icon: React.ElementType; color: string }> = {
+const TYPE_META: Record<ContentType, { label: string; Icon: ElementType; color: string }> = {
   live_class:       { label: "Live Class",        Icon: Radio,         color: "text-red-500" },
   pdf:              { label: "PDF",               Icon: FileText,      color: "text-red-400" },
   recorded_lecture: { label: "Recorded Lecture",  Icon: Play,          color: "text-foreground" },
@@ -414,7 +414,14 @@ const AdminCourseContentV2Page = () => {
         xhr.onload = () => (xhr.status === 200 ? resolve() : reject(new Error("Upload failed")));
         xhr.onerror = () => reject(new Error("Upload failed"));
         xhr.open("PUT", presign.uploadUrl);
-        xhr.setRequestHeader("Content-Type", file.type);
+        // Apply all AWS-signed headers returned by the edge function
+        if (presign.headers) {
+          Object.entries(presign.headers as Record<string, string>).forEach(([k, v]) => {
+            xhr.setRequestHeader(k, v);
+          });
+        } else {
+          xhr.setRequestHeader("Content-Type", file.type);
+        }
         xhr.send(file);
       });
 
@@ -489,7 +496,7 @@ const AdminCourseContentV2Page = () => {
         subject: courseSubject || "General",
         target_exam: null,
         meeting_url: null,
-      });
+      } as any);
       if (lcErr) {
         setSavingItem(false);
         return toast.error("Failed to schedule live class: " + lcErr.message);
@@ -515,10 +522,10 @@ const AdminCourseContentV2Page = () => {
 
     let error;
     if (editingItem) {
-      ({ error } = await supabase.from("content_items").update(payload).eq("id", editingItem.id));
+      ({ error } = await supabase.from("content_items").update(payload as any).eq("id", editingItem.id));
     } else {
       payload.order = contentItems.length;
-      ({ error } = await supabase.from("content_items").insert(payload));
+      ({ error } = await supabase.from("content_items").insert(payload as any));
     }
 
     setSavingItem(false);
@@ -908,7 +915,7 @@ const AdminCourseContentV2Page = () => {
 const panelInput =
   "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary placeholder:text-muted-foreground";
 
-function PanelField({ label, children }: { label: string; children: React.ReactNode }) {
+function PanelField({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div>
       <label className="text-xs font-semibold text-foreground mb-1 block">{label}</label>
