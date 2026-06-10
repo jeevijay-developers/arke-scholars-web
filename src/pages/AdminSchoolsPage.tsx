@@ -60,7 +60,7 @@ const AdminSchoolsPage = () => {
   const [uploading, setUploading] = useState(false);
   const [results, setResults] = useState<ResultRow[] | null>(null);
 
-  const CSV_TEMPLATE = "full_name,email,phone,class_level,target_exam,city\nAarav Sharma,aarav@example.com,9999999999,12,JEE Main,Delhi\nIsha Verma,isha@example.com,9888888888,11,NEET,Mumbai\n";
+  const CSV_TEMPLATE = "full_name,email,phone,class_level,target_exam,city\nAarav Sharma,aarav@example.com,9999999999,12,JEE,Delhi\nIsha Verma,isha@example.com,9888888888,11,NEET,Mumbai\n";
 
   const downloadTemplate = () => {
     const blob = new Blob([CSV_TEMPLATE], { type: "text/csv;charset=utf-8" });

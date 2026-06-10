@@ -2,11 +2,8 @@ import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import arkeLogo from "@/assets/arke-logo.png";
 import {
   LayoutDashboard,
-  Flame,
-  CircleDot,
   Briefcase,
   Inbox,
-  Flag,
   Users,
   GraduationCap,
   Video,
@@ -14,8 +11,6 @@ import {
   CreditCard,
   Bell,
   Settings,
-  ShieldCheck,
-  ShieldPlus,
   HeartHandshake,
   Library,
   Swords,
@@ -24,7 +19,11 @@ import {
   FileUp,
   Megaphone,
   Menu,
-  X,
+  BookOpen,
+  BookMarked,
+  ArrowLeftRight,
+  BarChart2,
+  UserCheck,
 } from "lucide-react";
 import LogoutButton from "@/components/LogoutButton";
 import NotificationBell from "@/components/NotificationBell";
@@ -35,36 +34,69 @@ import { useStaffPermissions } from "@/hooks/useStaffPermissions";
 import { toast } from "sonner";
 
 type NavItem = { label: string; icon: typeof LayoutDashboard; path: string };
+type NavSection = { title: string; items: NavItem[] };
 
-// Items every admin (and super-admin) sees.
-const baseNav: NavItem[] = [
-  { label: "Overview", icon: LayoutDashboard, path: "/admin/dashboard" },
-  { label: "Users", icon: Users, path: "/admin/users" },
-  { label: "Students", icon: GraduationCap, path: "/admin/students" },
-  { label: "Schools", icon: School, path: "/admin/schools" },
-  { label: "Mentor Assignments", icon: HeartHandshake, path: "/admin/mentor-assignments" },
-  { label: "Mentor Handovers", icon: HeartHandshake, path: "/admin/mentor-handovers" },
-  { label: "Courses", icon: GraduationCap, path: "/admin/courses" },
-  { label: "Live Classes", icon: Video, path: "/admin/live-classes" },
-  { label: "Tests", icon: ClipboardCheck, path: "/admin/tests" },
-  { label: "Question Bank", icon: Library, path: "/admin/question-bank" },
-  { label: "Upload Test", icon: FileUp, path: "/admin/upload-questions" },
-  { label: "Compete Questions", icon: Swords, path: "/admin/compete-questions" },
-  { label: "Exam Management", icon: GraduationCap, path: "/admin/exams" },
-  { label: "Course Banners", icon: Megaphone, path: "/admin/course-banners" },
-  { label: "Educator Applications", icon: Briefcase, path: "/admin/educator-applications" },
-  { label: "Enquiries", icon: Inbox, path: "/admin/enquiries" },
-  { label: "Student Analysis", icon: FileBarChart, path: "/admin/student-reports" },
-  { label: "Reports", icon: Flag, path: "/admin/reports" },
-  { label: "Notifications", icon: Bell, path: "/admin/notifications" },
+const navSections: NavSection[] = [
+  {
+    title: "Dashboard",
+    items: [
+      { label: "Overview", icon: LayoutDashboard, path: "/admin/dashboard" },
+    ],
+  },
+  {
+    title: "People",
+    items: [
+      { label: "Users",     icon: Users,          path: "/admin/users" },
+      { label: "Students",  icon: GraduationCap,  path: "/admin/students" },
+      { label: "Schools",   icon: School,         path: "/admin/schools" },
+    ],
+  },
+  {
+    title: "Mentorship",
+    items: [
+      { label: "Mentor Assignments", icon: HeartHandshake, path: "/admin/mentor-assignments" },
+      { label: "Mentor Handovers",   icon: ArrowLeftRight, path: "/admin/mentor-handovers" },
+    ],
+  },
+  {
+    title: "Content",
+    items: [
+      { label: "Courses",           icon: BookOpen,      path: "/admin/courses" },
+      { label: "Live Classes",      icon: Video,         path: "/admin/live-classes" },
+      { label: "Tests",             icon: ClipboardCheck,path: "/admin/tests" },
+      { label: "Question Bank",     icon: Library,       path: "/admin/question-bank" },
+      { label: "Upload Test",       icon: FileUp,        path: "/admin/upload-questions" },
+      { label: "Compete Questions", icon: Swords,        path: "/admin/compete-questions" },
+      { label: "Exam Management",   icon: BookMarked,    path: "/admin/exams" },
+      { label: "Course Banners",    icon: Megaphone,     path: "/admin/course-banners" },
+    ],
+  },
+  {
+    title: "Outreach",
+    items: [
+      { label: "Educator Applications", icon: Briefcase, path: "/admin/educator-applications" },
+      { label: "Enquiries",             icon: Inbox,     path: "/admin/enquiries" },
+      { label: "Notifications",         icon: Bell,      path: "/admin/notifications" },
+    ],
+  },
+  {
+    title: "Analytics",
+    items: [
+      { label: "Student Analysis", icon: FileBarChart, path: "/admin/student-reports" },
+      { label: "Reports",          icon: BarChart2,    path: "/admin/reports" },
+    ],
+  },
+  {
+    title: "Administration",
+    items: [
+      { label: "Staff", icon: UserCheck, path: "/admin/staff-roles" },
+    ],
+  },
 ];
 
-// Items only super-admin sees: revenue, settings, moderation.
 const superAdminNav: NavItem[] = [
-  { label: "Staff", icon: ShieldPlus, path: "/admin/staff-roles" },
   { label: "Payments & Revenue", icon: CreditCard, path: "/admin/payments" },
-  { label: "Moderation", icon: ShieldCheck, path: "/admin/moderation" },
-  { label: "Platform Settings", icon: Settings, path: "/admin/settings" },
+  { label: "Platform Settings",  icon: Settings,   path: "/admin/settings" },
 ];
 
 type SidebarProps = {
@@ -73,24 +105,34 @@ type SidebarProps = {
   avatarUrl?: string;
   isSuperAdmin: boolean;
   role: string | null;
-  visibleBaseNav: NavItem[];
+  visibleSections: NavSection[];
   onLogout: () => void;
   isOpen: boolean;
   onClose: () => void;
 };
 
-const AdminSidebar = memo(({ email, initials, avatarUrl, isSuperAdmin, role, visibleBaseNav, onLogout, isOpen, onClose }: SidebarProps) => {
+const NavLink = memo(({ item, active, onClose }: { item: NavItem; active: boolean; onClose: () => void }) => (
+  <Link
+    to={item.path}
+    onClick={onClose}
+    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+      active ? "bg-white/10 text-white" : "text-white/60 hover:bg-white/5 hover:text-white/90"
+    }`}
+  >
+    <item.icon className="h-4 w-4 shrink-0" />
+    <span>{item.label}</span>
+  </Link>
+));
+NavLink.displayName = "NavLink";
+
+const AdminSidebar = memo(({ email, initials, avatarUrl, isSuperAdmin, role, visibleSections, onLogout, isOpen, onClose }: SidebarProps) => {
   const { pathname } = useLocation();
   const roleLabel = isSuperAdmin ? "Super Admin" : role === "lead_manager" ? "Lead Manager" : "Admin";
 
   return (
     <>
-      {/* Mobile backdrop */}
       {isOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
-          onClick={onClose}
-        />
+        <div className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={onClose} />
       )}
 
       <aside
@@ -99,72 +141,52 @@ const AdminSidebar = memo(({ email, initials, avatarUrl, isSuperAdmin, role, vis
         } lg:flex`}
         style={{ backgroundColor: "hsl(222, 47%, 11%)" }}
       >
-      <div className="p-4 flex justify-center">
-        <Link to="/" onClick={onClose} className="flex items-center justify-center w-full bg-white rounded-xl py-2 px-4 hover:opacity-95 transition-opacity">
-          <img src={arkeLogo} alt="ARKE Logo" className="h-10 w-auto object-contain" />
-        </Link>
-      </div>
-
-      <nav className="flex-1 px-3 space-y-1">
-        <p className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white/40">Main</p>
-        {visibleBaseNav.map((item) => {
-          const active = pathname === item.path;
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              onClick={onClose}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                active ? "bg-white/10 text-white" : "text-white/60 hover:bg-white/5 hover:text-white/90"
-              }`}
-            >
-              <item.icon className="h-4 w-4 shrink-0" />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
-
-        {isSuperAdmin && (
-          <>
-            <p className="px-3 pt-4 pb-2 text-[10px] font-bold uppercase tracking-wider text-white/40">
-              Super Admin
-            </p>
-            {superAdminNav.map((item) => {
-              const active = pathname === item.path;
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  onClick={onClose}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                    active ? "bg-white/10 text-white" : "text-white/60 hover:bg-white/5 hover:text-white/90"
-                  }`}
-                >
-                  <item.icon className="h-4 w-4 shrink-0" />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </>
-        )}
-      </nav>
-
-      <div className="border-t border-white/10 p-4">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground overflow-hidden">
-            {avatarUrl ? <img src={avatarUrl} alt={initials} className="h-full w-full object-cover" /> : initials}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-white truncate">{email || roleLabel}</p>
-            <p className="text-[10px] text-white/50">{roleLabel}</p>
-          </div>
+        <div className="p-4 flex justify-center">
+          <Link to="/" onClick={onClose} className="flex items-center justify-center w-full bg-white rounded-xl py-2 px-4 hover:opacity-95 transition-opacity">
+            <img src={arkeLogo} alt="ARKE Logo" className="h-10 w-auto object-contain" />
+          </Link>
         </div>
-        <LogoutButton
-          onConfirm={onLogout}
-          className="mt-3 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors"
-        />
-      </div>
-    </aside>
+
+        <nav className="flex-1 px-3 pb-4">
+          {visibleSections.map((section) => (
+            <div key={section.title} className="mb-1">
+              <p className="px-3 pt-4 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-white/30">
+                {section.title}
+              </p>
+              {section.items.map((item) => (
+                <NavLink key={item.path} item={item} active={pathname === item.path} onClose={onClose} />
+              ))}
+            </div>
+          ))}
+
+          {isSuperAdmin && (
+            <div className="mb-1">
+              <p className="px-3 pt-4 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-white/30">
+                Super Admin
+              </p>
+              {superAdminNav.map((item) => (
+                <NavLink key={item.path} item={item} active={pathname === item.path} onClose={onClose} />
+              ))}
+            </div>
+          )}
+        </nav>
+
+        <div className="border-t border-white/10 p-4">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground overflow-hidden">
+              {avatarUrl ? <img src={avatarUrl} alt={initials} className="h-full w-full object-cover" /> : initials}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-white truncate">{email || roleLabel}</p>
+              <p className="text-[10px] text-white/50">{roleLabel}</p>
+            </div>
+          </div>
+          <LogoutButton
+            onConfirm={onLogout}
+            className="mt-3 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+          />
+        </div>
+      </aside>
     </>
   );
 });
@@ -224,25 +246,30 @@ export default function AdminLayout() {
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
 
-  // permissions === null means super_admin or full admin — show everything.
-  // Otherwise filter to items where the staff member has can_view.
-  const visibleBaseNav = useMemo(() => {
-    if (permissions === null) return baseNav;
-    return baseNav.filter((item) => {
-      const pageKey = item.path.replace("/admin/", "");
-      return permissions[pageKey]?.can_view === true;
-    });
+  // permissions === null → super_admin or full admin — show everything.
+  // Otherwise filter to items where the staff member has can_view, remove empty sections.
+  const visibleSections = useMemo(() => {
+    if (permissions === null) return navSections;
+    return navSections
+      .map((section) => ({
+        ...section,
+        items: section.items.filter((item) => {
+          const pageKey = item.path.replace("/admin/", "");
+          return permissions[pageKey]?.can_view === true;
+        }),
+      }))
+      .filter((section) => section.items.length > 0);
   }, [permissions]);
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="admin-panel flex min-h-screen bg-background">
       <AdminSidebar
         email={email}
         initials={initials}
         avatarUrl={avatarUrl}
         isSuperAdmin={isSuperAdmin}
         role={role}
-        visibleBaseNav={visibleBaseNav}
+        visibleSections={visibleSections}
         onLogout={handleLogout}
         isOpen={sidebarOpen}
         onClose={closeSidebar}
@@ -262,4 +289,4 @@ export default function AdminLayout() {
       </div>
     </div>
   );
-};
+}

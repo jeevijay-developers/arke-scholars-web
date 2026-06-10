@@ -49,7 +49,7 @@ const BLANK_EDITING: EditingQ = {
   subject: "Physics",
   topic: "Kinematics",
   difficulty: "medium",
-  target_exam: "JEE Main",
+  target_exam: "JEE",
   class_level: "11",
   question_text: "",
   question_type: "scq",

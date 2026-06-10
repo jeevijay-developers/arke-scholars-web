@@ -125,12 +125,27 @@ function paraIsItalic(paraXml: string): boolean {
   return /<w:i[ \/>]/.test(paraXml);
 }
 
+function paraStyle(paraXml: string): string {
+  return /<w:pStyle[^>]*w:val="([^"]+)"/.exec(paraXml)?.[1] ?? "";
+}
+
 function paraImageRids(paraXml: string): string[] {
   return [...paraXml.matchAll(/r:embed="([^"]+)"/g), ...paraXml.matchAll(/r:id="([^"]+)"/g)]
     .map((m) => m[1]);
 }
 
-// Build HTML for one <w:p>: text runs (bold preserved) + <img> tags in document order.
+// Extract LaTeX from OMML <m:oMath> — LaTeX stored verbatim in <m:t> elements.
+function extractOmmlLatex(ommlXml: string): string {
+  const parts: string[] = [];
+  for (const m of ommlXml.matchAll(/<m:t[^>]*>([^<]*)<\/m:t>/g)) {
+    const t = m[1].replace(/ /g, " ").trim();
+    if (t) parts.push(t);
+  }
+  const joined = parts.join("").trim();
+  return joined ? `$${joined}$` : "";
+}
+
+// Build HTML for one <w:p>: text runs (bold preserved) + <img> tags + OMML math in document order.
 function buildParaHtml(paraXml: string, ridToImage: Map<string, ImageRef>): string {
   type Token = { pos: number; html: string };
   const tokens: Token[] = [];
@@ -157,6 +172,20 @@ function buildParaHtml(paraXml: string, ridToImage: Map<string, ImageRef>): stri
 
   for (const m of paraXml.matchAll(/<w:pict>([\s\S]*?)<\/w:pict>/g)) {
     const rId = /r:id="([^"]+)"/.exec(m[1])?.[1] ?? /r:embed="([^"]+)"/.exec(m[1])?.[1];
+    if (!rId) continue;
+    const img = ridToImage.get(rId);
+    if (img?.url) tokens.push({ pos: m.index!, html: `<img src="${escHtml(img.url)}" />` });
+  }
+
+  // OMML inline math — LaTeX text stored in <m:t> elements, wrap in $...$
+  for (const m of paraXml.matchAll(/<m:oMath>([\s\S]*?)<\/m:oMath>/g)) {
+    const latex = extractOmmlLatex(m[1]);
+    if (latex) tokens.push({ pos: m.index!, html: latex });
+  }
+
+  // OLE objects (MathType / embedded diagrams) — use the EMF preview image
+  for (const m of paraXml.matchAll(/<w:object[^>]*>([\s\S]*?)<\/w:object>/g)) {
+    const rId = /v:imagedata[^>]*r:id="([^"]+)"/.exec(m[1])?.[1];
     if (!rId) continue;
     const img = ridToImage.get(rId);
     if (img?.url) tokens.push({ pos: m.index!, html: `<img src="${escHtml(img.url)}" />` });
@@ -481,15 +510,75 @@ function parseDocument(
     if (block.kind === "p") {
       const text = paraText(block.xml).trim();
       const bold = paraIsBold(block.xml);
+      const style = paraStyle(block.xml);
 
-      // Skip SECTION header lines (descriptive — type is auto-detected from the answer)
-      if (/^SECTION\s+(I|II|III|IV|V|VI|VII)/i.test(text)) {
+      // ── Style-based routing (template mode) ───────────────────────────────
+      // When the author used the Arke question template, paragraph styles are
+      // set explicitly. Style takes priority over heuristic detection.
+      if (style === "Q-Number") {
+        if (accum) finalizeQuestion(accum);
+        seenSection = true;
+        const numMatch = /^(\d+)\.?\s*/.exec(text);
+        accum = {
+          num: parseInt(numMatch?.[1] ?? "0", 10),
+          type: "scq", topic: null,
+          stemParas: [], stemRids: [],
+          optCells: [], optImages: {}, currentOpt: null,
+          matchRows: [], matchRowsHtml: [],
+          answerText: "", solutionParas: [], solutionRids: [],
+          inSolution: false, optionsDone: false,
+        };
+        continue;
+      }
+      if (style === "Q-Stem" && accum) {
+        const h = buildParaHtml(block.xml, ridToImage);
+        if (h) accum.stemParas.push(h);
+        accum.stemRids.push(...paraImageRids(block.xml));
+        continue;
+      }
+      if (style === "Q-Option" && accum && !accum.optionsDone) {
+        const optM = /^\(([1-4])\)/.exec(text);
+        const optNum = optM ? parseInt(optM[1], 10) : (accum.optCells.length + 1);
+        accum.currentOpt = optNum;
+        const h = buildParaHtml(block.xml, ridToImage);
+        if (h) accum.optCells.push([h]);
+        // Extract first image URL from this option's HTML into optImages so
+        // option_N_image is populated even when image is inline in the paragraph.
+        if (!accum.optImages[optNum]) {
+          const imgSrc = /src="([^"]+)"/.exec(h)?.[1];
+          if (imgSrc) accum.optImages[optNum] = imgSrc;
+        }
+        continue;
+      }
+      if (style === "Q-Answer" && accum) {
+        accum.answerText = text.replace(/^answer\s*:\s*/i, "").trim();
+        accum.optionsDone = true;
+        continue;
+      }
+      if (style === "Q-Solution" && accum) {
+        accum.inSolution = true;
+        const h = buildParaHtml(block.xml, ridToImage)
+          .replace(/^(?:<strong>\s*)?solution\s*:?\s*(?:<\/strong>\s*)?/i, "");
+        if (h.trim()) accum.solutionParas.push(h);
+        accum.solutionRids.push(...paraImageRids(block.xml));
+        continue;
+      }
+      if (style === "Q-Topic" && accum) {
+        const topicValue = text.replace(/^topic\s*[:\-–—\t]\s*/i, "").trim() || text.trim();
+        if (topicValue) accum.topic = topicValue;
+        continue;
+      }
+
+      // ── Heuristic routing (fallback for un-styled / imported papers) ──────
+
+      // Skip SECTION / PART header lines
+      if (/^(SECTION\s+(I{1,3}|IV|VI{0,3}|V|VII)|PART[\s\-–—]*[A-Z]\b)/i.test(text)) {
         if (accum) { finalizeQuestion(accum); accum = null; }
         seenSection = true;
         continue;
       }
 
-      // Skip everything before the first SECTION header (cover page, instruction list, etc.)
+      // Skip everything before the first section / part header
       if (!seenSection) { _discarded++; continue; }
 
       // Skip italic descriptor sub-line under section header (contains pipes + "Exam:")
@@ -497,7 +586,7 @@ function parseDocument(
 
       // Solution accumulation — must precede question-boundary test
       if (accum?.inSolution) {
-        if (bold && /^\d+\.\s+\S/.test(text)) {
+        if (bold && /^\d+\.\s*\S/.test(text)) {
           // Fall through to start a new question
         } else {
           const h = buildParaHtml(block.xml, ridToImage);
@@ -507,14 +596,14 @@ function parseDocument(
         }
       }
 
-      // Question boundary (bold-numbered)
-      if (bold && /^\d+\.\s+\S/.test(text)) {
+      // Question boundary (bold-numbered) — \s* handles tab-stripped "1.Stem" format
+      if (bold && /^\d+\.\s*\S/.test(text)) {
         if (accum) finalizeQuestion(accum);
-        const numMatch = /^(\d+)\.\s+/.exec(text);
+        const numMatch = /^(\d+)\.\s*/.exec(text);
         const stemHtmlFull = buildParaHtml(block.xml, ridToImage);
         const stemHtmlClean = stemHtmlFull
           .replace(/^<strong>\s*\d+\s*\.\s*<\/strong>\s*/i, "")
-          .replace(/^\d+\s*\.\s+/, "");
+          .replace(/^\d+\s*\.\s*/, "");
         accum = {
           num: parseInt(numMatch?.[1] ?? "0", 10),
           type: "scq",
@@ -594,15 +683,29 @@ function parseDocument(
           const img = ridToImage.get(rid);
           if (img?.url) {
             if (accum.currentOpt !== null) {
-              // Assign to active option (first image wins)
+              // Separate image for the active option — also add inline to option HTML
               if (!accum.optImages[accum.currentOpt]) {
                 accum.optImages[accum.currentOpt] = img.url;
               }
-            } else {
-              // Stem image — add via buildParaHtml so it renders in stem
               const h = buildParaHtml(block.xml, ridToImage);
-              if (h) accum.stemParas.push(h);
-              accum.stemRids.push(...rids);
+              if (h) {
+                const last = accum.optCells[accum.optCells.length - 1];
+                if (last) last.push(h);
+              }
+            } else {
+              // No active option yet — check if this should be the next option image.
+              // Treat it as the next option slot if we already have some options, else stem.
+              const nextSlot = accum.optCells.length + 1;
+              if (nextSlot >= 1 && nextSlot <= 4 && accum.optCells.length > 0) {
+                accum.currentOpt = nextSlot;
+                accum.optImages[nextSlot] = img.url;
+                accum.optCells.push([`<img src="${escHtml(img.url)}" />`]);
+              } else {
+                // Stem image
+                const h = buildParaHtml(block.xml, ridToImage);
+                if (h) accum.stemParas.push(h);
+                accum.stemRids.push(...rids);
+              }
             }
           }
           continue;
@@ -615,6 +718,11 @@ function parseDocument(
           const optNum = parseInt(rawText[1], 10);
           accum.currentOpt = optNum;
           accum.optCells.push([h]);
+          // Also populate optImages if image is inline in option HTML
+          if (!accum.optImages[optNum]) {
+            const imgSrc = /src="([^"]+)"/.exec(h)?.[1];
+            if (imgSrc) accum.optImages[optNum] = imgSrc;
+          }
         } else if (h) {
           if (accum.currentOpt !== null) {
             // Text continuation of the current option — append to its last cell

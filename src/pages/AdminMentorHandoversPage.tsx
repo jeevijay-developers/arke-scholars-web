@@ -71,7 +71,7 @@ const AdminMentorHandoversPage = () => {
   const availableBackups = useMemo(
     () => mentors.filter(
       (m) => m.user_id !== selectedPrimary &&
-             !currentPool.some((p) => p.backup_mentor_id === m.user_id),
+        !currentPool.some((p) => p.backup_mentor_id === m.user_id),
     ),
     [mentors, selectedPrimary, currentPool],
   );
@@ -145,7 +145,7 @@ const AdminMentorHandoversPage = () => {
 
   return (
     <div className="p-4 lg:p-6 space-y-6">
-      <div className="rounded-2xl bg-gradient-to-r from-secondary via-primary to-accent p-6 text-white">
+      <div className="rounded-2xl bg-[#0F1729] p-6 text-white">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
             <h1 className="text-2xl font-black font-display flex items-center gap-2">
@@ -155,9 +155,12 @@ const AdminMentorHandoversPage = () => {
               Configure backup mentors and trigger handovers when a primary is unavailable.
             </p>
           </div>
-          <Button onClick={openHandover} variant="secondary">
-            <Plus className="h-4 w-4 mr-2" /> New handover
-          </Button>
+          <button
+            onClick={openHandover}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-[#1d2026] hover:bg-white/90"
+          >
+            <Plus className="h-4 w-4" /> New handover
+          </button>
         </div>
       </div>
 

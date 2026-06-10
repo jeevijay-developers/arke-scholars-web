@@ -17,7 +17,7 @@ const STORAGE_KEY = "compete:active_match_id";
 
 const FOUNDATION_CLASSES = ["8", "9", "10"];
 const FOUNDATION_EXAM = "Foundation";
-const ADVANCED_EXAMS = ["JEE Main", "JEE Advanced", "NEET"];
+const ADVANCED_EXAMS = ["JEE", "NEET"];
 
 function getExamsForClass(classLevel: string, allExams: string[]): string[] {
   if (FOUNDATION_CLASSES.includes(classLevel)) {
@@ -33,7 +33,7 @@ const CompetePage = () => {
 
   const [phase, setPhase] = useState<Phase>("lobby");
   const [classLevel, setClassLevel] = useState("11");
-  const [targetExam, setTargetExam] = useState("JEE Main");
+  const [targetExam, setTargetExam] = useState("JEE");
   const [subject, setSubject] = useState("Physics");
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [matchId, setMatchId] = useState<string | null>(null);

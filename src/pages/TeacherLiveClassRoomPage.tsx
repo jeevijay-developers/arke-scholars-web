@@ -15,14 +15,13 @@ type ClassRow = {
   subject: string;
   educator_name: string;
   status: string;
-  meeting_url: string | null;
+  zoom_meeting_id: string | null;
+  zoom_meeting_password: string | null;
   recording_url: string | null;
   starts_at: string;
   ends_at: string | null;
   created_by: string | null;
   description: string | null;
-  zoom_meeting_id: string | null;
-  zoom_meeting_password: string | null;
 };
 
 type Attendee = {
@@ -71,12 +70,10 @@ const TeacherLiveClassRoomPage = () => {
       const id = data.id;
 
       const refreshAttendees = async () => {
-        const { data: rows, error: attErr } = await supabase
+        const { data: rows } = await supabase
           .from("live_class_attendance")
           .select("user_id, status, joined_at")
           .eq("class_id", id);
-        if (attErr) console.error("[Attendees] fetch failed:", attErr.message);
-
         const ids = (rows ?? []).map((r) => r.user_id);
         let names: Record<string, string> = {};
         if (ids.length) {
@@ -90,10 +87,7 @@ const TeacherLiveClassRoomPage = () => {
         }
         if (!cancelled) {
           setAttendees(
-            (rows ?? []).map((r) => ({
-              ...r,
-              display_name: names[r.user_id] || "Student",
-            })) as Attendee[],
+            (rows ?? []).map((r) => ({ ...r, display_name: names[r.user_id] || "Student" })) as Attendee[],
           );
         }
       };
@@ -111,9 +105,7 @@ const TeacherLiveClassRoomPage = () => {
         .on(
           "postgres_changes",
           { event: "UPDATE", schema: "public", table: "live_classes", filter: `id=eq.${id}` },
-          (payload) => {
-            setCls((prev) => (prev ? { ...prev, ...(payload.new as ClassRow) } : prev));
-          },
+          (payload) => { setCls((prev) => (prev ? { ...prev, ...(payload.new as ClassRow) } : prev)); },
         )
         .subscribe();
     })();
@@ -228,23 +220,21 @@ const TeacherLiveClassRoomPage = () => {
         </div>
       )}
 
-      {/* Main video area — full width, Zoom handles everything */}
-      <div className="flex-1 min-h-0 bg-[#0a0a0a]">
+      {/* Main — full-width Zoom meeting (no custom chat sidebar) */}
+      <div className="flex-1 min-h-0 relative bg-[#0a0a0a]">
         {isLive ? (
           cls.zoom_meeting_id ? (
-            <div className="h-full w-full">
-              <ZoomMeetingRoom
-                meetingNumber={cls.zoom_meeting_id}
-                password={cls.zoom_meeting_password ?? ""}
-                classSlug={cls.slug}
-                role="host"
-                displayName={teacherDisplay}
-                onLeave={() => navigate("/teacher/live-classes")}
-              />
-            </div>
+            <ZoomMeetingRoom
+              classId={cls.id}
+              classSlug={cls.slug}
+              displayName={teacherDisplay}
+              onLeave={() => navigate("/teacher/live-classes")}
+            />
           ) : (
-            <div className="flex h-full items-center justify-center text-white/60 text-sm px-4 text-center">
-              Zoom meeting not configured for this class. Please recreate it from admin.
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-white/60 gap-2 px-4 text-center">
+              <Video className="h-10 w-10 opacity-40" />
+              <p className="text-sm">Zoom meeting not configured.</p>
+              <p className="text-xs opacity-60">Re-create this class from admin to generate a Zoom meeting.</p>
             </div>
           )
         ) : isCompleted && cls.recording_url ? (
@@ -252,13 +242,13 @@ const TeacherLiveClassRoomPage = () => {
             src={cls.recording_url}
             title={cls.title}
             allow="fullscreen"
-            className="h-full w-full border-0"
+            className="absolute inset-0 h-full w-full border-0"
           />
         ) : (
-          <div className="flex h-full flex-col items-center justify-center text-white/60 px-4 text-center">
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-white/60 px-4 text-center">
             <Video className="h-10 w-10 mb-2 opacity-60" />
-            <p className="text-sm">Click "Start class" to begin your live stream.</p>
-            <p className="text-xs mt-1 opacity-60">Students will connect automatically when you go live.</p>
+            <p className="text-sm">Click "Start class" to launch the Zoom meeting.</p>
+            <p className="text-xs mt-1 opacity-60">Students connect automatically when you go live.</p>
           </div>
         )}
       </div>

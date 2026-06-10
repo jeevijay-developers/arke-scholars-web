@@ -308,10 +308,9 @@ const AdminCourseContentPage = () => {
         setUploadStates((prev) => ({ ...prev, [quality]: "error" }));
         reject(new Error("Upload failed"));
       };
+      // uploadUrl is a presigned URL — auth is in query params, only Content-Type needed
       xhr.open("PUT", data.uploadUrl);
-      Object.entries(data.headers as Record<string, string>).forEach(([k, v]) => {
-        xhr.setRequestHeader(k, v);
-      });
+      xhr.setRequestHeader("Content-Type", file.type || "video/mp4");
       xhr.send(file);
     });
   };

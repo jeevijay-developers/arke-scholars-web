@@ -146,13 +146,13 @@ const AdminTestsPage = () => {
   return (
     <div className="p-4 lg:p-6 space-y-6">
       {ConfirmDialog}
-      <div className="rounded-2xl bg-gradient-to-r from-primary via-accent to-secondary p-6 text-white flex items-start justify-between flex-wrap gap-3">
+      <div className="rounded-2xl bg-[#0F1729] p-6 text-white flex items-start justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-black font-display">Tests Management</h1>
           <p className="text-white/90 text-sm mt-1">Create, edit and publish test papers</p>
         </div>
         <div className="flex items-center gap-2">
-          <Link to="/admin/tests/new" className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-xs font-bold text-primary hover:bg-white/90">
+          <Link to="/admin/tests/new" className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-xs font-bold text-[#0F1729] hover:bg-white/90">
             <Plus className="h-4 w-4" /> Create Test
           </Link>
           <Link to="/admin/upload-questions" className="inline-flex items-center gap-1.5 rounded-lg bg-white/20 border border-white/40 px-3 py-2 text-xs font-bold text-white hover:bg-white/30">

@@ -400,9 +400,8 @@ const AdminCourseContentV2Page = () => {
   const handleS3Upload = async (file: File, setUrl: (u: string) => void) => {
     setUploadProgress(0);
     try {
-      // Get presigned URL from edge function
       const { data: presign, error: pErr } = await supabase.functions.invoke("get-upload-url", {
-        body: { fileName: file.name, fileType: file.type },
+        body: { fileName: file.name, fileType: file.type, contentLength: file.size },
       });
       if (pErr || !presign?.uploadUrl) throw new Error(pErr?.message ?? "Failed to get upload URL");
 
@@ -411,19 +410,21 @@ const AdminCourseContentV2Page = () => {
         if (e.lengthComputable) setUploadProgress(Math.round((e.loaded / e.total) * 100));
       };
       await new Promise<void>((resolve, reject) => {
-        xhr.onload = () => (xhr.status === 200 ? resolve() : reject(new Error("Upload failed")));
+        xhr.onload = () => (xhr.status === 200 ? resolve() : reject(new Error(`Upload failed (${xhr.status})`)));
         xhr.onerror = () => reject(new Error("Upload failed"));
+        // uploadUrl is a presigned URL — auth is in query params, only Content-Type needed
         xhr.open("PUT", presign.uploadUrl);
-        xhr.setRequestHeader("Content-Type", file.type);
+        xhr.setRequestHeader("Content-Type", file.type || "video/mp4");
         xhr.send(file);
       });
 
+      // fileUrl is the full public GET URL (includes bucket path prefix)
       setUrl(presign.fileUrl);
       setUploadProgress(null);
       toast.success("File uploaded");
-    } catch (e: any) {
+    } catch (e: unknown) {
       setUploadProgress(null);
-      toast.error(e.message ?? "Upload failed");
+      toast.error(e instanceof Error ? e.message : "Upload failed");
     }
   };
 
@@ -462,6 +463,7 @@ const AdminCourseContentV2Page = () => {
               title: fTitle.trim(),
               startTime: new Date(fScheduledAt).toISOString(),
               durationMinutes: 60,
+              teacherId: fTeacherId || undefined,
             },
           },
         );

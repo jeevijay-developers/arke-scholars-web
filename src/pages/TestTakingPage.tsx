@@ -59,7 +59,7 @@ const TestTakingPage = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
 
-  const [test, setTest] = useState<{ id: string; title: string; duration_minutes: number; total_questions: number } | null>(null);
+  const [test, setTest] = useState<{ id: string; slug: string; title: string; duration_minutes: number; total_questions: number } | null>(null);
   const [questions, setQuestions] = useState<TestQuestion[]>([]);
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [startedAt, setStartedAt] = useState<Date | null>(null);
@@ -72,8 +72,37 @@ const TestTakingPage = () => {
   const [statuses, setStatuses] = useState<Record<string, QStatus>>({});
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [tabSwitches, setTabSwitches] = useState(0);
+  const [tabWarnings, setTabWarnings] = useState(0);
+  const [showTabWarning, setShowTabWarning] = useState(false);
+  const [warningDropdownOpen, setWarningDropdownOpen] = useState(false);
+  const [autoSubmitModal, setAutoSubmitModal] = useState(false);
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+  const tabWarningsRef = useRef(0);
+  const autoSubmittedRef = useRef(false);
+  const warningBtnRef = useRef<HTMLButtonElement>(null);
+  const integerInputRef = useRef<HTMLInputElement>(null);
 
   const lastSavedRef = useRef<number>(0);
+  const answersRef = useRef<Record<string, AnswerState>>({});
+  const statusesRef = useRef<Record<string, QStatus>>({});
+
+  // Keep refs in sync so stale closures (timer, tab-switch handler) always see latest answers
+  useEffect(() => { answersRef.current = answers; }, [answers]);
+  useEffect(() => { statusesRef.current = statuses; }, [statuses]);
+
+  // Auto-focus integer input when switching to an integer-type question
+  useEffect(() => {
+    if (!started) return;
+    const cq = questions[currentQ];
+    if (!cq) return;
+    const isIntegerQ = cq.question_type === "integer" ||
+      (cq.question_type !== "match_column" && (!Array.isArray(cq.options) || (cq.options as unknown[]).length === 0));
+    if (isIntegerQ) {
+      const t = setTimeout(() => integerInputRef.current?.focus(), 80);
+      return () => clearTimeout(t);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentQ, started]);
 
   // Load test + existing in-progress attempt
   useEffect(() => {
@@ -84,11 +113,12 @@ const TestTakingPage = () => {
     }
     (async () => {
       setLoading(true);
-      const { data: t } = await supabase
+      // Accept both slug and UUID (content_items stores test_id as UUID)
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug ?? "");
+      const query = supabase
         .from("tests")
-        .select("id, title, duration_minutes, total_questions")
-        .eq("slug", slug)
-        .maybeSingle();
+        .select("id, slug, title, duration_minutes, total_questions");
+      const { data: t } = await (isUuid ? query.eq("id", slug) : query.eq("slug", slug)).maybeSingle();
       if (!t) {
         toast.error("Test not found");
         navigate("/my-tests");
@@ -150,13 +180,26 @@ const TestTakingPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [started, startedAt, test]);
 
-  // Anti-cheat: tab visibility
+  // Anti-cheat: tab visibility — 3 warnings then auto-submit
   useEffect(() => {
     if (!started) return;
     const handler = () => {
       if (document.hidden) {
+        const next = tabWarningsRef.current + 1;
+        tabWarningsRef.current = next;
         setTabSwitches((s) => s + 1);
-        toast.warning("Tab switching is logged during tests");
+        setTabWarnings(next);
+        setShowTabWarning(true);
+        setWarningDropdownOpen(true);
+        if (next >= 3) {
+          autoSubmittedRef.current = true;
+          handleSubmit(true, true); // save to DB, skip navigate
+        }
+      } else {
+        // student returned to the tab after auto-submit
+        if (autoSubmittedRef.current) {
+          setAutoSubmitModal(true);
+        }
       }
     };
     document.addEventListener("visibilitychange", handler);
@@ -166,6 +209,7 @@ const TestTakingPage = () => {
       document.removeEventListener("visibilitychange", handler);
       document.removeEventListener("contextmenu", noContext);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [started]);
 
   // Auto-save every 15s
@@ -185,13 +229,13 @@ const TestTakingPage = () => {
     await supabase
       .from("test_attempts")
       .update({
-        answers,
-        question_statuses: statuses,
+        answers: answersRef.current,
+        question_statuses: statusesRef.current,
         time_spent_seconds: startedAt ? Math.floor((Date.now() - startedAt.getTime()) / 1000) : 0,
         metadata: { tab_switches: tabSwitches },
       })
       .eq("id", attemptId);
-  }, [attemptId, answers, statuses, startedAt, tabSwitches]);
+  }, [attemptId, startedAt, tabSwitches]);
 
   const startAttempt = async () => {
     if (!user || !test) return;
@@ -271,14 +315,15 @@ const TestTakingPage = () => {
     updateStatus(q.id, "not-answered");
   };
 
-  const handleSubmit = async (auto = false) => {
+  const handleSubmit = async (auto = false, skipNavigate = false) => {
     if (!attemptId) return;
     setSubmitting(true);
+    // Use refs so this works correctly even when called from stale closures (timer, tab-switch)
     await supabase
       .from("test_attempts")
       .update({
-        answers,
-        question_statuses: statuses,
+        answers: answersRef.current,
+        question_statuses: statusesRef.current,
         status: auto ? "auto_submitted" : "submitted",
         submitted_at: new Date().toISOString(),
         time_spent_seconds: startedAt ? Math.floor((Date.now() - startedAt.getTime()) / 1000) : 0,
@@ -289,7 +334,9 @@ const TestTakingPage = () => {
     const { error } = await supabase.rpc("submit_test_attempt", { _attempt_id: attemptId });
     if (error) toast.error(error.message);
 
-    navigate(`/tests/${slug}/result/${attemptId}`);
+    if (!skipNavigate) {
+      navigate(`/tests/${test?.slug ?? slug}/result/${attemptId}`);
+    }
   };
 
   const counts = useMemo(() => {
@@ -346,7 +393,8 @@ const TestTakingPage = () => {
             </p>
             <ul className="text-xs text-muted-foreground space-y-1 list-disc pl-4">
               <li>Once started, the timer cannot be paused.</li>
-              <li>Tab switching and right-click are logged.</li>
+              <li>Switching tabs triggers a warning. <strong className="text-destructive">3 warnings = auto-submit.</strong></li>
+              <li>Right-click is disabled during the test.</li>
               <li>Your progress saves automatically every 15 seconds.</li>
               <li>The test auto-submits when time is up.</li>
             </ul>
@@ -378,15 +426,148 @@ const TestTakingPage = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col select-none">
       <SEO title={test.title} description={`Taking ${test.title} on ARKE Scholars.`} />
-      <header className="bg-card border-b border-border px-4 py-3 flex items-center justify-between">
+
+      {/* Auto-submit modal — shown when student returns to tab after 3rd violation */}
+      {autoSubmitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-sm rounded-2xl border border-destructive/30 bg-card p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-foreground">Test Auto-Submitted</p>
+                <p className="text-xs text-muted-foreground">Integrity violation detected</p>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Your test has been auto-submitted due to tab switch detection.
+            </p>
+            <button
+              onClick={() => navigate(`/tests/${test?.slug ?? slug}/result/${attemptId}`)}
+              className="w-full rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground"
+            >
+              View Results
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Submit confirmation modal */}
+      {showSubmitConfirm && (() => {
+        const confirmAttempted = Object.values(answersRef.current).filter((a) => {
+          if (!a) return false;
+          if (a.value != null && String(a.value).trim() !== "") return true;
+          if (Array.isArray(a.multiSelected) && a.multiSelected.length > 0) return true;
+          if (a.mapping != null && Object.keys(a.mapping).length > 0) return true;
+          return a.selected != null;
+        }).length;
+        const confirmTotal = questions.length;
+        const confirmUnattempted = confirmTotal - confirmAttempted;
+        const confirmMarked = Object.values(statusesRef.current).filter(
+          (s) => s === "marked" || s === "answered-marked"
+        ).length;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div className="mx-4 w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-5">
+              <div>
+                <p className="text-base font-black text-foreground">Submit Test?</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Review your attempt before submitting.</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-secondary/10 p-3 text-center">
+                  <p className="text-xl font-black text-secondary">{confirmAttempted}</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Attempted</p>
+                </div>
+                <div className="rounded-xl bg-muted p-3 text-center">
+                  <p className="text-xl font-black text-muted-foreground">{confirmUnattempted}</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Unattempted</p>
+                </div>
+                <div className="rounded-xl bg-accent/10 p-3 text-center">
+                  <p className="text-xl font-black text-accent">{confirmMarked}</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Marked</p>
+                </div>
+                <div className="rounded-xl bg-primary/10 p-3 text-center">
+                  <p className="text-xl font-black text-primary">{confirmTotal}</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Total</p>
+                </div>
+              </div>
+              {confirmUnattempted > 0 && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3 shrink-0" />
+                  {confirmUnattempted} question{confirmUnattempted !== 1 ? "s" : ""} left unattempted.
+                </p>
+              )}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowSubmitConfirm(false)}
+                  className="flex-1 rounded-xl border border-border py-2.5 text-sm font-medium text-foreground hover:bg-muted/50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => { setShowSubmitConfirm(false); handleSubmit(false); }}
+                  disabled={submitting}
+                  className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-bold text-primary-foreground disabled:opacity-50"
+                >
+                  {submitting ? "Submitting…" : "Submit"}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      <header className="bg-card border-b border-border px-4 py-3 flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-bold text-foreground truncate">{test.title}</p>
           <p className="text-[10px] text-muted-foreground">
             Question {currentQ + 1} / {questions.length}
           </p>
         </div>
-        <div className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-bold ${lowTime ? "bg-destructive text-destructive-foreground" : "bg-primary/10 text-primary"}`}>
-          <Clock className="h-4 w-4" /> {String(hrs).padStart(2, "0")}:{String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
+
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Warning indicator — only shown after first tab switch */}
+          {showTabWarning && (
+            <div className="relative">
+              <button
+                ref={warningBtnRef}
+                onClick={() => setWarningDropdownOpen((o) => !o)}
+                className="relative flex items-center justify-center h-8 w-8 rounded-full bg-amber-500/10 hover:bg-amber-500/20 transition-colors"
+                aria-label="Tab switch warnings"
+              >
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-black text-white leading-none">
+                  {tabWarnings}
+                </span>
+              </button>
+
+              {warningDropdownOpen && (
+                <>
+                  {/* Click-outside dismiss */}
+                  <div className="fixed inset-0 z-40" onClick={() => setWarningDropdownOpen(false)} />
+                  <div className="absolute right-0 top-10 z-50 w-64 rounded-xl border border-amber-500/20 bg-card shadow-lg overflow-hidden">
+                    <div className="flex items-center gap-2 bg-amber-500/10 px-3 py-2.5 border-b border-amber-500/20">
+                      <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                      <p className="text-xs font-bold text-amber-700 dark:text-amber-400">Tab switch detected</p>
+                    </div>
+                    <div className="px-3 py-2.5 space-y-1">
+                      <p className="text-xs text-foreground">
+                        You have used <span className="font-bold text-amber-600">{tabWarnings}</span> of 3 warnings.
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {3 - tabWarnings} warning{3 - tabWarnings !== 1 ? "s" : ""} left before your test is auto-submitted.
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          <div className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-bold ${lowTime ? "bg-destructive text-destructive-foreground" : "bg-primary/10 text-primary"}`}>
+            <Clock className="h-4 w-4" /> {String(hrs).padStart(2, "0")}:{String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
+          </div>
         </div>
       </header>
 
@@ -399,12 +580,15 @@ const TestTakingPage = () => {
               <span className="ml-auto">+{q.marks_correct} / {q.marks_wrong}</span>
             </div>
             <div className="text-sm text-foreground leading-relaxed"><LatexRenderer html={q.question_text} /></div>
-            {/* Integer */}
-            {q.question_type === "integer" && (
+            {/* Integer — also shown as fallback when question has no options */}
+            {(q.question_type === "integer" ||
+              (q.question_type !== "match_column" &&
+                (!Array.isArray(q.options) || (q.options as unknown[]).length === 0))) && (
               <div className="flex justify-center py-4">
                 <div className="space-y-3 text-center">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Enter your integer answer</p>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Enter your answer</p>
                   <input
+                    ref={integerInputRef}
                     type="number"
                     step="1"
                     inputMode="numeric"
@@ -414,7 +598,7 @@ const TestTakingPage = () => {
                     className="w-56 rounded-2xl border-2 border-primary/40 bg-primary/5 px-5 py-4 text-center text-2xl font-bold text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                     placeholder="—"
                   />
-                  <p className="text-[10px] text-muted-foreground">Only whole numbers accepted</p>
+                  <p className="text-[10px] text-muted-foreground">Whole numbers only (negative allowed)</p>
                 </div>
               </div>
             )}
@@ -463,7 +647,8 @@ const TestTakingPage = () => {
             })()}
 
             {/* SCQ / MCQ / Assertion-Reasoning options */}
-            {q.question_type !== "integer" && q.question_type !== "match_column" && (() => {
+            {q.question_type !== "integer" && q.question_type !== "match_column" &&
+              Array.isArray(q.options) && (q.options as unknown[]).length > 0 && (() => {
               const opts = q.options as { id: number; text: string; image?: string | null }[];
               if (!opts?.length) return null;
               const isMcq = q.question_type === "mcq";
@@ -513,7 +698,7 @@ const TestTakingPage = () => {
             </button>
             <div className="flex w-full justify-between gap-4">
               <button
-                onClick={() => handleSubmit(false)}
+                onClick={() => setShowSubmitConfirm(true)}
                 disabled={submitting}
                 className="rounded-lg bg-secondary px-4 py-2 text-xs font-bold text-secondary-foreground disabled:opacity-50"
               >

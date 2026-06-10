@@ -18,7 +18,7 @@ export const useCompeteTopics = (subject: string, classLevel: string, targetExam
         .eq("subject", subject)
         .eq("is_active", true)
         .eq("class_level", classLevel || "11")
-        .eq("target_exam", targetExam || "JEE Main");
+        .eq("target_exam", targetExam || "JEE");
 
       if (cancelled) return;
 

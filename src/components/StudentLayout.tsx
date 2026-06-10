@@ -1,7 +1,7 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, BookOpen, Video, ClipboardCheck, MessageCircle, Swords, BarChart3, Trophy, User, Settings, Search, Users, Menu, X, Heart } from "lucide-react";
+import { Home, BookOpen, Video, ClipboardCheck, MessageCircle, Swords, BarChart3, Trophy, User, Settings, Search, Users, Menu, X, LogOut, Flame } from "lucide-react";
 import LogoutButton from "@/components/LogoutButton";
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useRef, useState, useEffect } from "react";
 import arkeLogo from "@/assets/arke-logo.png";
 import LiveBadge from "@/components/LiveBadge";
 import NotificationBell from "@/components/NotificationBell";
@@ -18,28 +18,86 @@ type StudentNavItem = {
   path: string;
   live?: boolean;
   badge?: number;
+  flame?: boolean;
 };
 
-const buildNavItems = (doubtCount: number, liveCount: number, hasLive: boolean): StudentNavItem[] => [
+const buildNavItems = (doubtCount: number): StudentNavItem[] => [
   { label: "Home", icon: Home, path: "/dashboard" },
   { label: "My Learning", icon: BookOpen, path: "/my-courses" },
-  { label: "Favourites", icon: Heart, path: "/favourite-courses" },
-  { label: "Live Classes", icon: Video, path: "/my-live-classes", live: hasLive, badge: liveCount || undefined },
-  { label: "Tests", icon: ClipboardCheck, path: "/my-tests" },
+  { label: "Compete", icon: Swords, path: "/compete", flame: true },
   { label: "Doubts", icon: MessageCircle, path: "/doubts", badge: doubtCount || undefined },
   { label: "Mentor Chat", icon: Users, path: "/mentor-chat" },
 ];
 
-const exploreItems: StudentNavItem[] = [
-  { label: "Compete", icon: Swords, path: "/compete" },
+const dropdownItems = [
+  { label: "Profile", icon: User, path: "/profile" },
   { label: "My Analytics", icon: BarChart3, path: "/analytics" },
   { label: "Leaderboard", icon: Trophy, path: "/leaderboard" },
-];
-
-const accountItems: StudentNavItem[] = [
-  { label: "Profile", icon: User, path: "/profile" },
   { label: "Settings", icon: Settings, path: "/settings" },
 ];
+
+type AvatarDropdownProps = {
+  fullName: string;
+  avatarUrl?: string;
+  initials: string;
+  onLogout: () => void;
+};
+
+const AvatarDropdown = memo(({ fullName, avatarUrl, initials, onLogout }: AvatarDropdownProps) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    if (open) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  useEffect(() => { setOpen(false); }, [pathname]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-light text-xs font-bold text-primary overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary/40"
+      >
+        {avatarUrl ? (
+          <img src={avatarUrl} alt={fullName} className="h-full w-full object-cover" />
+        ) : initials}
+      </button>
+      {open && (
+        <div className="absolute right-0 top-10 z-50 w-52 rounded-xl border border-border bg-card shadow-lg py-1.5">
+          <div className="px-3 py-2 border-b border-border mb-1">
+            <p className="text-xs font-semibold text-foreground truncate">{fullName || "Student"}</p>
+          </div>
+          {dropdownItems.map((item) => (
+            <Link
+              key={item.path}
+              to={item.path}
+              className="flex items-center gap-2.5 px-3 py-2 text-sm text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground transition-colors"
+            >
+              <item.icon className="h-4 w-4 shrink-0" />
+              {item.label}
+            </Link>
+          ))}
+          <div className="border-t border-border mt-1 pt-1">
+            <button
+              onClick={() => { setOpen(false); onLogout(); }}
+              className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+            >
+              <LogOut className="h-4 w-4 shrink-0" />
+              Logout
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
+AvatarDropdown.displayName = "AvatarDropdown";
 
 type SidebarProps = {
   fullName: string;
@@ -47,13 +105,11 @@ type SidebarProps = {
   initials: string;
   onLogout: () => void;
   doubtCount: number;
-  liveCount: number;
-  hasLive: boolean;
 };
 
 // Isolated, memoized sidebar — re-renders only when its props or pathname change.
-const StudentSidebar = memo(({ fullName, avatarUrl, initials, onLogout, doubtCount, liveCount, hasLive }: SidebarProps) => {
-  const navItems = buildNavItems(doubtCount, liveCount, hasLive);
+const StudentSidebar = memo(({ fullName, avatarUrl, initials, onLogout, doubtCount }: SidebarProps) => {
+  const navItems = buildNavItems(doubtCount);
   const { pathname } = useLocation();
 
   const renderItem = (item: StudentNavItem) => {
@@ -66,6 +122,7 @@ const StudentSidebar = memo(({ fullName, avatarUrl, initials, onLogout, doubtCou
       >
         <item.icon className="h-4.5 w-4.5 shrink-0" />
         <span className="flex-1">{item.label}</span>
+        {item.flame && <Flame className="h-3.5 w-3.5 text-orange-500 shrink-0" />}
         {item.live && <LiveBadge />}
         {item.badge ? (
           <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
@@ -87,10 +144,6 @@ const StudentSidebar = memo(({ fullName, avatarUrl, initials, onLogout, doubtCou
       <nav className="flex-1 px-3 space-y-1">
         <p className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Main</p>
         {navItems.map(renderItem)}
-        <p className="px-3 pt-4 pb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Explore</p>
-        {exploreItems.map(renderItem)}
-        <p className="px-3 pt-4 pb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Account</p>
-        {accountItems.map(renderItem)}
       </nav>
 
       <div className="border-t border-border p-4">
@@ -104,7 +157,6 @@ const StudentSidebar = memo(({ fullName, avatarUrl, initials, onLogout, doubtCou
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-semibold text-foreground truncate">{fullName || "Guest"}</p>
-            <Link to="/profile" className="text-[10px] text-primary hover:underline">View Profile</Link>
           </div>
         </div>
         <LogoutButton onConfirm={onLogout} />
@@ -171,7 +223,7 @@ const StudentLayout = () => {
     ? fullName.split(" ").filter(Boolean).slice(0, 2).map((n) => n[0]?.toUpperCase()).join("")
     : "U";
 
-  const navItems = buildNavItems(pendingDoubtCount, liveUnreadCount, hasLive);
+  const navItems = buildNavItems(pendingDoubtCount);
 
   const renderDrawerItem = (item: StudentNavItem) => {
     const active = pathname === item.path;
@@ -194,6 +246,10 @@ const StudentLayout = () => {
     );
   };
 
+  // suppress unused var warning — hasLive kept for future use
+  void hasLive;
+  void liveUnreadCount;
+
   return (
     <div className={`flex min-h-screen bg-background ${drawerOpen ? "overflow-hidden" : ""}`}>
       {/* Desktop sidebar */}
@@ -203,8 +259,6 @@ const StudentLayout = () => {
         initials={initials}
         onLogout={handleLogout}
         doubtCount={pendingDoubtCount}
-        liveCount={liveUnreadCount}
-        hasLive={hasLive}
       />
 
       {/* Mobile drawer backdrop */}
@@ -231,10 +285,21 @@ const StudentLayout = () => {
         <nav className="flex-1 px-3 py-3 space-y-1">
           <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Main</p>
           {navItems.map(renderDrawerItem)}
-          <p className="px-3 pt-3 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Explore</p>
-          {exploreItems.map(renderDrawerItem)}
           <p className="px-3 pt-3 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Account</p>
-          {accountItems.map(renderDrawerItem)}
+          {dropdownItems.map((item) => {
+            const active = pathname === item.path;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                onClick={() => setDrawerOpen(false)}
+                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground"}`}
+              >
+                <item.icon className="h-4 w-4 shrink-0" />
+                <span className="flex-1">{item.label}</span>
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="border-t border-border p-4">
@@ -246,7 +311,6 @@ const StudentLayout = () => {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-foreground truncate">{fullName || "Guest"}</p>
-              <Link to="/profile" onClick={() => setDrawerOpen(false)} className="text-[10px] text-primary hover:underline">View Profile</Link>
             </div>
           </div>
           <LogoutButton onConfirm={handleLogout} />
@@ -274,11 +338,12 @@ const StudentLayout = () => {
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <NotificationBell />
-              <Link to="/profile" className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-light text-xs font-bold text-primary overflow-hidden">
-                {user?.avatar_url ? (
-                  <img src={user.avatar_url} alt={fullName} className="h-full w-full object-cover" />
-                ) : (fullName?.split(" ").map((n) => n[0]).join("").slice(0, 2) || "U")}
-              </Link>
+              <AvatarDropdown
+                fullName={fullName}
+                avatarUrl={user?.avatar_url}
+                initials={fullName?.split(" ").map((n) => n[0]).join("").slice(0, 2) || "U"}
+                onLogout={handleLogout}
+              />
             </div>
           </div>
           {/* Desktop: search left, icons right */}
@@ -293,11 +358,12 @@ const StudentLayout = () => {
             </div>
             <div className="flex items-center gap-3">
               <NotificationBell />
-              <Link to="/profile" className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-light text-xs font-bold text-primary overflow-hidden">
-                {user?.avatar_url ? (
-                  <img src={user.avatar_url} alt={fullName} className="h-full w-full object-cover" />
-                ) : (fullName?.split(" ").map((n) => n[0]).join("").slice(0, 2) || "U")}
-              </Link>
+              <AvatarDropdown
+                fullName={fullName}
+                avatarUrl={user?.avatar_url}
+                initials={initials}
+                onLogout={handleLogout}
+              />
             </div>
           </div>
         </header>

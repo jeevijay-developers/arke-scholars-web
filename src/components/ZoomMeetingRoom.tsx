@@ -3,26 +3,19 @@ import { Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export type ZoomMeetingRoomProps = {
-  meetingNumber: string;
-  password: string;
-  classSlug: string;
-  role: "host" | "attendee";
+  /** live_classes.id (UUID) — credentials and role are derived server-side */
+  classId: string;
+  classSlug?: string;
   displayName: string;
   onLeave?: () => void;
 };
 
 type Status = "loading" | "ready" | "error";
 
-const ZoomMeetingRoom = ({
-  meetingNumber,
-  password,
-  classSlug,
-  role,
-  displayName,
-  onLeave,
-}: ZoomMeetingRoomProps) => {
+const ZoomMeetingRoom = ({ classId, classSlug, displayName, onLeave }: ZoomMeetingRoomProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const clientRef = useRef<ReturnType<typeof import("@zoom/meetingsdk").ZoomMtgEmbedded.createClient> | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const clientRef = useRef<any>(null);
   const joinedRef = useRef(false);
 
   const [status, setStatus] = useState<Status>("loading");
@@ -33,9 +26,7 @@ const ZoomMeetingRoom = ({
 
     const init = async () => {
       try {
-        // Dynamically import to avoid SSR / Vite build issues with the heavy SDK bundle
         const { ZoomMtgEmbedded } = await import("@zoom/meetingsdk");
-
         if (cancelled) return;
 
         const client = ZoomMtgEmbedded.createClient();
@@ -48,25 +39,20 @@ const ZoomMeetingRoom = ({
           language: "en-US",
           customize: {
             meetingInfo: ["topic", "host", "mn", "pwd", "telPwd", "invite", "participant", "dc", "enctype"],
-            toolbar: {
-              buttons: [
-                { text: "Leave", className: "CustomButton", event: "leave" },
-              ],
-            },
           },
         });
 
-        // Fetch signature from edge function (role derived server-side)
+        // Fetch signature + meeting credentials from server (role derived server-side)
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.access_token) throw new Error("Not authenticated");
 
         const { data, error: fnErr } = await supabase.functions.invoke("zoom-signature", {
-          body: { meetingNumber, classSlug },
+          body: { classId, classSlug },
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
 
         if (fnErr || !data?.signature) {
-          throw new Error(fnErr?.message || "Failed to get meeting signature");
+          throw new Error(fnErr?.message ?? "Failed to get meeting signature");
         }
 
         if (cancelled) return;
@@ -74,16 +60,17 @@ const ZoomMeetingRoom = ({
         await client.join({
           signature: data.signature,
           sdkKey: data.sdkKey,
-          meetingNumber: meetingNumber.replace(/\D/g, ""),
-          password,
+          meetingNumber: data.meetingNumber,
+          password: data.password ?? "",
           userName: displayName,
         });
 
         joinedRef.current = true;
         if (!cancelled) setStatus("ready");
 
-        client.on("connection-change", (payload: { state: string }) => {
-          if (payload.state === "Closed" || payload.state === "Fail") {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        client.on("connection-change", (payload: any) => {
+          if (payload?.state === "Closed" || payload?.state === "Fail") {
             onLeave?.();
           }
         });
@@ -105,7 +92,7 @@ const ZoomMeetingRoom = ({
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [meetingNumber, classSlug, role]);
+  }, [classId]);
 
   if (status === "error") {
     return (
@@ -131,11 +118,7 @@ const ZoomMeetingRoom = ({
         </div>
       )}
       {/* Zoom Component View mounts here */}
-      <div
-        ref={containerRef}
-        id="meetingSDKElement"
-        className="h-full w-full"
-      />
+      <div ref={containerRef} id="meetingSDKElement" className="h-full w-full" />
     </div>
   );
 };
