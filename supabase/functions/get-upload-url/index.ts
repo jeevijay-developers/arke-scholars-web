@@ -5,9 +5,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const S3_ENDPOINT = 'https://s3.ap-tokyo.megas4.com'
-const REGION = 'us-east-1'
-const SERVICE = 's3'
+const S3_ENDPOINT  = 'https://s3.ap-tokyo.megas4.com'
+// Public read base — bucket path is required for GET even though PUT doesn't need it
+const S3_READ_BASE = 'https://s3.ap-tokyo.megas4.com/biijszzsfufvateaffbvtjapmculhceod7agr'
+const REGION   = 'us-east-1'
+const SERVICE  = 's3'
+const EXPIRES  = 3600 // presigned URL valid for 1 hour
 
 // --- AWS4 signing helpers ---
 
@@ -24,29 +27,49 @@ async function sha256hex(data: string): Promise<string> {
   return toHex(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data))))
 }
 
-async function buildAuthHeader(
+// Build a presigned PUT URL (auth in query string, no custom request headers needed).
+// This avoids CORS preflight issues that arise when browsers send Authorization headers.
+async function buildPresignedPutUrl(
   accessKeyId: string,
   secretKey: string,
-  method: string,
-  path: string,
-  signedHeaders: Record<string, string>, // lowercase key → value, sorted
+  host: string,
+  key: string,
+  contentType: string,
   amzDate: string,
   dateStamp: string,
 ): Promise<string> {
-  const sortedNames = Object.keys(signedHeaders).sort()
-  const canonicalHeaders = sortedNames.map(k => `${k}:${signedHeaders[k]}\n`).join('')
-  const signedHeadersStr = sortedNames.join(';')
+  const credential    = `${accessKeyId}/${dateStamp}/${REGION}/${SERVICE}/aws4_request`
+  const signedHeaders = 'content-type;host'
+
+  // Canonical query string — params must be sorted alphabetically and URI-encoded
+  const qpRaw: Record<string, string> = {
+    'X-Amz-Algorithm':    'AWS4-HMAC-SHA256',
+    'X-Amz-Credential':   credential,
+    'X-Amz-Date':         amzDate,
+    'X-Amz-Expires':      String(EXPIRES),
+    'X-Amz-SignedHeaders': signedHeaders,
+  }
+  const canonicalQS = Object.keys(qpRaw)
+    .sort()
+    .map(k => `${encodeURIComponent(k)}=${encodeURIComponent(qpRaw[k])}`)
+    .join('&')
 
   const canonicalRequest = [
-    method, path, '',
-    canonicalHeaders,
-    signedHeadersStr,
+    'PUT',
+    `/${key}`,
+    canonicalQS,
+    `content-type:${contentType}\nhost:${host}\n`,
+    signedHeaders,
     'UNSIGNED-PAYLOAD',
   ].join('\n')
 
-  const hashedCanonical = await sha256hex(canonicalRequest)
   const credentialScope = `${dateStamp}/${REGION}/${SERVICE}/aws4_request`
-  const stringToSign = `AWS4-HMAC-SHA256\n${amzDate}\n${credentialScope}\n${hashedCanonical}`
+  const stringToSign = [
+    'AWS4-HMAC-SHA256',
+    amzDate,
+    credentialScope,
+    await sha256hex(canonicalRequest),
+  ].join('\n')
 
   const kDate    = await hmac(new TextEncoder().encode('AWS4' + secretKey), dateStamp)
   const kRegion  = await hmac(kDate, REGION)
@@ -54,7 +77,7 @@ async function buildAuthHeader(
   const kSigning = await hmac(kService, 'aws4_request')
   const signature = toHex(await hmac(kSigning, stringToSign))
 
-  return `AWS4-HMAC-SHA256 Credential=${accessKeyId}/${credentialScope}, SignedHeaders=${signedHeadersStr}, Signature=${signature}`
+  return `${S3_ENDPOINT}/${key}?${canonicalQS}&X-Amz-Signature=${encodeURIComponent(signature)}`
 }
 
 // ---
@@ -95,23 +118,23 @@ Deno.serve(async (req) => {
   }
 
   let lessonId: string
+  let fileName: string
   let contentType: string
-  let contentLength: number
   let quality: string
   try {
-    const body = await req.json()
-    lessonId      = String(body.lessonId ?? '')
-    contentType   = String(body.contentType ?? 'video/mp4')
-    contentLength = Number(body.contentLength ?? 0)
-    quality       = String(body.quality ?? 'original')
+    const body  = await req.json()
+    lessonId    = String(body.lessonId  ?? '')
+    fileName    = String(body.fileName  ?? '')
+    contentType = String(body.contentType ?? body.fileType ?? 'video/mp4')
+    quality     = String(body.quality   ?? 'original')
   } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
       status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
 
-  if (!lessonId || !contentLength) {
-    return new Response(JSON.stringify({ error: 'lessonId and contentLength are required' }), {
+  if (!lessonId && !fileName) {
+    return new Response(JSON.stringify({ error: 'lessonId or fileName is required' }), {
       status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
@@ -123,34 +146,34 @@ Deno.serve(async (req) => {
   const amzDate   = now.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z')
   const dateStamp = amzDate.slice(0, 8)
 
-  const VALID_QUALITIES = ['720p', '360p', '240p']
-  const key = VALID_QUALITIES.includes(quality)
-    ? `arke/${lessonId}_${quality}.mp4`
-    : `arke/${lessonId}.mp4`
-  const uploadUrl = `${S3_ENDPOINT}/${key}`
-  const host      = 's3.ap-tokyo.megas4.com'
-
-  // These are the headers the browser will send in the PUT — must match exactly
-  const signedHeaders: Record<string, string> = {
-    'content-type':          contentType,
-    'host':                  host,
-    'x-amz-content-sha256': 'UNSIGNED-PAYLOAD',
-    'x-amz-date':            amzDate,
+  // Determine S3 key:
+  // - Lesson uploads: keyed by lessonId with optional quality suffix
+  // - Content-item uploads: keyed by a random UUID so filenames cannot collide or be guessed
+  let key: string
+  if (lessonId) {
+    const VALID_QUALITIES = ['720p', '360p', '240p']
+    key = VALID_QUALITIES.includes(quality)
+      ? `arke/${lessonId}_${quality}.mp4`
+      : `arke/${lessonId}.mp4`
+  } else {
+    const ext = fileName.includes('.')
+      ? fileName.slice(fileName.lastIndexOf('.')).toLowerCase()
+      : '.mp4'
+    const uuid = crypto.randomUUID()
+    key = `content-items/${uuid}${ext}`
   }
 
-  const authorization = await buildAuthHeader(
-    accessKeyId, secretKey, 'PUT', `/${key}`, signedHeaders, amzDate, dateStamp,
+  const host        = 's3.ap-tokyo.megas4.com'
+  const uploadUrl   = await buildPresignedPutUrl(
+    accessKeyId, secretKey, host, key, contentType, amzDate, dateStamp,
   )
 
   return new Response(JSON.stringify({
+    // uploadUrl is now a presigned URL — browser just PUTs with Content-Type, no auth headers
     uploadUrl,
+    // fileUrl is the public GET URL — bucket path is required for reads
+    fileUrl: `${S3_READ_BASE}/${key}`,
     key,
-    headers: {
-      'Authorization':        authorization,
-      'Content-Type':         contentType,
-      'X-Amz-Content-Sha256': 'UNSIGNED-PAYLOAD',
-      'X-Amz-Date':           amzDate,
-    },
   }), {
     status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })

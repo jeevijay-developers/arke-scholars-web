@@ -118,7 +118,7 @@ serve(async (req) => {
     const admin = createClient(supabaseUrl, serviceKey);
     const { data: course, error: courseErr } = await admin
       .from("courses")
-      .select("id, name, price")
+      .select("id, name, sale_price, is_course_free")
       .eq("id", orderedCourseId)
       .maybeSingle();
     if (courseErr || !course) {
@@ -153,9 +153,10 @@ serve(async (req) => {
       });
     }
 
-    // Step 6: Validate captured amount matches DB price (no underpayment)
-    const expectedPaise = Math.round(Number(course.price) * 100);
-    if (capturedPayment.amount < expectedPaise) {
+    // Step 6: Validate captured amount matches DB price (no underpayment).
+    // Free courses bypass the amount check entirely.
+    const expectedPaise = Math.round(Number((course as any).sale_price ?? 0) * 100);
+    if (!((course as any).is_course_free) && capturedPayment.amount < expectedPaise) {
       console.error("Payment amount insufficient", { paid: capturedPayment.amount, expected: expectedPaise });
       return new Response(JSON.stringify({ error: "Payment amount does not match course price" }), {
         status: 400,

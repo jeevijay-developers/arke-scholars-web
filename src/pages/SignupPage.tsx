@@ -17,11 +17,7 @@ const FOUNDATION_CLASSES = [
 const SENIOR_CLASSES = [
   { value: "11", label: "Class 11" },
   { value: "12", label: "Class 12" },
-];
-const BOARD_CLASSES = [
-  { value: "10", label: "Class 10" },
-  { value: "11", label: "Class 11" },
-  { value: "12", label: "Class 12" },
+  { value: "dropper", label: "12th Pass (Dropper)" },
 ];
 
 const SignupPage = () => {
@@ -36,7 +32,7 @@ const SignupPage = () => {
   const [cooldown, setCooldown] = useState(0);
   const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const [profile, setProfile] = useState({ full_name: "", target_exam: "JEE Main", class_level: "11" });
+  const [profile, setProfile] = useState({ full_name: "", target_exam: "JEE", class_level: "11" });
   const [submitting, setSubmitting] = useState(false);
 
   const fullPhone = `${countryCode}${phone}`;
@@ -77,8 +73,12 @@ const SignupPage = () => {
       return;
     }
     setSending(true);
-    await new Promise((r) => setTimeout(r, 500));
+    const { error } = await supabase.auth.signInWithOtp({ phone: fullPhone });
     setSending(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success("OTP sent to your phone!");
     startCooldown();
     setStep("otp");
@@ -86,8 +86,12 @@ const SignupPage = () => {
 
   const handleResend = async () => {
     setResending(true);
-    await new Promise((r) => setTimeout(r, 500));
+    const { error } = await supabase.auth.signInWithOtp({ phone: fullPhone });
     setResending(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success("New OTP sent");
     startCooldown();
     setDigits(Array(OTP_LENGTH).fill(""));
@@ -96,16 +100,18 @@ const SignupPage = () => {
 
   const handleVerifyOtp = async () => {
     if (otp.length < OTP_LENGTH) { toast.error("Enter the full 6-digit code"); return; }
-    if (otp !== "123456") { toast.error("Invalid OTP. Try again."); return; }
     setVerifying(true);
-    await supabase.auth.signInAnonymously();
+    const { error } = await supabase.auth.verifyOtp({ phone: fullPhone, token: otp, type: "sms" });
     setVerifying(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     setStep("profile");
   };
 
   const isFoundation = profile.target_exam === "Foundation";
-  const isBoards = profile.target_exam === "Boards";
-  const classOptions = isFoundation ? FOUNDATION_CLASSES : isBoards ? BOARD_CLASSES : SENIOR_CLASSES;
+  const classOptions = isFoundation ? FOUNDATION_CLASSES : SENIOR_CLASSES;
 
   const updateProfile = (k: keyof typeof profile, v: string) =>
     setProfile((p) => {
@@ -263,8 +269,7 @@ const SignupPage = () => {
                   <div>
                     <label className="text-sm font-medium text-foreground">Target Exam</label>
                     <select value={profile.target_exam} onChange={(e) => updateProfile("target_exam", e.target.value)} className="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground">
-                      <option>JEE Main</option>
-                      <option>JEE Advanced</option>
+                      <option>JEE</option>
                       <option>NEET</option>
                       <option>Foundation</option>
                     </select>

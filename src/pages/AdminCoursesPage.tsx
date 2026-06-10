@@ -78,14 +78,14 @@ const AdminCoursesPage = () => {
   return (
     <div className="p-4 lg:p-6 space-y-6">
       {ConfirmDialog}
-      <div className="rounded-2xl bg-gradient-to-r from-primary via-accent to-secondary p-6 text-white flex items-start justify-between gap-4 flex-wrap">
+      <div className="rounded-2xl bg-[#0F1729] p-6 text-white flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-black font-display">Courses Management</h1>
           <p className="text-white/90 text-sm mt-1">Review, activate, and manage all platform courses</p>
         </div>
         <Link
           to="/admin/courses/new"
-          className="inline-flex items-center gap-2 rounded-lg bg-white text-primary px-4 py-2 text-sm font-bold shadow-sm hover:bg-white/90 transition-colors"
+          className="inline-flex items-center gap-2 rounded-lg bg-white text-[#0F1729] px-4 py-2 text-sm font-bold shadow-sm hover:bg-white/90 transition-colors"
         >
           <Plus className="h-4 w-4" /> New Course
         </Link>

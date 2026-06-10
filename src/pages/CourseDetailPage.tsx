@@ -131,19 +131,19 @@ const CourseDetailPage = () => {
 
   const stats = enrolled
     ? [
-        { value: String(totalLessons), label: "Lectures" },
-        { value: String(tests.length), label: "Tests" },
-        { value: String(allNotes.length), label: "Notes" },
-        { value: `${totalHours}h`, label: "Total Time" },
-        { value: `${progressPercent}%`, label: "Progress" },
-      ]
+      { value: String(totalLessons), label: "Lectures" },
+      { value: String(tests.length), label: "Tests" },
+      { value: String(allNotes.length), label: "Notes" },
+      { value: `${totalHours}h`, label: "Total Time" },
+      { value: `${progressPercent}%`, label: "Progress" },
+    ]
     : [
-        { value: String(totalLessons), label: "Lectures" },
-        { value: String(tests.length), label: "Tests" },
-        { value: String(allNotes.length), label: "Notes" },
-        { value: `${totalHours}h`, label: "Total Time" },
-        { value: `${course.rating ? Number(course.rating).toFixed(1) : "N/A"}★`, label: "Rating" },
-      ];
+      { value: String(totalLessons), label: "Lectures" },
+      { value: String(tests.length), label: "Tests" },
+      { value: String(allNotes.length), label: "Notes" },
+      { value: `${totalHours}h`, label: "Total Time" },
+      { value: `${course.rating ? Number(course.rating).toFixed(1) : "N/A"}★`, label: "Rating" },
+    ];
 
   const courseAny = course as unknown as { what_youll_learn?: string[] | null; requirements?: string[] | null };
   const whatYoullLearn = (courseAny.what_youll_learn && courseAny.what_youll_learn.length > 0)
@@ -168,7 +168,7 @@ const CourseDetailPage = () => {
       return;
     }
     if (enrolled) {
-      navigate(`/courses/${course.slug}/learn`);
+      navigate(`/learn/${course.id}`);
       return;
     }
     setEnrollOpen(true);
@@ -190,7 +190,7 @@ const CourseDetailPage = () => {
   const discount = Number(course.discount_percent ?? 0);
 
   return (
-    <div className="bg-background pb-16">
+    <div className="bg-background pb-28 lg:pb-16">
       {course && (
         <SEO
           title={`${course.name} – ${course.target} · Class ${course.class}`}
@@ -223,14 +223,14 @@ const CourseDetailPage = () => {
               },
               ...(course.rating && reviewCount > 0
                 ? {
-                    "aggregateRating": {
-                      "@type": "AggregateRating",
-                      "ratingValue": String(Number(course.rating).toFixed(1)),
-                      "ratingCount": String(reviewCount),
-                      "bestRating": "5",
-                      "worstRating": "1"
-                    }
+                  "aggregateRating": {
+                    "@type": "AggregateRating",
+                    "ratingValue": String(Number(course.rating).toFixed(1)),
+                    "ratingCount": String(reviewCount),
+                    "bestRating": "5",
+                    "worstRating": "1"
                   }
+                }
                 : {})
             },
             {
@@ -299,17 +299,6 @@ const CourseDetailPage = () => {
                   </span>
                 )}
               </div>
-
-              <div className="mt-4 flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-[10px] font-black text-primary-foreground">
-                  {initials}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  By <span className="font-semibold text-foreground">{course.educator_name}</span>
-                  {" · "}
-                  <span>ARKE Scholars</span>
-                </p>
-              </div>
             </div>
           </div>
         </div>
@@ -323,11 +312,10 @@ const CourseDetailPage = () => {
               <button
                 key={tab}
                 onClick={() => setActiveTab(i)}
-                className={`pb-3 text-sm font-semibold whitespace-nowrap transition-colors ${
-                  i === activeTab
+                className={`pb-3 text-sm font-semibold whitespace-nowrap transition-colors ${i === activeTab
                     ? "text-primary border-b-2 border-primary"
                     : "text-muted-foreground hover:text-foreground"
-                }`}
+                  }`}
               >
                 {tab}
               </button>
@@ -408,7 +396,7 @@ const CourseDetailPage = () => {
                       </p>
                     </div>
                     <button
-                      onClick={() => navigate(`/courses/${course.slug}/learn`)}
+                      onClick={() => navigate(`/learn/${course.id}`)}
                       className="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground hover:bg-primary-dark transition-colors shrink-0"
                     >
                       Continue Learning <ArrowRight className="h-3.5 w-3.5" />
@@ -592,7 +580,7 @@ const CourseDetailPage = () => {
                   )}
 
                   <button
-                    onClick={() => navigate(`/courses/${course.slug}/learn`)}
+                    onClick={() => navigate(`/learn/${course.id}`)}
                     className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground hover:bg-primary-dark transition-colors"
                   >
                     Continue Learning <ArrowRight className="h-4 w-4" />
@@ -605,8 +593,8 @@ const CourseDetailPage = () => {
           )}
         </div>
 
-        {/* Sticky purchase / progress card */}
-        <aside className="lg:sticky lg:top-24 self-start">
+        {/* Sticky purchase / progress card — desktop only */}
+        <aside className="hidden lg:block lg:sticky lg:top-24 self-start">
           <div className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-sm">
             <div className="aspect-video rounded-xl border-2 border-dashed border-border bg-muted/30 flex items-center justify-center text-xs text-muted-foreground overflow-hidden">
               {course.thumbnail_url ? (
@@ -634,7 +622,7 @@ const CourseDetailPage = () => {
                 </div>
 
                 <button
-                  onClick={() => navigate(`/courses/${course.slug}/learn`)}
+                  onClick={() => navigate(`/learn/${course.id}`)}
                   className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-foreground py-3 text-sm font-bold text-background hover:opacity-90 transition-opacity"
                 >
                   Continue Learning <ArrowRight className="h-4 w-4" />
@@ -683,11 +671,10 @@ const CourseDetailPage = () => {
 
                 <button
                   onClick={() => toggleFav(course.id)}
-                  className={`w-full rounded-xl border py-3 text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
-                    favouriteIds.has(course.id)
+                  className={`w-full rounded-xl border py-3 text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${favouriteIds.has(course.id)
                       ? "border-rose-500 bg-rose-500/10 text-rose-500 hover:bg-rose-500/20"
                       : "border-border text-foreground hover:bg-muted/30"
-                  }`}
+                    }`}
                 >
                   <Heart className={`h-4 w-4 ${favouriteIds.has(course.id) ? "fill-rose-500" : ""}`} />
                   {favouriteIds.has(course.id) ? "Saved to Favourites" : "Add to Favourite"}
@@ -708,6 +695,42 @@ const CourseDetailPage = () => {
             {/* Guarantee removed */}
           </div>
         </aside>
+      </div>
+
+      {/* Mobile sticky bottom CTA */}
+      <div className="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-background/95 backdrop-blur-sm border-t border-border px-4 py-3 flex items-center gap-3 shadow-[0_-4px_24px_rgba(0,0,0,0.08)]">
+        {enrolled ? (
+          <button
+            onClick={() => navigate(`/learn/${course.id}`)}
+            className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-foreground py-3.5 text-sm font-bold text-background hover:opacity-90 transition-opacity"
+          >
+            Continue Learning <ArrowRight className="h-4 w-4" />
+          </button>
+        ) : (
+          <>
+            <div className="flex flex-col min-w-0">
+              {course.is_course_free ? (
+                <span className="font-display text-lg font-black text-secondary">Free</span>
+              ) : (
+                <span className="font-display text-lg font-black text-foreground">
+                  ₹{Number(course.sale_price).toLocaleString()}
+                  {discount > 0 && (
+                    <span className="ml-1.5 text-xs font-bold text-secondary">{discount}% OFF</span>
+                  )}
+                </span>
+              )}
+              {!course.is_course_free && course.mrp > course.sale_price && (
+                <span className="text-xs text-muted-foreground line-through">₹{Number(course.mrp).toLocaleString()}</span>
+              )}
+            </div>
+            <button
+              onClick={handleEnrollClick}
+              className="flex-1 rounded-xl bg-foreground py-3.5 text-sm font-bold text-background hover:opacity-90 transition-opacity"
+            >
+              {course.is_course_free ? "Enroll Free →" : "Enroll Now →"}
+            </button>
+          </>
+        )}
       </div>
 
       <EnrollmentModal

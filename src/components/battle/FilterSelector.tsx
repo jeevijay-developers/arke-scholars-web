@@ -14,7 +14,7 @@ import { Loader2, Swords } from "lucide-react";
 import type { BattleFilters } from "@/hooks/useBattleMatchmaking";
 
 const CLASS_LEVELS = ["6", "7", "8", "9", "10", "11", "12", "12th pass"];
-const DEFAULT_EXAMS = ["JEE Main", "JEE Advanced", "NEET", "BITSAT", "KCET", "MHT-CET"];
+const DEFAULT_EXAMS = ["JEE", "NEET", "Foundation"];
 
 type Props = {
   onEnterLobby: (filters: BattleFilters) => void;
@@ -23,7 +23,7 @@ type Props = {
 
 export function FilterSelector({ onEnterLobby, busy = false }: Props) {
   const [classLevel, setClassLevel] = useState("11");
-  const [targetExam, setTargetExam] = useState("JEE Main");
+  const [targetExam, setTargetExam] = useState("JEE");
   const [subject, setSubject] = useState("Physics");
   const [topic, setTopic] = useState("");
   const [topics, setTopics] = useState<string[]>([]);

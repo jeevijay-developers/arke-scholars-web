@@ -61,6 +61,27 @@ function youtubeId(url: string): string | null {
   return m ? m[1] : null;
 }
 
+const S3_HOST      = "https://s3.ap-tokyo.megas4.com";
+const S3_READ_BASE = "https://s3.ap-tokyo.megas4.com/biijszzsfufvateaffbvtjapmculhceod7agr";
+
+// Normalize any S3 video URL to the correct bucket-prefixed form.
+// Handles three stored formats:
+//   (a) correct:  https://s3.ap-tokyo.megas4.com/biijsz.../arke/xxx.mp4  → unchanged
+//   (b) legacy:   https://s3.ap-tokyo.megas4.com/arke/xxx.mp4            → inject bucket
+//   (c) bare key: arke/xxx.mp4                                            → prepend S3_READ_BASE
+// Any other https:// URL (external host) is returned unchanged.
+function resolveS3Url(raw: string): string {
+  if (!raw) return raw;
+  if (raw.startsWith(S3_READ_BASE)) return raw;
+  if (raw.startsWith(S3_HOST + "/")) {
+    const path = raw.slice(S3_HOST.length + 1);
+    return `${S3_READ_BASE}/${path}`;
+  }
+  if (raw.startsWith("http")) return raw; // non-S3 external URL
+  const key = raw.startsWith("/") ? raw.slice(1) : raw;
+  return `${S3_READ_BASE}/${key}`;
+}
+
 // ── Content viewer ────────────────────────────────────────────────────────────
 
 function ContentViewer({ item }: { item: ContentItem }) {
@@ -81,13 +102,19 @@ function ContentViewer({ item }: { item: ContentItem }) {
         </div>
       );
     }
-    if (item.video_url || item.file_url) {
+
+    // Resolve URL regardless of video_source — handles legacy no-bucket S3 URLs too
+    const rawUrl = item.video_url ?? item.file_url;
+    if (rawUrl) {
+      const src = resolveS3Url(rawUrl);
       return (
         <div className="aspect-video w-full rounded-xl overflow-hidden bg-black">
           <video
-            src={item.video_url ?? item.file_url ?? undefined}
+            key={src}
+            src={src}
             controls
             className="h-full w-full"
+            onError={(e) => console.error("Video load error", src, e)}
           />
         </div>
       );
@@ -230,15 +257,15 @@ const LearnCoursePage = () => {
 
   const selectFolder = (folder: FolderRow, depth: number) => {
     const hasSubs = (folder.subFolders?.length ?? 0) > 0;
+    // Always expand/collapse parent folders that have subfolders
     if (depth === 0 && hasSubs) {
-      // Expand/collapse only; content will be loaded when sub-folder is selected
       setExpandedIds((prev) => {
         const n = new Set(prev);
         n.has(folder.id) ? n.delete(folder.id) : n.add(folder.id);
         return n;
       });
-      return;
     }
+    // Always load this folder's own content regardless of subfolders
     setSelectedFolderId(folder.id);
     loadFolderContent(folder.id);
   };

@@ -78,7 +78,7 @@ const AdminSettingsPage = () => {
 
   return (
     <div className="p-4 lg:p-6 space-y-6 max-w-2xl">
-      <div className="rounded-2xl bg-gradient-to-r from-primary via-accent to-secondary p-6 text-white">
+      <div className="rounded-2xl bg-[#0F1729] p-6 text-white">
         <div className="flex items-center gap-3"><Settings className="h-7 w-7" /><h1 className="text-2xl font-black font-display">Platform Settings</h1></div>
         <p className="text-white/90 text-sm mt-1">
           {readOnly ? "Read-only view. Only super admins can change platform settings." : "Configure global platform settings and features"}

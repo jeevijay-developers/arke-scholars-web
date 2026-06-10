@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Video,
-  Calendar,
+
   Loader2,
   Plus,
   X,
@@ -377,13 +377,15 @@ const AdminLiveClassesPage = () => {
 
         // Create Zoom meeting and persist credentials
         try {
-          const { data: zoomData, error: zoomErr } = await supabase.functions.invoke("zoom-create-meeting", {
+          const { data: zoomRaw, error: zoomErr } = await supabase.functions.invoke("zoom-create-meeting", {
             body: {
               title: form.title,
               startTime: startsAt.toISOString(),
               durationMinutes: form.duration_minutes,
+              teacherId: form.teacherId || undefined,
             },
           });
+          const zoomData = zoomRaw as { meetingId?: string; password?: string } | null;
           if (!zoomErr && zoomData?.meetingId) {
             await supabase.from("live_classes").update({
               zoom_meeting_id: zoomData.meetingId,
@@ -402,8 +404,8 @@ const AdminLiveClassesPage = () => {
       }
       closeForm();
       load();
-    } catch (err: any) {
-      toast.error(err?.message ?? "Failed to save class");
+    } catch (err) {
+      toast.error((err as Error)?.message ?? "Failed to save class");
     } finally {
       setSubmitting(false);
     }
@@ -505,7 +507,7 @@ const AdminLiveClassesPage = () => {
     load();
   };
 
-  const useTemplate = (t: Template) => {
+  const applyTemplate = (t: Template) => {
     setEditingId(null);
     setForm({
       title: t.title,
@@ -540,7 +542,7 @@ const AdminLiveClassesPage = () => {
 
   return (
     <div className="p-4 lg:p-6 space-y-6">
-      <div className="rounded-2xl bg-gradient-to-r from-primary via-accent to-secondary p-6 text-white">
+      <div className="rounded-2xl bg-[#0F1729] p-6 text-white">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
             <h1 className="text-2xl font-black font-display">Live Classes</h1>
@@ -556,7 +558,7 @@ const AdminLiveClassesPage = () => {
             {activeTab === "live" && (
               <button
                 onClick={openCreate}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-xs font-bold text-primary hover:bg-white/90"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-xs font-bold text-[#0F1729] hover:bg-white/90"
               >
                 <Plus className="h-4 w-4" /> Schedule class
               </button>
@@ -1048,7 +1050,7 @@ const AdminLiveClassesPage = () => {
                     </div>
                     <div className="flex gap-1.5 shrink-0">
                       <button
-                        onClick={() => useTemplate(t)}
+                        onClick={() => applyTemplate(t)}
                         className="rounded-md bg-primary px-2.5 py-1 text-[11px] font-bold text-primary-foreground hover:bg-primary/90"
                       >
                         Use

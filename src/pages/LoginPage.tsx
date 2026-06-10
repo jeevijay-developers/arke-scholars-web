@@ -88,8 +88,12 @@ const LoginPage = () => {
       return;
     }
     setSending(true);
-    await new Promise((r) => setTimeout(r, 500));
+    const { error } = await supabase.auth.signInWithOtp({ phone: fullPhone });
     setSending(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success("OTP sent to your phone!");
     startCooldown();
     setStep("otp");
@@ -97,8 +101,12 @@ const LoginPage = () => {
 
   const handleResend = async () => {
     setResending(true);
-    await new Promise((r) => setTimeout(r, 500));
+    const { error } = await supabase.auth.signInWithOtp({ phone: fullPhone });
     setResending(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success("New OTP sent");
     startCooldown();
     setDigits(Array(OTP_LENGTH).fill(""));
@@ -107,9 +115,13 @@ const LoginPage = () => {
 
   const handleVerifyOtp = async () => {
     if (otp.length < OTP_LENGTH) { toast.error("Enter the full 6-digit code"); return; }
-    if (otp !== "123456") { toast.error("Invalid OTP. Try again."); return; }
     setVerifying(true);
-    await supabase.auth.signInAnonymously();
+    const { error } = await supabase.auth.verifyOtp({ phone: fullPhone, token: otp, type: "sms" });
+    setVerifying(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     // Session established — auth context useEffect above handles redirect
   };
 

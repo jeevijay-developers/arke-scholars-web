@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { create, getNumericDate } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
+import { create } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -26,13 +26,10 @@ serve(async (req) => {
       });
     }
 
-    const { meetingNumber, classSlug } = await req.json() as {
-      meetingNumber: string;
-      classSlug: string;
-    };
-
-    if (!meetingNumber || !classSlug) {
-      return new Response(JSON.stringify({ error: "meetingNumber and classSlug are required" }), {
+    // Accept either classId (UUID) or classSlug for flexibility
+    const body = await req.json() as { classId?: string; classSlug?: string };
+    if (!body.classId && !body.classSlug) {
+      return new Response(JSON.stringify({ error: "classId or classSlug is required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -45,29 +42,42 @@ serve(async (req) => {
       });
     }
 
-    // Derive role server-side — never trust client
     const svcClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const { data: liveClass } = await svcClient
+    const query = svcClient
       .from("live_classes")
-      .select("created_by")
-      .eq("slug", classSlug)
-      .maybeSingle();
+      .select("created_by, zoom_meeting_id, zoom_meeting_password");
 
-    if (!liveClass) {
-      return new Response(JSON.stringify({ error: "Live class not found" }), {
+    const { data: liveClass } = body.classId
+      ? await query.eq("id", body.classId).maybeSingle()
+      : await query.eq("slug", body.classSlug!).maybeSingle();
+
+    if (!liveClass?.zoom_meeting_id) {
+      return new Response(JSON.stringify({ error: "Live class or Zoom meeting not found" }), {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // 1 = host (teacher/creator), 0 = attendee
-    const role = liveClass.created_by === user.id ? 1 : 0;
+    // Derive role server-side — 1 = host, 0 = attendee
+    let role = 0;
+    if (liveClass.created_by === user.id) {
+      role = 1;
+    } else {
+      // admin / super_admin / teacher also get host controls
+      const [{ data: isAdmin }, { data: isSuper }, { data: isTeacher }] = await Promise.all([
+        svcClient.rpc("has_role", { _user_id: user.id, _role: "admin" }),
+        svcClient.rpc("has_role", { _user_id: user.id, _role: "super_admin" }),
+        svcClient.rpc("has_role", { _user_id: user.id, _role: "teacher" }),
+      ]);
+      if (isAdmin || isSuper || isTeacher) role = 1;
+    }
 
     const now = Math.floor(Date.now() / 1000);
     const exp = now + 7200;
+    const meetingNumber = liveClass.zoom_meeting_id.replace(/\D/g, "");
 
     const key = await crypto.subtle.importKey(
       "raw",
@@ -79,20 +89,20 @@ serve(async (req) => {
 
     const signature = await create(
       { alg: "HS256", typ: "JWT" },
-      {
-        sdkKey,
-        mn: meetingNumber.replace(/\D/g, ""),
-        role,
-        iat: now - 30,
-        exp,
-        tokenExp: exp,
-      },
+      { sdkKey, mn: meetingNumber, role, iat: now - 30, exp, tokenExp: exp },
       key,
     );
 
-    return new Response(JSON.stringify({ signature, sdkKey, role }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        signature,
+        sdkKey,
+        meetingNumber,
+        password: liveClass.zoom_meeting_password ?? "",
+        role,
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return new Response(JSON.stringify({ error: msg }), {
