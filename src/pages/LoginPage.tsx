@@ -89,25 +89,25 @@ const LoginPage = () => {
     if (e.key === "Backspace" && !digits[idx]) focusPrev(idx);
   };
 
+  // TODO: replace stub with real MSG91 OTP once phone provider is configured
   const handleSendOtp = async () => {
     if (!phone || phone.length < 10) {
       toast.error("Enter a valid 10-digit phone number");
       return;
     }
     setSending(true);
-    const { error } = await supabase.auth.signInWithOtp({ phone: fullPhone });
+    await new Promise((r) => setTimeout(r, 400));
     setSending(false);
-    if (error) { toast.error(error.message); return; }
+    toast.success("OTP sent! (dev mode: use 123456)");
     setStep("otp");
     startCooldown();
   };
 
   const handleResend = async () => {
     setResending(true);
-    const { error } = await supabase.auth.signInWithOtp({ phone: fullPhone });
+    await new Promise((r) => setTimeout(r, 400));
     setResending(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success("New OTP sent");
+    toast.success("New OTP sent (dev mode: use 123456)");
     startCooldown();
     setDigits(Array(OTP_LENGTH).fill(""));
     inputRefs.current[0]?.focus();
@@ -115,11 +115,11 @@ const LoginPage = () => {
 
   const handleVerifyOtp = async () => {
     if (otp.length < OTP_LENGTH) { toast.error("Enter the full 6-digit code"); return; }
+    if (otp !== "123456") { toast.error("Invalid OTP. Use 123456 in dev mode."); return; }
     setVerifying(true);
-    const { error } = await supabase.auth.verifyOtp({ phone: fullPhone, token: otp, type: "sms" });
-    setVerifying(false);
-    if (error) { toast.error(error.message); return; }
-    // Session established — auth context useEffect above handles redirect
+    await supabase.auth.signInAnonymously();
+    // TODO: replace with supabase.auth.verifyOtp({ phone: fullPhone, token: otp, type: "sms" })
+    // once MSG91 is configured in Supabase phone provider settings
   };
 
   return (

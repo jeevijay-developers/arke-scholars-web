@@ -166,28 +166,32 @@ const StudentSidebar = memo(({ fullName, avatarUrl, initials, onLogout, doubtCou
 });
 StudentSidebar.displayName = "StudentSidebar";
 
-// Mobile bottom nav — also memoized so it doesn't re-render on every route change beyond active styling.
+// Mobile bottom nav — floating card style with active pill indicator
 const StudentMobileNav = memo(() => {
   const { pathname } = useLocation();
   const items = [
-    { icon: Home, label: "Home", path: "/dashboard" },
-    { icon: BookOpen, label: "Learning", path: "/my-courses" },
-    { icon: Video, label: "Live", path: "/my-live-classes" },
-    { icon: MessageCircle, label: "Doubts", path: "/doubts" },
-    { icon: ClipboardCheck, label: "Tests", path: "/my-tests" },
+    { icon: Home,          label: "Home",     path: "/dashboard" },
+    { icon: BookOpen,      label: "Learning", path: "/my-courses" },
+    { icon: Video,         label: "Live",     path: "/my-live-classes" },
+    { icon: MessageCircle, label: "Doubts",   path: "/doubts" },
+    { icon: ClipboardCheck,label: "Tests",    path: "/my-tests" },
   ];
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-border bg-card py-2 lg:hidden">
+    <nav className="fixed bottom-3 left-3 right-3 z-40 lg:hidden flex items-center justify-around bg-white rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.10)] border border-border/20 py-1.5 px-1">
       {items.map((item) => {
-        const active = pathname === item.path;
+        const active = pathname === item.path || pathname.startsWith(item.path + "/");
         return (
           <Link
             key={item.path}
             to={item.path}
-            className={`flex flex-col items-center gap-0.5 px-3 py-1 ${active ? "text-primary" : "text-muted-foreground"}`}
+            className="flex flex-col items-center gap-0.5 px-2"
           >
-            <item.icon className="h-5 w-5" />
-            <span className="text-[10px] font-medium">{item.label}</span>
+            <div className={`flex items-center justify-center w-10 h-10 rounded-xl transition-colors duration-150 ${active ? "bg-orange-500" : ""}`}>
+              <item.icon className={`h-5 w-5 transition-colors duration-150 ${active ? "text-white" : "text-muted-foreground"}`} />
+            </div>
+            <span className={`text-[10px] font-semibold transition-colors duration-150 ${active ? "text-orange-500" : "text-muted-foreground"}`}>
+              {item.label}
+            </span>
           </Link>
         );
       })}

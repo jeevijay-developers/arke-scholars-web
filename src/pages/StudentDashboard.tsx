@@ -20,10 +20,10 @@ const subjectIcons: Record<string, React.ElementType> = {
 };
 
 const quickActions = [
-  { icon: Video, label: "Attend Class", desc: "Join live session", link: "/my-live-classes", gradient: "from-primary to-primary-dark" },
-  { icon: ClipboardCheck, label: "Take Test", desc: "Start a mock test", link: "/my-tests", gradient: "from-secondary to-secondary-dark" },
-  { icon: Bot, label: "Ask Doubt", desc: "AI doubt solver", link: "/doubts", gradient: "from-accent to-primary" },
-  { icon: BarChart3, label: "Analytics", desc: "View progress", link: "/analytics", gradient: "from-primary-dark to-accent" },
+  { icon: Video, label: "Attend Class", desc: "Join live session", link: "/my-live-classes", bg: "bg-orange-500" },
+  { icon: ClipboardCheck, label: "Take Test", desc: "Start a mock test", link: "/my-tests", bg: "bg-emerald-600" },
+  { icon: Bot, label: "Ask Doubt", desc: "AI doubt solver", link: "/doubts", bg: "bg-sky-500" },
+  { icon: BarChart3, label: "Analytics", desc: "View progress", link: "/analytics", bg: "bg-violet-600" },
 ];
 
 const formatTime = (iso: string) =>
@@ -44,7 +44,7 @@ const StudentDashboard = () => {
   const greeting = greetingFor(new Date());
 
   return (
-    <div className="flex gap-0 pb-20 lg:pb-0">
+    <div className="flex gap-0 pb-24 lg:pb-0">
       <SEO title="My Dashboard" description="Your ARKE Scholars learning dashboard." />
       {/* Main Content */}
       <div className="flex-1 p-4 lg:p-6 min-w-0">
@@ -54,12 +54,12 @@ const StudentDashboard = () => {
             <h1 className="text-xl font-black font-display text-foreground lg:text-2xl">{greeting}, {firstName}</h1>
             <p className="text-sm text-muted-foreground">{new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
           </div>
-          <div className="flex gap-2">
+          {/* <div className="flex gap-2">
             <Link to="/contact" className="inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-xs font-semibold text-foreground hover:bg-background transition-colors">
               <PhoneCall className="h-3.5 w-3.5" /> Talk to Counsellor
             </Link>
             <Link to="/courses" className="rounded-lg bg-[#F97415] px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity">Enroll in Course</Link>
-          </div>
+          </div> */}
         </div>
 
         <OnboardingTracker />
@@ -69,7 +69,7 @@ const StudentDashboard = () => {
         {/* Quick Actions */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 stagger-children">
           {quickActions.map(qa => (
-            <Link key={qa.label} to={qa.link} className={`rounded-xl bg-gradient-to-br ${qa.gradient} p-4 text-center hover-lift group`}>
+            <Link key={qa.label} to={qa.link} className={`rounded-xl ${qa.bg} p-4 text-center hover-lift group`}>
               <qa.icon className="h-6 w-6 text-white mx-auto mb-2 group-hover:scale-110 transition-transform" />
               <p className="text-xs font-bold text-white">{qa.label}</p>
               <p className="text-[10px] text-white/70">{qa.desc}</p>
@@ -97,7 +97,7 @@ const StudentDashboard = () => {
             <div className="grid gap-3 sm:grid-cols-2">
               {data.continueWatching.map(cw => (
                 <Link key={cw.lesson_slug + cw.course_id} to={cw.course_slug ? `/courses/${cw.course_slug}/learn` : "/my-courses"} className="flex items-center gap-3 rounded-xl border border-border p-3 hover-lift">
-                  <div className="h-12 w-12 shrink-0 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center">
+                  <div className="h-12 w-12 shrink-0 rounded-xl bg-orange-50 flex items-center justify-center">
                     <BookOpen className="h-5 w-5 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -130,7 +130,7 @@ const StudentDashboard = () => {
                 const isCompleted = cls.status === "completed";
                 return (
                   <div key={cls.id} className="flex items-center gap-3 rounded-xl border border-border p-3 hover:bg-background/50 transition-colors hover-lift">
-                    <div className="h-12 w-12 shrink-0 rounded-xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center">
+                    <div className="h-12 w-12 shrink-0 rounded-xl bg-orange-500 flex items-center justify-center">
                       <SubjectIcon className="h-5 w-5 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -169,12 +169,12 @@ const StudentDashboard = () => {
 
         {/* Rank Cards */}
         <div className="space-y-3 mb-5">
-          <div className="rounded-xl bg-gradient-to-br from-primary to-primary-dark p-4">
+          <div className="rounded-xl bg-orange-500 p-4">
             <p className="text-xs font-medium text-white/80">All India Percentile</p>
             <p className="text-3xl font-black font-display text-white">{data.percentile !== null ? data.percentile : "—"}</p>
             <p className="text-xs font-medium text-white/80">{data.percentile !== null ? "Last 5 tests" : "No tests yet"}</p>
           </div>
-          <div className="rounded-xl bg-gradient-to-br from-secondary to-secondary-dark p-4">
+          <div className="rounded-xl bg-emerald-600 p-4">
             <p className="text-xs font-medium text-white/80">Overall Accuracy</p>
             <p className="text-3xl font-black font-display text-white">{data.accuracyPct !== null ? `${data.accuracyPct}` : "—"}</p>
             <p className="text-xs font-medium text-white/80">{data.accuracyPct !== null ? "From practice sessions" : "Start practicing"}</p>
