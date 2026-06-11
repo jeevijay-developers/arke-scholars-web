@@ -146,8 +146,8 @@ function DateFilterButton({
       <button
         onClick={() => setOpen((o) => !o)}
         className={`flex items-center gap-1.5 h-10 px-3 rounded-xl border text-sm font-medium transition-colors ${active
-            ? "border-[#f97015] bg-orange-50 text-[#f97015]"
-            : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+          ? "border-[#f97015] bg-orange-50 text-[#f97015]"
+          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
           }`}
       >
         <CalendarDays className="w-4 h-4" />
@@ -244,8 +244,8 @@ function StatusFilterButton({
       <button
         onClick={() => setOpen((o) => !o)}
         className={`flex items-center gap-1.5 h-10 px-3 rounded-xl border text-sm font-medium transition-colors ${active
-            ? "border-[#f97015] bg-orange-50 text-[#f97015]"
-            : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+          ? "border-[#f97015] bg-orange-50 text-[#f97015]"
+          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
           }`}
       >
         <ListFilter className="w-4 h-4" />
@@ -268,8 +268,8 @@ function StatusFilterButton({
               key={opt.value}
               onClick={() => { onChange(opt.value); setOpen(false); }}
               className={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors ${value === opt.value
-                  ? "bg-orange-50 text-[#f97015] font-semibold"
-                  : "text-slate-700 hover:bg-slate-50"
+                ? "bg-orange-50 text-[#f97015] font-semibold"
+                : "text-slate-700 hover:bg-slate-50"
                 }`}
             >
               <span>{opt.label}</span>
@@ -304,28 +304,6 @@ function OverviewTab({ leads, onGoLeads }: { leads: Lead[]; onGoLeads: () => voi
 
   return (
     <div className="space-y-6 max-w-7xl p-4 md:p-8">
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#f97015] via-[#f97015] to-[#d95e05] p-6 md:p-8 text-white shadow-xl shadow-orange-500/20">
-        <div className="absolute -right-10 -top-10 w-48 h-48 rounded-full bg-white/10 blur-2xl" />
-        <div className="absolute -right-20 -bottom-20 w-64 h-64 rounded-full bg-white/5 blur-3xl" />
-        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur text-xs font-medium mb-3">
-              <TrendingUp className="w-3.5 h-3.5" /> {conversionRate}% conversion rate
-            </div>
-            <h2 className="text-2xl md:text-3xl font-bold">Student Leads Dashboard</h2>
-            <p className="text-sm md:text-base text-white/85 mt-1">
-              You have <span className="font-semibold">{newCount}</span> new lead{newCount === 1 ? "" : "s"} waiting to be contacted.
-            </p>
-          </div>
-          <button
-            onClick={onGoLeads}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-[#f97015] text-sm font-semibold hover:bg-orange-50 transition-colors w-fit"
-          >
-            View All Leads <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {cards.map((c) => (
           <div key={c.label} className="bg-white rounded-2xl p-5 border border-slate-200 hover:shadow-md transition-all">
@@ -532,8 +510,8 @@ function LeadsTab({
                         <button
                           onClick={() => onEnrolledToggle(l.id, !l.enrolled)}
                           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 ${l.enrolled
-                              ? "bg-emerald-500 focus:ring-emerald-400"
-                              : "bg-[#F97415] focus:ring-orange-400"
+                            ? "bg-emerald-500 focus:ring-emerald-400"
+                            : "bg-[#F97415] focus:ring-orange-400"
                             }`}
                           aria-label="Toggle enrolled"
                         >
