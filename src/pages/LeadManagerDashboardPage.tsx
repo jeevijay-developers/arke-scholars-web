@@ -579,7 +579,9 @@ export default function LeadManagerDashboardPage() {
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const isLeadsRoute = location.pathname.includes("/leads");
+  const isAdminContext = location.pathname.startsWith("/admin");
+  const isLeadsRoute = location.pathname.endsWith("/leads");
+  const leadsPath = isAdminContext ? "/admin/student-enquiry/leads" : "/lead-manager/leads";
 
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
@@ -697,5 +699,5 @@ export default function LeadManagerDashboardPage() {
     );
   }
 
-  return <OverviewTab leads={leads} onGoLeads={() => navigate("/lead-manager/leads")} />;
+  return <OverviewTab leads={leads} onGoLeads={() => navigate(leadsPath)} />;
 }

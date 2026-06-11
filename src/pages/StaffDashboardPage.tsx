@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 import { format } from "date-fns";
 import { Briefcase, ArrowRight, Clock, Check, X, Eye, Loader2, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,6 +28,7 @@ const statusVariants: Record<string, { label: string; className: string }> = {
 };
 
 const StaffDashboardPage = () => {
+  const { role } = useAuth();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -51,6 +53,8 @@ const StaffDashboardPage = () => {
   };
 
   const recent = rows.slice(0, 5);
+
+  if (role === "lead_manager") return <Navigate to="/admin/student-enquiry" replace />;
 
   return (
     <div className="p-4 lg:p-6 space-y-6">

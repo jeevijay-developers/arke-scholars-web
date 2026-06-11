@@ -75,7 +75,8 @@ const navSections: NavSection[] = [
     title: "Outreach",
     items: [
       { label: "Educator Applications", icon: Briefcase, path: "/admin/educator-applications" },
-      { label: "Enquiries",             icon: Inbox,     path: "/admin/enquiries" },
+      { label: "General Enquiry",        icon: Inbox,     path: "/admin/enquiries" },
+      { label: "Student Enquiry",       icon: GraduationCap, path: "/admin/student-enquiry" },
       { label: "Notifications",         icon: Bell,      path: "/admin/notifications" },
     ],
   },
@@ -246,9 +247,13 @@ export default function AdminLayout() {
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
 
+  // Lead managers see only the Student Enquiry tab.
   // permissions === null → super_admin or full admin — show everything.
   // Otherwise filter to items where the staff member has can_view, remove empty sections.
   const visibleSections = useMemo(() => {
+    if (role === "lead_manager") {
+      return [{ title: "Leads", items: [{ label: "Student Enquiry", icon: GraduationCap, path: "/admin/student-enquiry" }] }];
+    }
     if (permissions === null) return navSections;
     return navSections
       .map((section) => ({
