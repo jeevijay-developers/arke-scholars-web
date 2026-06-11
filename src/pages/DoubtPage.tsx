@@ -113,7 +113,7 @@ const DoubtPage = () => {
           <h2 className="text-lg font-black font-display text-foreground">My Doubts</h2>
           <button
             onClick={() => setShowAsk(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#F97415] px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity"
           >
             <Plus className="h-3.5 w-3.5" /> Ask New Doubt
           </button>
@@ -124,9 +124,8 @@ const DoubtPage = () => {
             <button
               key={tab.key}
               onClick={() => setActiveFilter(tab.key)}
-              className={`whitespace-nowrap px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
-                activeFilter === tab.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted/50"
-              }`}
+              className={`whitespace-nowrap px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${activeFilter === tab.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted/50"
+                }`}
             >
               {tab.label}
             </button>
@@ -195,9 +194,8 @@ const DoubtPage = () => {
                   <button
                     type="button"
                     onClick={() => setAnswerMode("ai")}
-                    className={`flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition-colors ${
-                      answerMode === "ai" ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
-                    }`}
+                    className={`flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition-colors ${answerMode === "ai" ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
+                      }`}
                   >
                     <span className="flex items-center gap-1.5 text-xs font-bold text-foreground">
                       <Sparkles className="h-3.5 w-3.5 text-primary" /> AI
@@ -207,9 +205,8 @@ const DoubtPage = () => {
                   <button
                     type="button"
                     onClick={() => setAnswerMode("educator")}
-                    className={`flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition-colors ${
-                      answerMode === "educator" ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
-                    }`}
+                    className={`flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition-colors ${answerMode === "educator" ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
+                      }`}
                   >
                     <span className="flex items-center gap-1.5 text-xs font-bold text-foreground">
                       <GraduationCap className="h-3.5 w-3.5 text-secondary" /> Educator
@@ -315,62 +312,62 @@ const DoubtCard = ({ doubt, expanded, onToggle, onDelete }: { doubt: DoubtRow; e
           </button>
         </div>
 
-      {expanded && (
-        <div className="mt-3 space-y-3 pt-3 border-t border-border">
-          {doubt.image_url && (
-            <div className="relative inline-block">
-              <img src={doubt.image_url} alt="Doubt" className="rounded-lg max-h-48" />
-              <button
-                type="button"
-                onClick={async () => {
-                  await supabase.from("doubts").update({ image_url: null }).eq("id", doubt.id);
-                }}
-                className="absolute top-1 right-1 h-6 w-6 rounded-full bg-background/90 border border-border flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground transition-colors shadow"
-                aria-label="Remove image"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          )}
-          {doubt.ai_answer && (
-            <div className="rounded-lg bg-primary/5 border border-primary/20 p-3 space-y-2">
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <p className="text-[11px] font-bold text-primary uppercase flex items-center gap-1"><Brain className="h-3 w-3" /> AI answer</p>
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400">
-                  <AlertTriangle className="h-2.5 w-2.5" />
-                  AI generated answer might be incorrect
-                </span>
+        {expanded && (
+          <div className="mt-3 space-y-3 pt-3 border-t border-border">
+            {doubt.image_url && (
+              <div className="relative inline-block">
+                <img src={doubt.image_url} alt="Doubt" className="rounded-lg max-h-48" />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await supabase.from("doubts").update({ image_url: null }).eq("id", doubt.id);
+                  }}
+                  className="absolute top-1 right-1 h-6 w-6 rounded-full bg-background/90 border border-border flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground transition-colors shadow"
+                  aria-label="Remove image"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
               </div>
-              <FormattedAnswer content={doubt.ai_answer} tone="primary" className="text-xs" />
-            </div>
-          )}
-          {teacherAnswers.map((a) => (
-            <div key={a.id} className="rounded-lg bg-secondary/5 border border-secondary/20 p-3 space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-[11px] font-bold text-secondary uppercase">
-                  {a.responder_name || a.responder_role} · {a.responder_role}
-                </p>
-                {(a.responder_role === "teacher" || a.responder_role === "mentor") && a.responder_id && (
-                  <ReportDialog
-                    reportedName={a.responder_name || a.responder_role}
-                    reportedRole={a.responder_role as "teacher" | "mentor"}
-                    reportedUserId={a.responder_id}
-                    trigger={
-                      <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] text-destructive hover:text-destructive">
-                        <Flag className="h-3 w-3" /> Report
-                      </Button>
-                    }
-                  />
-                )}
+            )}
+            {doubt.ai_answer && (
+              <div className="rounded-lg bg-primary/5 border border-primary/20 p-3 space-y-2">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <p className="text-[11px] font-bold text-primary uppercase flex items-center gap-1"><Brain className="h-3 w-3" /> AI answer</p>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400">
+                    <AlertTriangle className="h-2.5 w-2.5" />
+                    AI generated answer might be incorrect
+                  </span>
+                </div>
+                <FormattedAnswer content={doubt.ai_answer} tone="primary" className="text-xs" />
               </div>
-              <FormattedAnswer content={a.answer_text} tone="secondary" className="text-xs" />
-            </div>
-          ))}
-          {!doubt.ai_answer && teacherAnswers.length === 0 && (
-            <p className="text-xs text-muted-foreground italic">Awaiting answer...</p>
-          )}
-        </div>
-      )}
+            )}
+            {teacherAnswers.map((a) => (
+              <div key={a.id} className="rounded-lg bg-secondary/5 border border-secondary/20 p-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11px] font-bold text-secondary uppercase">
+                    {a.responder_name || a.responder_role} · {a.responder_role}
+                  </p>
+                  {(a.responder_role === "teacher" || a.responder_role === "mentor") && a.responder_id && (
+                    <ReportDialog
+                      reportedName={a.responder_name || a.responder_role}
+                      reportedRole={a.responder_role as "teacher" | "mentor"}
+                      reportedUserId={a.responder_id}
+                      trigger={
+                        <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] text-destructive hover:text-destructive">
+                          <Flag className="h-3 w-3" /> Report
+                        </Button>
+                      }
+                    />
+                  )}
+                </div>
+                <FormattedAnswer content={a.answer_text} tone="secondary" className="text-xs" />
+              </div>
+            ))}
+            {!doubt.ai_answer && teacherAnswers.length === 0 && (
+              <p className="text-xs text-muted-foreground italic">Awaiting answer...</p>
+            )}
+          </div>
+        )}
       </div>
 
       {showDeleteConfirm && (

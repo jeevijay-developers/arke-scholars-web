@@ -90,7 +90,7 @@ const CompeteResult = ({ match, questions, answers, onPlayAgain, onLobby }: Prop
         <Stat icon={<Target className="h-4 w-4 text-accent" />} label="Accuracy" value={`${accuracy}%`} />
         <Stat icon={<Check className="h-4 w-4 text-secondary" />} label="Correct" value={`${correctCount}/${myAnswers.length}`} />
         <Stat icon={<Zap className="h-4 w-4 text-primary" />} label="Avg time" value={`${avgTimeS}s`} />
-        <Stat icon={<Flame className="h-4 w-4 text-primary" />} label="Fastest" value={Number.isFinite(fastest) ? `${(fastest/1000).toFixed(1)}s` : "—"} />
+        <Stat icon={<Flame className="h-4 w-4 text-primary" />} label="Fastest" value={Number.isFinite(fastest) ? `${(fastest / 1000).toFixed(1)}s` : "—"} />
       </div>
 
       {/* ELO summary */}
@@ -160,8 +160,8 @@ const CompeteResult = ({ match, questions, answers, onPlayAgain, onLobby }: Prop
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <p className="text-xs font-black text-white/60">Q{i + 1}</p>
                   <div className="flex items-center gap-2 text-[10px]">
-                    <Badge ok={mine?.is_correct} label={mine ? `You ${(mine.time_taken_ms/1000).toFixed(1)}s · ${Math.round(mine.points)}pt` : "Skipped"} />
-                    <Badge ok={opp?.is_correct} label={opp ? `Opp ${(opp.time_taken_ms/1000).toFixed(1)}s` : "—"} />
+                    <Badge ok={mine?.is_correct} label={mine ? `You ${(mine.time_taken_ms / 1000).toFixed(1)}s · ${Math.round(mine.points)}pt` : "Skipped"} />
+                    <Badge ok={opp?.is_correct} label={opp ? `Opp ${(opp.time_taken_ms / 1000).toFixed(1)}s` : "—"} />
                   </div>
                 </div>
                 <div className="text-sm text-white mb-2 [&_p]:m-0"><MathRenderer content={q.question_text} /></div>
@@ -173,13 +173,12 @@ const CompeteResult = ({ match, questions, answers, onPlayAgain, onLobby }: Prop
                     return (
                       <div
                         key={oi}
-                        className={`flex items-center justify-between rounded-lg px-3 py-2 text-xs ${
-                          isCorrect
+                        className={`flex items-center justify-between rounded-lg px-3 py-2 text-xs ${isCorrect
                             ? "bg-secondary/15 border border-secondary/40 text-white"
                             : youPicked
                               ? "bg-destructive/15 border border-destructive/40 text-white"
                               : "bg-white/5 border border-white/10 text-white/80"
-                        }`}
+                          }`}
                       >
                         <span className="flex-1 min-w-0">
                           <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/15 text-[10px] font-black mr-2 align-middle">{String.fromCharCode(65 + oi)}</span>
@@ -205,7 +204,7 @@ const CompeteResult = ({ match, questions, answers, onPlayAgain, onLobby }: Prop
 
       {/* Actions */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-w-2xl mx-auto">
-        <button onClick={onPlayAgain} className="rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-3 text-sm font-black text-primary-foreground hover:opacity-90 inline-flex items-center justify-center gap-1">
+        <button onClick={onPlayAgain} className="rounded-lg bg-[#F97415] px-4 py-3 text-sm font-black text-primary-foreground hover:opacity-90 inline-flex items-center justify-center gap-1">
           <RotateCw className="h-4 w-4" /> Play Again
         </button>
         <button onClick={onLobby} className="rounded-lg bg-white/10 px-4 py-3 text-sm font-bold text-white hover:bg-white/15 inline-flex items-center justify-center gap-1">

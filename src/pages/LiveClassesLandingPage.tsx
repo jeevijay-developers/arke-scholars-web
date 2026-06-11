@@ -118,7 +118,7 @@ const LiveClassesLandingPage = () => {
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               to={user ? "/my-live-classes" : "/signup"}
-              className="inline-flex items-center gap-2 rounded-pill bg-gradient-to-r from-primary to-accent px-7 py-3 text-sm font-bold text-white shadow-blue hover:opacity-90 hover:scale-105 transition-all"
+              className="inline-flex items-center gap-2 rounded-pill bg-[#F97415] px-7 py-3 text-sm font-bold text-white shadow-blue hover:opacity-90 hover:scale-105 transition-all"
             >
               {user ? "View My Classes" : "Join the Next Class"} <ArrowRight className="h-4 w-4" />
             </Link>
@@ -198,7 +198,7 @@ const LiveClassesLandingPage = () => {
               { icon: PlayCircle, step: "04", title: "Rewatch anytime", desc: "Recording is available in your library within 2 hours of class end." },
             ].map((s) => (
               <div key={s.step} className="relative rounded-2xl border border-border bg-card p-6">
-                <span className="absolute -top-3 left-6 rounded-pill bg-gradient-to-r from-primary to-accent px-3 py-0.5 text-[10px] font-black text-white">
+                <span className="absolute -top-3 left-6 rounded-pill bg-[#F97415] px-3 py-0.5 text-[10px] font-black text-white">
                   STEP {s.step}
                 </span>
                 <s.icon className="mt-3 h-7 w-7 text-primary" />
@@ -225,7 +225,7 @@ const LiveClassesLandingPage = () => {
             </div>
             <Link
               to={user ? "/my-live-classes" : "/signup"}
-              className="rounded-pill bg-gradient-to-r from-primary to-accent px-6 py-2.5 text-sm font-bold text-white shadow-blue hover:opacity-90 transition-opacity"
+              className="rounded-pill bg-[#F97415] px-6 py-2.5 text-sm font-bold text-white shadow-blue hover:opacity-90 transition-opacity"
             >
               {user ? "My Schedule" : "See Pricing"}
             </Link>
@@ -245,7 +245,7 @@ const LiveClassesLandingPage = () => {
           </p>
           <Link
             to={user ? "/my-live-classes" : "/signup"}
-            className="mt-8 inline-flex items-center gap-2 rounded-pill bg-gradient-to-r from-primary to-accent px-10 py-4 text-lg font-bold text-white shadow-blue hover:opacity-90 hover:scale-105 transition-all"
+            className="mt-8 inline-flex items-center gap-2 rounded-pill bg-[#F97415] px-10 py-4 text-lg font-bold text-white shadow-blue hover:opacity-90 hover:scale-105 transition-all"
           >
             {user ? "Open My Live Classes" : "Join Free"} <ArrowRight className="h-5 w-5" />
           </Link>

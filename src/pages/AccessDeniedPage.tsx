@@ -70,7 +70,7 @@ const AccessDeniedPage = () => {
         <div className="mt-6 flex flex-col gap-2">
           <Link
             to={primaryHref}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2.5 text-sm font-bold text-primary-foreground hover:opacity-90 transition-opacity"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#F97415] px-4 py-2.5 text-sm font-bold text-primary-foreground hover:opacity-90 transition-opacity"
           >
             <LayoutDashboard className="h-4 w-4" />
             {primaryLabel}

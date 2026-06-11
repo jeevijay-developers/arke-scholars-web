@@ -80,16 +80,16 @@ const EducatorsPage = () => {
   // marketing page never appears empty before any teachers are onboarded.
   const list = dbEducators.length > 0
     ? dbEducators.map((e) => ({
-        id: e.user_id,
-        name: e.full_name,
-        subject: e.subject || "Faculty",
-        rating: 4.8,
-        students: 0,
-        classes: 0,
-        exp: "—",
-        speciality: e.city || "Educator",
-        avatar_url: e.avatar_url,
-      }))
+      id: e.user_id,
+      name: e.full_name,
+      subject: e.subject || "Faculty",
+      rating: 4.8,
+      students: 0,
+      classes: 0,
+      exp: "—",
+      speciality: e.city || "Educator",
+      avatar_url: e.avatar_url,
+    }))
     : fallbackEducators.map((f) => ({ ...f, avatar_url: null as string | null }));
 
   const filtered = list.filter(
@@ -123,7 +123,7 @@ const EducatorsPage = () => {
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               to={user ? "/dashboard" : "/signup"}
-              className="inline-flex items-center gap-2 rounded-pill bg-gradient-to-r from-primary to-accent px-7 py-3 text-sm font-bold text-white shadow-blue hover:opacity-90 hover:scale-105 transition-all"
+              className="inline-flex items-center gap-2 rounded-pill bg-[#F97415] px-7 py-3 text-sm font-bold text-white shadow-blue hover:opacity-90 hover:scale-105 transition-all"
             >
               {user ? "Go to Dashboard" : "Start Learning"} <ArrowRight className="h-4 w-4" />
             </Link>
@@ -254,7 +254,7 @@ const EducatorsPage = () => {
           </p>
           <Link
             to={user ? "/dashboard" : "/signup"}
-            className="mt-8 inline-flex items-center gap-2 rounded-pill bg-gradient-to-r from-primary to-accent px-10 py-4 text-lg font-bold text-white shadow-blue hover:opacity-90 hover:scale-105 transition-all"
+            className="mt-8 inline-flex items-center gap-2 rounded-pill bg-[#F97415] px-10 py-4 text-lg font-bold text-white shadow-blue hover:opacity-90 hover:scale-105 transition-all"
           >
             {user ? "Open My Dashboard" : "Get Started Free"} <ArrowRight className="h-5 w-5" />
           </Link>

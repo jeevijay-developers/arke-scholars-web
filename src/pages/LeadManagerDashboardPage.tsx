@@ -34,24 +34,24 @@ type Lead = {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STATUSES: { value: string; label: string }[] = [
-  { value: "new",             label: "New" },
+  { value: "new", label: "New" },
   { value: "call_not_picked", label: "Call not Picked" },
-  { value: "not_interested",  label: "Not Interested" },
-  { value: "wrong_number",    label: "Wrong Number" },
-  { value: "not_reachable",   label: "Not Reachable" },
-  { value: "not_student",     label: "Not Student" },
-  { value: "connected",       label: "Connected" },
+  { value: "not_interested", label: "Not Interested" },
+  { value: "wrong_number", label: "Wrong Number" },
+  { value: "not_reachable", label: "Not Reachable" },
+  { value: "not_student", label: "Not Student" },
+  { value: "connected", label: "Connected" },
 ];
 
 const STATUS_STYLES: Record<string, string> = {
-  new:             "bg-amber-50 text-amber-700 border-amber-200",
+  new: "bg-amber-50 text-amber-700 border-amber-200",
   call_not_picked: "bg-orange-50 text-orange-700 border-orange-200",
-  not_interested:  "bg-slate-100 text-slate-600 border-slate-200",
-  wrong_number:    "bg-red-50 text-red-700 border-red-200",
-  not_reachable:   "bg-pink-50 text-pink-700 border-pink-200",
-  not_student:     "bg-gray-100 text-gray-600 border-gray-200",
-  connected:       "bg-blue-50 text-blue-700 border-blue-200",
-  enrolled:        "bg-emerald-50 text-emerald-700 border-emerald-200",
+  not_interested: "bg-slate-100 text-slate-600 border-slate-200",
+  wrong_number: "bg-red-50 text-red-700 border-red-200",
+  not_reachable: "bg-pink-50 text-pink-700 border-pink-200",
+  not_student: "bg-gray-100 text-gray-600 border-gray-200",
+  connected: "bg-blue-50 text-blue-700 border-blue-200",
+  enrolled: "bg-emerald-50 text-emerald-700 border-emerald-200",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -145,11 +145,10 @@ function DateFilterButton({
     <div className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        className={`flex items-center gap-1.5 h-10 px-3 rounded-xl border text-sm font-medium transition-colors ${
-          active
+        className={`flex items-center gap-1.5 h-10 px-3 rounded-xl border text-sm font-medium transition-colors ${active
             ? "border-[#f97015] bg-orange-50 text-[#f97015]"
             : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
-        }`}
+          }`}
       >
         <CalendarDays className="w-4 h-4" />
         {active ? `${filter.from || "…"} → ${filter.to || "…"}` : "Date"}
@@ -189,7 +188,7 @@ function DateFilterButton({
           <div className="flex gap-2 mt-4">
             <button
               onClick={apply}
-              className="flex-1 h-9 bg-[#f97015] text-white text-sm font-semibold rounded-lg hover:bg-[#d95e05] transition-colors"
+              className="flex-1 h-9 bg-[#F97415] text-white text-sm font-semibold rounded-lg hover:bg-[#d95e05] transition-colors"
             >
               Apply
             </button>
@@ -209,15 +208,15 @@ function DateFilterButton({
 // ─── Status Filter Button ────────────────────────────────────────────────────
 
 const STATUS_FILTER_OPTIONS = [
-  { value: "",               label: "All Statuses" },
-  { value: "new",            label: "New" },
-  { value: "call_not_picked",label: "Call not Picked" },
+  { value: "", label: "All Statuses" },
+  { value: "new", label: "New" },
+  { value: "call_not_picked", label: "Call not Picked" },
   { value: "not_interested", label: "Not Interested" },
-  { value: "wrong_number",   label: "Wrong Number" },
-  { value: "not_reachable",  label: "Not Reachable" },
-  { value: "not_student",    label: "Not Student" },
-  { value: "connected",      label: "Connected" },
-  { value: "enrolled",       label: "Enrolled" },
+  { value: "wrong_number", label: "Wrong Number" },
+  { value: "not_reachable", label: "Not Reachable" },
+  { value: "not_student", label: "Not Student" },
+  { value: "connected", label: "Connected" },
+  { value: "enrolled", label: "Enrolled" },
 ];
 
 function StatusFilterButton({
@@ -244,11 +243,10 @@ function StatusFilterButton({
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((o) => !o)}
-        className={`flex items-center gap-1.5 h-10 px-3 rounded-xl border text-sm font-medium transition-colors ${
-          active
+        className={`flex items-center gap-1.5 h-10 px-3 rounded-xl border text-sm font-medium transition-colors ${active
             ? "border-[#f97015] bg-orange-50 text-[#f97015]"
             : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
-        }`}
+          }`}
       >
         <ListFilter className="w-4 h-4" />
         {active ? activeLabel : "Sort by Status"}
@@ -269,15 +267,14 @@ function StatusFilterButton({
             <button
               key={opt.value}
               onClick={() => { onChange(opt.value); setOpen(false); }}
-              className={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors ${
-                value === opt.value
+              className={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors ${value === opt.value
                   ? "bg-orange-50 text-[#f97015] font-semibold"
                   : "text-slate-700 hover:bg-slate-50"
-              }`}
+                }`}
             >
               <span>{opt.label}</span>
               {value === opt.value && (
-                <span className="w-2 h-2 rounded-full bg-[#f97015]" />
+                <span className="w-2 h-2 rounded-full bg-[#F97415]" />
               )}
             </button>
           ))}
@@ -291,18 +288,18 @@ function StatusFilterButton({
 
 function OverviewTab({ leads, onGoLeads }: { leads: Lead[]; onGoLeads: () => void }) {
   const today = new Date(); today.setHours(0, 0, 0, 0);
-  const newToday  = leads.filter((l) => new Date(l.created_at) >= today).length;
-  const newCount  = leads.filter((l) => l.status === "new").length;
+  const newToday = leads.filter((l) => new Date(l.created_at) >= today).length;
+  const newCount = leads.filter((l) => l.status === "new").length;
   const contacted = leads.filter((l) => l.status === "connected").length;
-  const enrolled  = leads.filter((l) => l.enrolled).length;
+  const enrolled = leads.filter((l) => l.enrolled).length;
   const conversionRate = leads.length ? Math.round((enrolled / leads.length) * 100) : 0;
 
   const cards = [
-    { label: "Total Leads",      value: leads.length, icon: Users,         bg: "bg-orange-50",  iconColor: "text-[#f97015]" },
-    { label: "New Today",        value: newToday,     icon: Sparkles,      bg: "bg-blue-50",    iconColor: "text-blue-600" },
-    { label: "Awaiting Contact", value: newCount,     icon: UserPlus,      bg: "bg-amber-50",   iconColor: "text-amber-600" },
-    { label: "Connected",        value: contacted,    icon: PhoneCall,     bg: "bg-violet-50",  iconColor: "text-violet-600" },
-    { label: "Enrolled",         value: enrolled,     icon: GraduationCap, bg: "bg-emerald-50", iconColor: "text-emerald-600" },
+    { label: "Total Leads", value: leads.length, icon: Users, bg: "bg-orange-50", iconColor: "text-[#f97015]" },
+    { label: "New Today", value: newToday, icon: Sparkles, bg: "bg-blue-50", iconColor: "text-blue-600" },
+    { label: "Awaiting Contact", value: newCount, icon: UserPlus, bg: "bg-amber-50", iconColor: "text-amber-600" },
+    { label: "Connected", value: contacted, icon: PhoneCall, bg: "bg-violet-50", iconColor: "text-violet-600" },
+    { label: "Enrolled", value: enrolled, icon: GraduationCap, bg: "bg-emerald-50", iconColor: "text-emerald-600" },
   ];
 
   return (
@@ -534,16 +531,14 @@ function LeadsTab({
                       <div className="flex flex-col items-center gap-1">
                         <button
                           onClick={() => onEnrolledToggle(l.id, !l.enrolled)}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 ${
-                            l.enrolled
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 ${l.enrolled
                               ? "bg-emerald-500 focus:ring-emerald-400"
-                              : "bg-[#f97015] focus:ring-orange-400"
-                          }`}
+                              : "bg-[#F97415] focus:ring-orange-400"
+                            }`}
                           aria-label="Toggle enrolled"
                         >
-                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform duration-200 ${
-                            l.enrolled ? "translate-x-6" : "translate-x-1"
-                          }`} />
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform duration-200 ${l.enrolled ? "translate-x-6" : "translate-x-1"
+                            }`} />
                         </button>
                         <span className={`text-[10px] font-bold ${l.enrolled ? "text-emerald-600" : "text-[#f97015]"}`}>
                           {l.enrolled ? "Enrolled" : "Not yet"}
@@ -628,7 +623,7 @@ export default function LeadManagerDashboardPage() {
       const q = search.toLowerCase();
       result = result.filter((l) =>
         [l.name, l.phone, l.city, l.board, l.medium, l.status,
-         l.utm_source, l.utm_medium, l.utm_campaign]
+        l.utm_source, l.utm_medium, l.utm_campaign]
           .filter(Boolean)
           .some((v) => String(v).toLowerCase().includes(q))
       );

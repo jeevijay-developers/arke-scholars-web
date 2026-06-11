@@ -95,7 +95,7 @@ const AdmissionsPage = () => {
           <div className="mt-8 flex flex-row items-center justify-center gap-2 sm:gap-3">
             <Link
               to="/signup"
-              className="inline-flex items-center gap-1.5 rounded-pill bg-gradient-to-r from-primary to-accent px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-blue hover:opacity-90 sm:px-7 sm:py-3 sm:text-sm sm:gap-2"
+              className="inline-flex items-center gap-1.5 rounded-pill bg-[#F97415] px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-blue hover:opacity-90 sm:px-7 sm:py-3 sm:text-sm sm:gap-2"
             >
               Apply Now <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </Link>
@@ -122,7 +122,7 @@ const AdmissionsPage = () => {
                 key={title}
                 className="relative w-[260px] shrink-0 snap-start scroll-ml-4 md:scroll-ml-0 rounded-2xl border border-border bg-card p-6 text-center shadow-sm md:w-auto"
               >
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-primary to-accent px-3 py-0.5 text-[10px] font-black text-primary-foreground z-10">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#F97415] px-3 py-0.5 text-[10px] font-black text-primary-foreground z-10">
                   STEP {i + 1}
                 </div>
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">

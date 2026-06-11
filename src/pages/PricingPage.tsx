@@ -161,12 +161,12 @@ const PricingPage = () => {
                 <div
                   key={p.name}
                   className={`relative rounded-2xl border p-8 transition-transform hover:-translate-y-1 ${p.popular
-                      ? "border-primary bg-card shadow-blue"
-                      : "border-border bg-card shadow-sm"
+                    ? "border-primary bg-card shadow-blue"
+                    : "border-border bg-card shadow-sm"
                     }`}
                 >
                   {p.popular && (
-                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-pill bg-gradient-to-r from-primary to-accent px-4 py-1 text-xs font-bold text-primary-foreground">
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-pill bg-[#F97415] px-4 py-1 text-xs font-bold text-primary-foreground">
                       Most Popular
                     </span>
                   )}
@@ -193,8 +193,8 @@ const PricingPage = () => {
                   <Link
                     to="/signup"
                     className={`mt-6 block rounded-pill py-3 text-center text-sm font-bold transition-colors ${p.popular
-                        ? "bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90"
-                        : "border border-border text-foreground hover:bg-primary/5"
+                      ? "bg-[#F97415] text-primary-foreground hover:opacity-90"
+                      : "border border-border text-foreground hover:bg-primary/5"
                       }`}
                   >
                     {p.cta}

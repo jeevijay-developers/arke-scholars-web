@@ -142,7 +142,7 @@ const CompeteLobby = ({
         <button
           onClick={onQuickMatch}
           disabled={busy}
-          className="w-full rounded-xl bg-gradient-to-r from-primary to-accent px-6 py-4 text-base font-black text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-60"
+          className="w-full rounded-xl bg-[#F97415] px-6 py-4 text-base font-black text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-60"
         >
           {busy ? (
             <span className="inline-flex items-center justify-center gap-2">

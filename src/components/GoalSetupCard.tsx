@@ -98,11 +98,10 @@ const GoalSetupCard = () => {
             <button
               key={g.value}
               onClick={() => setSelected(g.value)}
-              className={`relative rounded-xl border p-3 text-left transition-all ${
-                active
+              className={`relative rounded-xl border p-3 text-left transition-all ${active
                   ? "border-primary bg-primary/10 shadow-md"
                   : "border-border bg-card hover:border-primary/50"
-              }`}
+                }`}
             >
               <div className="font-display text-sm font-bold text-foreground">{g.label}</div>
               <div className="mt-0.5 text-[11px] text-muted-foreground">{g.desc}</div>
@@ -126,7 +125,7 @@ const GoalSetupCard = () => {
         <button
           onClick={save}
           disabled={!selected || saving}
-          className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 disabled:opacity-60 transition-opacity"
+          className="inline-flex items-center gap-2 rounded-lg bg-[#F97415] px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 disabled:opacity-60 transition-opacity"
         >
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
           Save

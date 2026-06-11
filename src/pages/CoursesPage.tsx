@@ -19,29 +19,29 @@ type ExamOption = {
 };
 
 const EXAM_OPTIONS: ExamOption[] = [
-  { label: "All",        value: "All",       classes: [] },
+  { label: "All", value: "All", classes: [] },
   {
-    label: "JEE",        value: "JEE",
+    label: "JEE", value: "JEE",
     children: ["MAINS", "Advance"],
     classes: [
-      { label: "Class 11",  value: "11" },
-      { label: "Class 12",  value: "12" },
+      { label: "Class 11", value: "11" },
+      { label: "Class 12", value: "12" },
       { label: "12th Pass", value: "12th_pass" },
     ],
   },
   {
-    label: "NEET",       value: "NEET",
+    label: "NEET", value: "NEET",
     classes: [
-      { label: "Class 11",  value: "11" },
-      { label: "Class 12",  value: "12" },
+      { label: "Class 11", value: "11" },
+      { label: "Class 12", value: "12" },
       { label: "12th Pass", value: "12th_pass" },
     ],
   },
   {
     label: "Foundation", value: "Foundation",
     classes: [
-      { label: "Class 8",  value: "8"  },
-      { label: "Class 9",  value: "9"  },
+      { label: "Class 8", value: "8" },
+      { label: "Class 9", value: "9" },
       { label: "Class 10", value: "10" },
     ],
   },
@@ -111,10 +111,10 @@ const CoursesPage = () => {
     const p = searchParams.get("exam")?.toLowerCase();
     if (!p) return;
     if (p.includes("foundation")) { setActiveExamIdx(3); setActiveSub(null); }
-    else if (p.includes("neet"))  { setActiveExamIdx(2); setActiveSub(null); }
-    else if (p.includes("jee"))   { setActiveExamIdx(1); setActiveSub(null); }
+    else if (p.includes("neet")) { setActiveExamIdx(2); setActiveSub(null); }
+    else if (p.includes("jee")) { setActiveExamIdx(1); setActiveSub(null); }
     setActiveClass("");
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   const { courses, loading } = useCourses(
@@ -158,7 +158,7 @@ const CoursesPage = () => {
           {user && (
             <Link
               to="/my-courses"
-              className="inline-flex items-center gap-1 rounded-pill bg-gradient-to-r from-primary to-accent px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity"
+              className="inline-flex items-center gap-1 rounded-pill bg-[#F97415] px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity"
             >
               My Learning <ArrowRight className="h-3.5 w-3.5" />
             </Link>
@@ -183,11 +183,10 @@ const CoursesPage = () => {
                   >
                     <button
                       onClick={() => { selectExam(i); setJeeOpen((v) => !v); }}
-                      className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-semibold transition-colors inline-flex items-center gap-1 ${
-                        isActive
-                          ? "bg-gradient-to-r from-primary to-accent text-primary-foreground"
+                      className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-semibold transition-colors inline-flex items-center gap-1 ${isActive
+                          ? "bg-[#F97415] text-primary-foreground"
                           : "border border-border text-muted-foreground hover:bg-muted/30"
-                      }`}
+                        }`}
                     >
                       {isActive ? jeeLabel : "JEE"}
                       <ChevronDown className={`h-3 w-3 transition-transform ${jeeOpen ? "rotate-180" : ""}`} />
@@ -199,9 +198,8 @@ const CoursesPage = () => {
                             <button
                               key={sub}
                               onClick={() => { selectExam(i); setActiveSub(sub); setJeeOpen(false); }}
-                              className={`w-full text-left px-4 py-2.5 text-xs font-semibold transition-colors hover:bg-muted/50 ${
-                                activeSub === sub && isActive ? "text-primary" : "text-foreground"
-                              }`}
+                              className={`w-full text-left px-4 py-2.5 text-xs font-semibold transition-colors hover:bg-muted/50 ${activeSub === sub && isActive ? "text-primary" : "text-foreground"
+                                }`}
                             >
                               {sub}
                             </button>
@@ -217,11 +215,10 @@ const CoursesPage = () => {
                 <button
                   key={opt.value}
                   onClick={() => selectExam(i)}
-                  className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
-                    isActive
-                      ? "bg-gradient-to-r from-primary to-accent text-primary-foreground"
+                  className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${isActive
+                      ? "bg-[#F97415] text-primary-foreground"
                       : "border border-border text-muted-foreground hover:bg-muted/30"
-                  }`}
+                    }`}
                 >
                   {opt.label}
                 </button>
@@ -234,11 +231,10 @@ const CoursesPage = () => {
             <div className="flex gap-2 overflow-x-auto no-scrollbar">
               <button
                 onClick={() => setActiveClass("")}
-                className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  activeClass === ""
+                className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${activeClass === ""
                     ? "bg-foreground text-background"
                     : "text-muted-foreground hover:bg-muted/50"
-                }`}
+                  }`}
               >
                 All Classes
               </button>
@@ -246,11 +242,10 @@ const CoursesPage = () => {
                 <button
                   key={cls.value}
                   onClick={() => setActiveClass(cls.value === activeClass ? "" : cls.value)}
-                  className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
-                    activeClass === cls.value
+                  className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${activeClass === cls.value
                       ? "bg-foreground text-background"
                       : "text-muted-foreground hover:bg-muted/50"
-                  }`}
+                    }`}
                 >
                   {cls.label}
                 </button>
@@ -318,7 +313,7 @@ const CoursesPage = () => {
                     </Link>
                     <button
                       onClick={() => handleEnroll(c)}
-                      className="flex-1 rounded-xl bg-gradient-to-r from-primary to-accent py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity"
+                      className="flex-1 rounded-xl bg-[#F97415] py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity"
                     >
                       {c.is_course_free ? "Enroll Free" : "Enroll Now"}
                     </button>

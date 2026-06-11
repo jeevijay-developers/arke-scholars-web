@@ -166,7 +166,7 @@ const ContactPage = () => {
               <button
                 type="submit"
                 disabled={submitted || submitting}
-                className="inline-flex items-center gap-2 rounded-pill bg-gradient-to-r from-primary to-accent px-6 md:px-8 py-2.5 md:py-3 text-sm font-bold text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-pill bg-[#F97415] px-6 md:px-8 py-2.5 md:py-3 text-sm font-bold text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
               >
                 {submitting ? (
                   <><Loader2 className="h-4 w-4 animate-spin" /> Sending...</>

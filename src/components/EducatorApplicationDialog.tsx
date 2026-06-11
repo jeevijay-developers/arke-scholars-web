@@ -388,7 +388,7 @@ const EducatorApplicationDialog = ({ trigger }: Props) => {
 
             <div className="flex justify-end gap-3 pt-2">
               <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={submitting}>Cancel</Button>
-              <Button type="submit" disabled={submitting} className="bg-gradient-to-r from-primary to-accent text-primary-foreground">
+              <Button type="submit" disabled={submitting} className="bg-[#F97415] text-primary-foreground">
                 {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Submitting…</> : <><Upload className="h-4 w-4" /> Submit Application</>}
               </Button>
             </div>

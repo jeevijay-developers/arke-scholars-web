@@ -38,10 +38,10 @@ const PublicLayout = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Region banner */}
-      <div className="bg-gradient-to-r from-primary to-accent py-1.5">
+      <div className="bg-[#F97415] py-1.5">
         <div className="container mx-auto flex items-center justify-center gap-2 px-4">
           <Globe className="h-3.5 w-3.5 text-primary-foreground" />
-          <span className="text-[11px] font-medium text-primary-foreground/80">Serving students across</span>
+          <span className="text-[11px] font-medium text-primary-foreground">Serving students across</span>
           <span className="rounded-full bg-primary-foreground/20 px-3 py-0.5 text-[11px] font-bold text-primary-foreground">🇮🇳 India</span>
         </div>
       </div>
@@ -115,7 +115,7 @@ const PublicLayout = () => {
                 </Link>
                 <Link
                   to="/signup"
-                  className="rounded-pill bg-gradient-to-r from-primary to-accent px-3 md:px-5 py-2 text-xs md:text-sm font-bold text-primary-foreground shadow-blue hover:opacity-90 transition-opacity whitespace-nowrap"
+                  className="rounded-pill bg-[#F97415] px-3 md:px-5 py-2 text-xs md:text-sm font-bold text-primary-foreground shadow-blue hover:opacity-90 transition-opacity whitespace-nowrap"
                 >
                   Get Started
                 </Link>
@@ -134,11 +134,10 @@ const PublicLayout = () => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`px-4 py-2.5 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors ${
-                  active
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                }`}
+                className={`px-4 py-2.5 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors ${active
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+                  }`}
               >
                 {item.label}
               </Link>
@@ -157,10 +156,11 @@ const PublicLayout = () => {
           <div className="grid gap-8 md:grid-cols-4">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent">
-                  <Flame className="h-4 w-4 text-white" />
-                </div>
-                <span className="text-lg font-black font-display gradient-text">ARKE</span>
+                <img
+                  src={"/src/assets/arke-logo-light.png"}
+                  alt="ARKE"
+                  className="h-8 md:h-10 w-auto object-contain"
+                />
               </div>
               <p className="text-sm text-white/60">Empowering students across India to achieve their dream exam results.</p>
             </div>

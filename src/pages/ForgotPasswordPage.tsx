@@ -122,7 +122,7 @@ const ForgotPasswordPage = () => {
                 <button
                   onClick={handleSubmit}
                   disabled={submitting}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent py-3 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-60 transition-opacity"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#F97415] py-3 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-60 transition-opacity"
                 >
                   {submitting ? (
                     <>

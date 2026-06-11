@@ -64,7 +64,7 @@ const FavouriteCoursesPage = () => {
           <Heart className="mx-auto mb-3 h-10 w-10 text-rose-500" />
           <h2 className="font-display text-xl font-black text-foreground">Sign in to see your favourites</h2>
           <p className="mt-2 text-sm text-muted-foreground">Save courses you love and revisit them anytime.</p>
-          <Link to="/login" className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-primary to-accent px-5 py-2.5 text-sm font-bold text-primary-foreground hover:opacity-90">
+          <Link to="/login" className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-[#F97415] px-5 py-2.5 text-sm font-bold text-primary-foreground hover:opacity-90">
             Login <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
@@ -110,7 +110,7 @@ const FavouriteCoursesPage = () => {
             </p>
             <Link
               to="/courses"
-              className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-primary to-accent px-5 py-2.5 text-sm font-bold text-primary-foreground hover:opacity-90"
+              className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-[#F97415] px-5 py-2.5 text-sm font-bold text-primary-foreground hover:opacity-90"
             >
               Browse Courses <ArrowRight className="h-3.5 w-3.5" />
             </Link>

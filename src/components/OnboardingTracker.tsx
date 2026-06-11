@@ -118,7 +118,7 @@ const OnboardingTracker = () => {
 
       <div className="mb-4 h-2 rounded-full bg-muted overflow-hidden">
         <div
-          className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-500"
+          className="h-full bg-[#F97415] transition-all duration-500"
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -130,11 +130,10 @@ const OnboardingTracker = () => {
             <Link
               key={s.key}
               to={s.link}
-              className={`flex items-center gap-3 rounded-xl border p-3 transition-all ${
-                s.done
+              className={`flex items-center gap-3 rounded-xl border p-3 transition-all ${s.done
                   ? "border-secondary/30 bg-secondary/5"
                   : "border-border hover:border-primary/40 hover:bg-background/50"
-              }`}
+                }`}
             >
               <Icon className={`h-5 w-5 shrink-0 ${s.done ? "text-secondary" : "text-muted-foreground"}`} />
               <div className="flex-1 min-w-0">

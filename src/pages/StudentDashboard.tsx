@@ -58,7 +58,7 @@ const StudentDashboard = () => {
             <Link to="/contact" className="inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-xs font-semibold text-foreground hover:bg-background transition-colors">
               <PhoneCall className="h-3.5 w-3.5" /> Talk to Counsellor
             </Link>
-            <Link to="/courses" className="rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity">Enroll in Course</Link>
+            <Link to="/courses" className="rounded-lg bg-[#F97415] px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity">Enroll in Course</Link>
           </div>
         </div>
 
