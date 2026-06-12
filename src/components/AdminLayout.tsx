@@ -247,13 +247,9 @@ export default function AdminLayout() {
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
 
-  // Lead managers see only the Student Enquiry tab.
   // permissions === null → super_admin or full admin — show everything.
   // Otherwise filter to items where the staff member has can_view, remove empty sections.
   const visibleSections = useMemo(() => {
-    if (role === "lead_manager") {
-      return [{ title: "Leads", items: [{ label: "Student Enquiry", icon: GraduationCap, path: "/admin/student-enquiry" }] }];
-    }
     if (permissions === null) return navSections;
     return navSections
       .map((section) => ({
