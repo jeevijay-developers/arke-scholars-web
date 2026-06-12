@@ -44,3 +44,16 @@ verify_jwt = false
 
 [functions.zoom-webhook]
 verify_jwt = false
+
+# Send SMS Hook → MSG91 relay. Called by Supabase Auth (not the browser);
+# authenticity is the standardwebhooks signature, so JWT verification is off.
+[functions.send-sms-otp]
+verify_jwt = false
+
+# Routes Supabase-generated phone OTPs through the send-sms-otp edge function.
+# uri below is for local dev (supabase start); production is enabled in the
+# dashboard under Authentication → Hooks → Send SMS.
+[auth.hook.send_sms]
+enabled = true
+uri = "http://host.docker.internal:54321/functions/v1/send-sms-otp"
+secrets = "env(SEND_SMS_HOOK_SECRET)"

@@ -179,13 +179,32 @@ const CreateCoursePage = () => {
       tags,
     };
 
+    let savedCourseId = courseId;
     if (!isEditMode) {
       const baseSlug = slugify(name) || `course-${Date.now()}`;
-      const { error } = await supabase.from("courses").insert({ ...payload, slug: `${baseSlug}-${Date.now().toString(36)}`, created_by: user.id });
+      const { data: inserted, error } = await supabase
+        .from("courses")
+        .insert({ ...payload, slug: `${baseSlug}-${Date.now().toString(36)}`, created_by: user.id })
+        .select("id")
+        .single();
       if (error) { toast.error(error.message); setSubmitting(false); return; }
+      savedCourseId = inserted?.id ?? null;
     } else {
       const { error } = await supabase.from("courses").update(payload).eq("id", courseId!);
       if (error) { toast.error(error.message); setSubmitting(false); return; }
+    }
+
+    // A free course makes all of its content free. Flag every lesson / content
+    // item as a free preview. (Switching back to paid is intentionally left
+    // alone — admins re-lock individual items manually.)
+    if (isCourseFree && savedCourseId) {
+      const [{ error: lessonsErr }, { error: itemsErr }] = await Promise.all([
+        supabase.from("lessons").update({ is_free_preview: true }).eq("course_id", savedCourseId),
+        supabase.from("content_items").update({ is_free_preview: true }).eq("course_id", savedCourseId),
+      ]);
+      if (lessonsErr || itemsErr) {
+        toast.error("Course saved, but some content could not be marked free");
+      }
     }
 
     toast.success(isEditMode ? "Course updated" : publish ? "Course published!" : "Draft saved");

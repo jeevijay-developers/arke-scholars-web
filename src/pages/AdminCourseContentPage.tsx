@@ -31,7 +31,7 @@ import { useConfirm } from "@/components/ConfirmDialog";
 import { usePagination } from "@/hooks/usePagination";
 import TablePagination from "@/components/TablePagination";
 
-type Course = { id: string; name: string; slug: string; subject: string; educator_name: string; thumbnail_url: string | null };
+type Course = { id: string; name: string; slug: string; subject: string; educator_name: string; thumbnail_url: string | null; is_course_free: boolean };
 type Chapter = { id: string; title: string; position: number };
 type Resource = {
   id: string;
@@ -202,7 +202,7 @@ const AdminCourseContentPage = () => {
     (async () => {
       const { data, error } = await supabase
         .from("courses")
-        .select("id,name,slug,subject,educator_name,thumbnail_url")
+        .select("id,name,slug,subject,educator_name,thumbnail_url,is_course_free")
         .order("created_at", { ascending: false });
       if (error) toast.error(error.message);
       setCourses((data as Course[]) ?? []);
@@ -338,6 +338,8 @@ const AdminCourseContentPage = () => {
     if (!title) { toast.error("Lecture title is required"); return; }
     if (!lectureForm.chapter_id) { toast.error("Pick a chapter"); return; }
     const durationSecs = Math.max(60, Math.round((lectureForm.durationMin || 10) * 60));
+    // Free courses force every lesson to be a free preview.
+    const freePreview = selectedCourse.is_course_free || lectureForm.is_free_preview;
 
     const hasAnyUpload = Object.values(videoFiles).some(Boolean);
     const lessonId = editingLessonId ?? crypto.randomUUID();
@@ -373,7 +375,7 @@ const AdminCourseContentPage = () => {
             duration_seconds: durationSecs,
             chapter_id: lectureForm.chapter_id,
             position: nextPosition,
-            is_free_preview: lectureForm.is_free_preview,
+            is_free_preview: freePreview,
           };
           if (videoKey !== lectureForm.uploadedKey) patch.video_url = videoKey;
           const { error } = await supabase.from("lessons").update(patch).eq("id", editingLessonId);
@@ -391,7 +393,7 @@ const AdminCourseContentPage = () => {
             position: positionInChapter,
             duration_seconds: durationSecs,
             video_url: videoKey,
-            is_free_preview: lectureForm.is_free_preview,
+            is_free_preview: freePreview,
             type: "video",
           });
           if (error) throw error;
@@ -411,7 +413,7 @@ const AdminCourseContentPage = () => {
             duration_seconds: durationSecs,
             chapter_id: lectureForm.chapter_id,
             position: nextPosition,
-            is_free_preview: lectureForm.is_free_preview,
+            is_free_preview: freePreview,
           })
           .eq("id", editingLessonId);
         if (error) throw error;
@@ -429,7 +431,7 @@ const AdminCourseContentPage = () => {
           position: positionInChapter,
           duration_seconds: durationSecs,
           video_url: null,
-          is_free_preview: lectureForm.is_free_preview,
+          is_free_preview: freePreview,
           type: "video",
         });
         if (error) throw error;
@@ -1168,10 +1170,15 @@ const AdminCourseContentPage = () => {
             <div className="flex items-center justify-between rounded-lg border border-border p-3">
               <div>
                 <p className="text-sm font-medium text-foreground">Free preview</p>
-                <p className="text-xs text-muted-foreground">Anyone can watch without enrolling</p>
+                <p className="text-xs text-muted-foreground">
+                  {selectedCourse?.is_course_free
+                    ? "Always free — this is a free course"
+                    : "Anyone can watch without enrolling"}
+                </p>
               </div>
               <Switch
-                checked={lectureForm.is_free_preview}
+                checked={selectedCourse?.is_course_free || lectureForm.is_free_preview}
+                disabled={selectedCourse?.is_course_free}
                 onCheckedChange={(v) => setLectureForm({ ...lectureForm, is_free_preview: v })}
               />
             </div>

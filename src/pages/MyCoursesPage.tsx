@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import SEO from "@/components/SEO";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { syncFreeCourseEnrollments } from "@/lib/freeCourseEnrollment";
 import {
   BookOpen, Play, Clock, Star, ArrowRight, Sparkles,
   GraduationCap, Trophy, Zap, Loader2,
@@ -41,6 +42,11 @@ const MyCoursesPage = () => {
   useEffect(() => {
     const load = async () => {
       if (!user) { setLoading(false); return; }
+
+      // Auto-assign any free courses matching the student's target + class
+      // before loading, so they appear in My Learning without manual enrollment.
+      await syncFreeCourseEnrollments(user.id);
+
       const { data, error } = await supabase
         .from("enrollments")
         .select(`

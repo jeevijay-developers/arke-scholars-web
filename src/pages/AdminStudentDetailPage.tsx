@@ -359,18 +359,6 @@ const AdminStudentDetailPage = () => {
                   {CLASS_LEVELS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
                 </select>
               </div>
-              <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <CityStateFields
-                  city={edit.city ?? ""}
-                  state={edit.state ?? ""}
-                  country={edit.country ?? ""}
-                  onCityChange={(v) => setEdit((s) => ({ ...s, city: v }))}
-                  onStateChange={(v) => setEdit((s) => ({ ...s, state: v }))}
-                  onCountryChange={(v) => setEdit((s) => ({ ...s, country: v }))}
-                  inputClassName="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary transition-colors"
-                  labelClassName="text-[10px] font-bold text-muted-foreground uppercase tracking-wide"
-                />
-              </div>
               <div>
                 <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Target Exam</label>
                 <select
@@ -381,6 +369,18 @@ const AdminStudentDetailPage = () => {
                   <option value="">— Select exam —</option>
                   {examNames.map((e) => <option key={e} value={e}>{e}</option>)}
                 </select>
+              </div>
+              <div className="sm:col-span-2 space-y-4">
+                <CityStateFields
+                  city={edit.city ?? ""}
+                  state={edit.state ?? ""}
+                  country={edit.country ?? ""}
+                  onCityChange={(v) => setEdit((s) => ({ ...s, city: v }))}
+                  onStateChange={(v) => setEdit((s) => ({ ...s, state: v }))}
+                  onCountryChange={(v) => setEdit((s) => ({ ...s, country: v }))}
+                  inputClassName="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary transition-colors"
+                  labelClassName="text-[10px] font-bold text-muted-foreground uppercase tracking-wide"
+                />
               </div>
             </div>
 

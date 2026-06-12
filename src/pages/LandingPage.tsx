@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import SEO from "@/components/SEO";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 import {
   ArrowRight, Play, Check, Trophy, FileText, MessageCircle,
   GraduationCap, ChevronRight, ChevronLeft,
@@ -135,6 +136,7 @@ const APP_BULLETS = [
 ];
 
 const LandingPage = () => {
+  const { user } = useAuth();
   const { banners } = useCourseBanners();
 
   return (
@@ -206,8 +208,8 @@ const LandingPage = () => {
                 <strong className="text-white/90">ARKE Scholars</strong> helps you master JEE, NEET &amp; Foundation exams with live classes from top educators, AI-powered doubt solving, and smart test analytics.
               </p>
               <div className="mt-6 md:mt-8 flex items-center justify-center md:justify-start gap-3">
-                <Link to="/signup" className="inline-flex items-center gap-1.5 rounded-pill bg-primary px-6 py-3 md:px-8 md:py-3.5 text-sm md:text-base font-bold text-primary-foreground hover:bg-primary/90 transition-colors">
-                  Get Started <ArrowRight className="h-4 w-4" />
+                <Link to={user ? "/courses" : "/signup"} className="inline-flex items-center gap-1.5 rounded-pill bg-primary px-6 py-3 md:px-8 md:py-3.5 text-sm md:text-base font-bold text-primary-foreground hover:bg-primary/90 transition-colors">
+                  {user ? "Explore Courses" : "Get Started"} <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
             </div>

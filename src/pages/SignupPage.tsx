@@ -67,25 +67,46 @@ const SignupPage = () => {
 
   const otp = digits.join("");
 
-  // TODO: replace stub with real MSG91 OTP once phone provider is configured
   const handleSendOtp = async () => {
     if (!phone || phone.length < 10) {
       toast.error("Enter a valid 10-digit phone number");
       return;
     }
     setSending(true);
-    await new Promise((r) => setTimeout(r, 400));
+    // Reject numbers that already have an account before spending an OTP.
+    // phone_exists is a security-definer RPC (returns only a boolean) since
+    // profiles RLS hides other users' rows from anonymous signup visitors.
+    // The RPC is newer than the generated supabase types; cast the client (not
+    // the detached method — that loses `this` and breaks supabase-js) so the
+    // call still runs bound to the client.
+    const { data: exists, error: checkError } = await (
+      supabase as unknown as {
+        rpc: (
+          fn: "phone_exists",
+          args: { p_phone: string },
+        ) => Promise<{ data: boolean | null; error: { message: string } | null }>;
+      }
+    ).rpc("phone_exists", { p_phone: fullPhone });
+    if (checkError) { setSending(false); toast.error(checkError.message); return; }
+    if (exists) {
+      setSending(false);
+      toast.error("User already exists with this number, please login");
+      return;
+    }
+    const { error } = await supabase.auth.signInWithOtp({ phone: fullPhone });
     setSending(false);
-    toast.success("OTP sent! (dev mode: use 123456)");
+    if (error) { toast.error(error.message); return; }
+    toast.success("OTP sent to your phone!");
     startCooldown();
     setStep("otp");
   };
 
   const handleResend = async () => {
     setResending(true);
-    await new Promise((r) => setTimeout(r, 400));
+    const { error } = await supabase.auth.signInWithOtp({ phone: fullPhone });
     setResending(false);
-    toast.success("New OTP sent (dev mode: use 123456)");
+    if (error) { toast.error(error.message); return; }
+    toast.success("New OTP sent");
     startCooldown();
     setDigits(Array(OTP_LENGTH).fill(""));
     inputRefs.current[0]?.focus();
@@ -93,12 +114,29 @@ const SignupPage = () => {
 
   const handleVerifyOtp = async () => {
     if (otp.length < OTP_LENGTH) { toast.error("Enter the full 6-digit code"); return; }
-    if (otp !== "123456") { toast.error("Invalid OTP. Use 123456 in dev mode."); return; }
     setVerifying(true);
-    await supabase.auth.signInAnonymously();
-    // TODO: replace with supabase.auth.verifyOtp({ phone: fullPhone, token: otp, type: "sms" })
-    // once MSG91 is configured in Supabase phone provider settings
+    const { error } = await supabase.auth.verifyOtp({ phone: fullPhone, token: otp, type: "sms" });
     setVerifying(false);
+    if (error) { toast.error(error.message); return; }
+
+    // Check if this user already has a profile — if so skip profile setup
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (profile?.full_name) {
+        // Existing user — redirect directly, same as LoginPage
+        if (isStaff) navigate("/admin/dashboard", { replace: true });
+        else if (isTeacher) navigate("/teacher/dashboard", { replace: true });
+        else if (isMentor) navigate("/mentor/dashboard", { replace: true });
+        else if (isLeadManager) navigate("/lead-manager/dashboard", { replace: true });
+        else navigate("/my-courses", { replace: true });
+        return;
+      }
+    }
     setStep("profile");
   };
 

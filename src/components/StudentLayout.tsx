@@ -166,27 +166,56 @@ const StudentSidebar = memo(({ fullName, avatarUrl, initials, onLogout, doubtCou
 });
 StudentSidebar.displayName = "StudentSidebar";
 
-// Mobile bottom nav — floating card style with active pill indicator
+// Mobile bottom nav — floating card with special elevated Compete center button
 const StudentMobileNav = memo(() => {
   const { pathname } = useLocation();
-  const items = [
-    { icon: Home,          label: "Home",     path: "/dashboard" },
-    { icon: BookOpen,      label: "Learning", path: "/my-courses" },
-    { icon: Video,         label: "Live",     path: "/my-live-classes" },
-    { icon: MessageCircle, label: "Doubts",   path: "/doubts" },
-    { icon: ClipboardCheck,label: "Tests",    path: "/my-tests" },
+
+  const sideItems = [
+    { icon: Home, label: "Home", path: "/dashboard" },
+    { icon: BookOpen, label: "Courses", path: "/my-courses" },
+    // center slot reserved for Compete
+    { icon: MessageCircle, label: "Doubts", path: "/doubts" },
+    { icon: User, label: "Profile", path: "/profile" },
   ];
+
+  const competeActive = pathname === "/compete" || pathname.startsWith("/compete/");
+
   return (
-    <nav className="fixed bottom-3 left-3 right-3 z-40 lg:hidden flex items-center justify-around bg-white rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.10)] border border-border/20 py-1.5 px-1">
-      {items.map((item) => {
+    <nav className="fixed bottom-3 left-3 right-3 z-40 lg:hidden flex items-end justify-around bg-white rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.10)] border border-border/20 px-1 pt-1.5 pb-1.5">
+      {/* Left two items */}
+      {sideItems.slice(0, 2).map((item) => {
         const active = pathname === item.path || pathname.startsWith(item.path + "/");
         return (
-          <Link
-            key={item.path}
-            to={item.path}
-            className="flex flex-col items-center gap-0.5 px-2"
-          >
-            <div className={`flex items-center justify-center w-10 h-10 rounded-xl transition-colors duration-150 ${active ? "bg-orange-500" : ""}`}>
+          <Link key={item.path} to={item.path} className="flex flex-col items-center gap-0.5 px-2">
+            <div className={`flex items-center justify-center w-10 h-10 rounded-full transition-colors duration-150 ${active ? "bg-orange-500" : ""}`}>
+              <item.icon className={`h-5 w-5 transition-colors duration-150 ${active ? "text-white" : "text-muted-foreground"}`} />
+            </div>
+            <span className={`text-[10px] font-semibold transition-colors duration-150 ${active ? "text-orange-500" : "text-muted-foreground"}`}>
+              {item.label}
+            </span>
+          </Link>
+        );
+      })}
+
+      {/* Center — Compete special button */}
+      <Link
+        to="/compete"
+        className="flex flex-col items-center gap-1 px-2 -mt-5"
+      >
+        <div className={`flex items-center justify-center w-14 h-14 rounded-full shadow-md transition-all duration-150 ${competeActive ? "bg-orange-600 scale-105" : "bg-orange-500"}`}>
+          <Trophy className="h-7 w-7 text-white" />
+        </div>
+        <span className={`text-[10px] font-semibold transition-colors duration-150 ${competeActive ? "text-orange-600" : "text-orange-500"}`}>
+          Compete
+        </span>
+      </Link>
+
+      {/* Right two items */}
+      {sideItems.slice(2).map((item) => {
+        const active = pathname === item.path || pathname.startsWith(item.path + "/");
+        return (
+          <Link key={item.path} to={item.path} className="flex flex-col items-center gap-0.5 px-2">
+            <div className={`flex items-center justify-center w-10 h-10 rounded-full transition-colors duration-150 ${active ? "bg-orange-500" : ""}`}>
               <item.icon className={`h-5 w-5 transition-colors duration-150 ${active ? "text-white" : "text-muted-foreground"}`} />
             </div>
             <span className={`text-[10px] font-semibold transition-colors duration-150 ${active ? "text-orange-500" : "text-muted-foreground"}`}>

@@ -93,6 +93,7 @@ const CourseDetailPage = () => {
   }, [user, course]);
 
   const flatLessons = useMemo(() => chapters.flatMap((c) => c.lessons), [chapters]);
+  const freeLessons = useMemo(() => flatLessons.filter((l) => l.is_free_preview), [flatLessons]);
   const totalLessons = flatLessons.length;
   const completedCount = flatLessons.filter((l) => completedSlugs.has(l.slug)).length;
   const totalSeconds = flatLessons.reduce((s, l) => s + (l.duration_seconds || 0), 0);
@@ -161,13 +162,27 @@ const CourseDetailPage = () => {
     "Lifetime access",
   ];
 
-  const handleEnrollClick = () => {
+  const handleEnrollClick = async () => {
     if (!user) {
       toast.info("Please sign in to enroll");
       navigate("/login");
       return;
     }
     if (enrolled) {
+      navigate(`/learn/${course.id}`);
+      return;
+    }
+    // Free courses skip payment — enroll directly and go straight to learning.
+    if (course.is_course_free) {
+      const { error } = await supabase
+        .from("enrollments")
+        .insert({ user_id: user.id, course_id: course.id, is_active: true });
+      if (error && !error.message.includes("duplicate")) {
+        toast.error("Could not enroll. Please try again.");
+        return;
+      }
+      toast.success("You're enrolled!");
+      await handleEnrolled();
       navigate(`/learn/${course.id}`);
       return;
     }
@@ -386,30 +401,28 @@ const CourseDetailPage = () => {
           {/* Lectures */}
           {activeTab === 1 && (
             <div className="mt-6 space-y-4">
-              {enrolled && (
+              {freeLessons.length > 0 && (
                 <div className="rounded-2xl border border-border bg-card p-4">
-                  <div className="flex items-center justify-between mb-2 gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold text-foreground">Your progress</p>
-                      <p className="text-xs text-muted-foreground">
-                        {completedCount} of {totalLessons} lessons completed
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => navigate(`/learn/${course.id}`)}
-                      className="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground hover:bg-primary-dark transition-colors shrink-0"
-                    >
-                      Continue Learning <ArrowRight className="h-3.5 w-3.5" />
-                    </button>
+                  <div className="flex items-center gap-2 mb-3">
+                    <p className="text-sm font-bold text-foreground">Free preview videos</p>
+                    <span className="rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-bold text-secondary">
+                      {freeLessons.length} FREE
+                    </span>
                   </div>
-                  <div className="h-2 rounded-full bg-muted overflow-hidden">
-                    <div className="h-2 bg-secondary transition-all" style={{ width: `${progressPercent}%` }} />
-                  </div>
-                  <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
-                    <span>{progressPercent}% complete</span>
-                    {enrollment?.last_lesson_title && (
-                      <span className="truncate ml-2">Last watched: {enrollment.last_lesson_title}</span>
-                    )}
+                  <div className="space-y-1">
+                    {freeLessons.map((l) => (
+                      <button
+                        key={l.id}
+                        onClick={() => navigate(`/learn/${course.id}?lesson=${l.slug}`)}
+                        className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-sm text-left hover:bg-muted/30 transition-colors"
+                      >
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                          <Play className="h-3.5 w-3.5 text-primary" />
+                        </span>
+                        <span className="flex-1 truncate text-foreground">{l.title}</span>
+                        <span className="text-xs text-muted-foreground shrink-0">{Math.round(l.duration_seconds / 60)} min</span>
+                      </button>
+                    ))}
                   </div>
                 </div>
               )}

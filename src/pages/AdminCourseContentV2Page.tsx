@@ -164,6 +164,7 @@ const AdminCourseContentV2Page = () => {
 
   const [courseName, setCourseName] = useState("");
   const [courseSubject, setCourseSubject] = useState("");
+  const [courseIsFree, setCourseIsFree] = useState(false);
   const [teachers, setTeachers] = useState<{ id: string; full_name: string }[]>([]);
   const [folders, setFolders] = useState<FolderRow[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
@@ -201,13 +202,13 @@ const AdminCourseContentV2Page = () => {
   const [savingItem, setSavingItem] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
-  // Load course name + subject
+  // Load course name + free flag
   useEffect(() => {
     if (!courseId) return;
-    supabase.from("courses").select("name, subject").eq("id", courseId).maybeSingle().then(({ data }) => {
+    supabase.from("courses").select("name, is_course_free").eq("id", courseId).maybeSingle().then(({ data }) => {
       if (data) {
         setCourseName((data as any).name);
-        setCourseSubject((data as any).subject ?? "");
+        setCourseIsFree((data as any).is_course_free ?? false);
       }
     });
   }, [courseId]);
@@ -512,7 +513,7 @@ const AdminCourseContentV2Page = () => {
       zoom_link: resolvedZoomLink,
       scheduled_at: fScheduledAt ? new Date(fScheduledAt).toISOString() : null,
       test_id: fTestId || null,
-      is_free_preview: fIsFreePreview,
+      is_free_preview: courseIsFree || fIsFreePreview,
     };
 
     let error;
@@ -880,8 +881,21 @@ const AdminCourseContentV2Page = () => {
               )}
 
               <div className="flex items-center gap-2">
-                <input id="freePreview" type="checkbox" checked={fIsFreePreview} onChange={(e) => setFIsFreePreview(e.target.checked)} className="accent-primary h-4 w-4" />
-                <label htmlFor="freePreview" className="text-xs font-medium text-foreground cursor-pointer">Free preview (visible without enrollment)</label>
+                <input
+                  id="freePreview"
+                  type="checkbox"
+                  checked={courseIsFree || fIsFreePreview}
+                  disabled={courseIsFree}
+                  onChange={(e) => setFIsFreePreview(e.target.checked)}
+                  className="accent-primary h-4 w-4 disabled:opacity-60 disabled:cursor-not-allowed"
+                />
+                <label
+                  htmlFor="freePreview"
+                  className={`text-xs font-medium text-foreground ${courseIsFree ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}
+                >
+                  Free preview (visible without enrollment)
+                  {courseIsFree && <span className="ml-1 text-muted-foreground">— always free in a free course</span>}
+                </label>
               </div>
             </div>
 

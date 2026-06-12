@@ -84,23 +84,27 @@ function resolveS3Url(raw: string): string {
 
 // ── Content viewer ────────────────────────────────────────────────────────────
 
+function YoutubeEmbed({ videoId, title }: { videoId: string; title: string }) {
+  return (
+    <div className="aspect-video w-full rounded-xl overflow-hidden bg-black">
+      <iframe
+        src={`https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1`}
+        title={title}
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+        allowFullScreen
+        className="h-full w-full"
+      />
+    </div>
+  );
+}
+
 function ContentViewer({ item }: { item: ContentItem }) {
   if (item.type === "video" || item.type === "recorded_lecture") {
-    const isYT = item.video_source === "youtube" || (item.video_url?.includes("youtube") ?? false);
+    const isYT = item.video_source === "youtube" || !!(item.video_url?.includes("youtube") || item.video_url?.includes("youtu.be"));
     const ytId = item.video_url ? youtubeId(item.video_url) : null;
 
     if (isYT && ytId) {
-      return (
-        <div className="aspect-video w-full rounded-xl overflow-hidden bg-black">
-          <iframe
-            src={`https://www.youtube.com/embed/${ytId}`}
-            title={item.title}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            className="h-full w-full"
-          />
-        </div>
-      );
+      return <YoutubeEmbed videoId={ytId} title={item.title} />;
     }
 
     const rawUrl = item.video_url ?? item.file_url;
@@ -112,6 +116,8 @@ function ContentViewer({ item }: { item: ContentItem }) {
             key={src}
             src={src}
             controls
+            controlsList="nodownload"
+            onContextMenu={(e) => e.preventDefault()}
             className="h-full w-full"
             onError={(e) => console.error("Video load error", src, e)}
           />
@@ -121,10 +127,11 @@ function ContentViewer({ item }: { item: ContentItem }) {
   }
 
   if (item.type === "pdf" && item.file_url) {
+    const pdfSrc = resolveS3Url(item.file_url);
     return (
       <div className="flex h-[70vh] flex-col gap-3">
-        <iframe src={item.file_url} title={item.title} className="flex-1 w-full rounded-xl border border-border" />
-        <a href={item.file_url} download target="_blank" rel="noreferrer"
+        <iframe src={pdfSrc} title={item.title} className="flex-1 w-full rounded-xl border border-border" />
+        <a href={pdfSrc} target="_blank" rel="noreferrer"
           className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted">
           <ExternalLink className="h-3.5 w-3.5" /> Open in new tab
         </a>
@@ -135,6 +142,23 @@ function ContentViewer({ item }: { item: ContentItem }) {
   if (item.type === "live_class") {
     const scheduled = item.scheduled_at ? new Date(item.scheduled_at) : null;
     const past = scheduled ? scheduled < new Date() : false;
+
+    // If the link is a YouTube URL, always embed inline — never open a new tab
+    const ytRecordingId = item.zoom_link ? youtubeId(item.zoom_link) : null;
+    if (ytRecordingId) {
+      return (
+        <div className="space-y-3">
+          <YoutubeEmbed videoId={ytRecordingId} title={item.title} />
+          {scheduled && (
+            <p className="text-xs text-muted-foreground text-center">
+              {past ? "Recorded on" : "Scheduled for"}{" "}
+              {scheduled.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
+            </p>
+          )}
+        </div>
+      );
+    }
+
     return (
       <div className="flex flex-col items-center justify-center gap-5 py-16">
         <Radio className="h-12 w-12 text-red-500" />
