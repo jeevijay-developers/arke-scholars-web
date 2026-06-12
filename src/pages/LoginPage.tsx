@@ -64,7 +64,7 @@ const LoginPage = () => {
   useEffect(() => () => { if (cooldownRef.current) clearInterval(cooldownRef.current); }, []);
 
   const startCooldown = useCallback(() => {
-    setCooldown(30);
+    setCooldown(60);
     if (cooldownRef.current) clearInterval(cooldownRef.current);
     cooldownRef.current = setInterval(() => {
       setCooldown((c) => {
