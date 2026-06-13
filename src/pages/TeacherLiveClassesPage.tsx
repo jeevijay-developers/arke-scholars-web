@@ -75,7 +75,7 @@ const TeacherLiveClassesPage = () => {
 
   return (
     <div className="p-4 lg:p-6 space-y-6">
-      <div className="rounded-2xl bg-gradient-to-r from-primary via-accent to-secondary p-6 text-white">
+      <div className="rounded-2xl bg-primary p-6 text-white">
         <h1 className="text-2xl font-black font-display">Live Classes</h1>
         <p className="text-white/90 text-sm mt-1">Your scheduled live sessions — managed by the admin team</p>
       </div>
