@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
+
 export type ZoomMeetingRoomProps = {
   /** live_classes.id (UUID) — credentials and role are derived server-side */
   classId: string;
@@ -39,11 +40,25 @@ const ZoomMeetingRoom = ({ classId, classSlug, displayName, onLeave }: ZoomMeeti
 
         if (!containerRef.current) throw new Error("Meeting container not mounted");
 
+        const w = containerRef.current.clientWidth || window.innerWidth;
+        const h = containerRef.current.clientHeight || window.innerHeight;
         await client.init({
           zoomAppRoot: containerRef.current,
           language: "en-US",
           customize: {
             meetingInfo: ["topic", "host", "mn", "pwd", "telPwd", "invite", "participant", "dc", "enctype"],
+            video: {
+              isResizable: false,
+              popper: { disableDraggable: true },
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              defaultViewType: "speaker" as any,
+              viewSizes: { default: { width: w, height: h } },
+            },
+            chat: { popper: { disableDraggable: true } },
+            participants: { popper: { disableDraggable: true } },
+            setting: { popper: { disableDraggable: true } },
+            invite: { popper: { disableDraggable: true } },
+            meeting: { popper: { disableDraggable: true } },
           },
         });
 
@@ -72,6 +87,33 @@ const ZoomMeetingRoom = ({ classId, classSlug, displayName, onLeave }: ZoomMeeti
 
         joinedRef.current = true;
         if (!cancelled) setStatus("ready");
+
+        // Force Zoom's suspension-view panel to fill the container.
+        // Zoom renders a react-draggable + react-resizable popper at fixed px;
+        // these overrides pin it to fill 100% and remove drag/resize chrome.
+        const style = document.createElement("style");
+        style.id = "zoom-fill-override";
+        style.textContent = `
+          #meetingSDKElement .react-resizable-handle {
+            display: none !important;
+          }
+          #meetingSDKElement .zoommtg-drag-handle {
+            cursor: default !important;
+          }
+          /* Zoom sets inline px on VIDEO-PLAYER-CONTAINER — override to fill */
+          #meetingSDKElement video-player-container {
+            width: 100% !important;
+            height: 100% !important;
+            top: 0 !important;
+            left: 0 !important;
+          }
+          #meetingSDKElement video {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
+          }
+        `;
+        document.head.appendChild(style);
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         client.on("connection-change", (payload: any) => {
