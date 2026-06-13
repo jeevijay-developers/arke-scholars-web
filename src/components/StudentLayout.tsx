@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, BookOpen, Video, ClipboardCheck, MessageCircle, Swords, BarChart3, Trophy, User, Settings, Search, Users, Menu, X, LogOut, Flame, Store } from "lucide-react";
+import { Home, BookOpen, MessageCircle, Swords, BarChart3, Trophy, User, Settings, Search, Users, LogOut, Flame, Store } from "lucide-react";
 import LogoutButton from "@/components/LogoutButton";
 import { memo, useCallback, useMemo, useRef, useState, useEffect } from "react";
 import arkeLogo from "@/assets/arke-logo.png";
@@ -41,9 +41,10 @@ type AvatarDropdownProps = {
   avatarUrl?: string;
   initials: string;
   onLogout: () => void;
+  navItems?: StudentNavItem[];
 };
 
-const AvatarDropdown = memo(({ fullName, avatarUrl, initials, onLogout }: AvatarDropdownProps) => {
+const AvatarDropdown = memo(({ fullName, avatarUrl, initials, onLogout, navItems }: AvatarDropdownProps) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const { pathname } = useLocation();
@@ -69,10 +70,31 @@ const AvatarDropdown = memo(({ fullName, avatarUrl, initials, onLogout }: Avatar
         ) : initials}
       </button>
       {open && (
-        <div className="absolute right-0 top-10 z-50 w-52 rounded-xl border border-border bg-card shadow-lg py-1.5">
+        <div className="absolute right-0 top-10 z-50 w-56 rounded-xl border border-border bg-card shadow-lg py-1.5">
           <div className="px-3 py-2 border-b border-border mb-1">
             <p className="text-xs font-semibold text-foreground truncate">{fullName || "Student"}</p>
           </div>
+          {navItems && navItems.length > 0 && (
+            <>
+              {navItems.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className="flex items-center gap-2.5 px-3 py-2 text-sm text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground transition-colors"
+                >
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  <span className="flex-1">{item.label}</span>
+                  {item.flame && <Flame className="h-3 w-3 text-orange-500 shrink-0" />}
+                  {item.badge ? (
+                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
+                      {item.badge}
+                    </span>
+                  ) : null}
+                </Link>
+              ))}
+              <div className="border-t border-border my-1" />
+            </>
+          )}
           {dropdownItems.map((item) => (
             <Link
               key={item.path}
@@ -231,7 +253,6 @@ StudentMobileNav.displayName = "StudentMobileNav";
 
 const StudentLayout = () => {
   const navigate = useNavigate();
-  const { pathname } = useLocation();
   const { user, notifications } = useAppStore();
   const { signOut } = useAuth();
   useNotifications();
@@ -243,8 +264,6 @@ const StudentLayout = () => {
     () => notifications.filter((n) => !n.read_at && (n.type || "").toLowerCase().includes("live_class")).length,
     [notifications],
   );
-  const [drawerOpen, setDrawerOpen] = useState(false);
-
   const handleLogout = useCallback(async () => {
     await signOut();
     toast.success("Signed out");
@@ -258,33 +277,12 @@ const StudentLayout = () => {
 
   const navItems = buildNavItems(pendingDoubtCount);
 
-  const renderDrawerItem = (item: StudentNavItem) => {
-    const active = pathname === item.path;
-    return (
-      <Link
-        key={item.path}
-        to={item.path}
-        onClick={() => setDrawerOpen(false)}
-        className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground"}`}
-      >
-        <item.icon className="h-4 w-4 shrink-0" />
-        <span className="flex-1">{item.label}</span>
-        {item.live && <LiveBadge />}
-        {item.badge ? (
-          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
-            {item.badge}
-          </span>
-        ) : null}
-      </Link>
-    );
-  };
-
   // suppress unused var warning — hasLive kept for future use
   void hasLive;
   void liveUnreadCount;
 
   return (
-    <div className={`flex min-h-screen bg-background ${drawerOpen ? "overflow-hidden" : ""}`}>
+    <div className="flex min-h-screen bg-background">
       {/* Desktop sidebar */}
       <StudentSidebar
         fullName={fullName}
@@ -294,76 +292,13 @@ const StudentLayout = () => {
         doubtCount={pendingDoubtCount}
       />
 
-      {/* Mobile drawer backdrop */}
-      {drawerOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
-          onClick={() => setDrawerOpen(false)}
-        />
-      )}
-
-      {/* Mobile slide-out drawer */}
-      <aside
-        className={`fixed top-0 left-0 z-50 h-screen w-72 bg-card border-r border-border flex flex-col overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden transition-transform duration-300 lg:hidden ${drawerOpen ? "translate-x-0" : "-translate-x-full"}`}
-      >
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <div className="bg-white rounded-lg py-1.5 px-3 flex items-center justify-center">
-            <img src={arkeLogo} alt="ARKE Logo" className="h-8 w-auto object-contain" />
-          </div>
-          <button onClick={() => setDrawerOpen(false)} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
-            <X className="h-5 w-5 text-muted-foreground" />
-          </button>
-        </div>
-
-        <nav className="flex-1 px-3 py-3 space-y-1">
-          <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Main</p>
-          {navItems.map(renderDrawerItem)}
-          <p className="px-3 pt-3 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Account</p>
-          {dropdownItems.map((item) => {
-            const active = pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => setDrawerOpen(false)}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${active ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground"}`}
-              >
-                <item.icon className="h-4 w-4 shrink-0" />
-                <span className="flex-1">{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="border-t border-border p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-light text-xs font-bold text-primary overflow-hidden shrink-0">
-              {user?.avatar_url ? (
-                <img src={user.avatar_url} alt={fullName} className="h-full w-full object-cover" />
-              ) : initials}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-foreground truncate">{fullName || "Guest"}</p>
-            </div>
-          </div>
-          <LogoutButton onConfirm={handleLogout} />
-        </div>
-      </aside>
-
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
         <header className="sticky top-0 z-40 flex items-center border-b border-border bg-card px-4 py-3 lg:px-6">
-          {/* Mobile: hamburger left, logo center, icons right */}
+          {/* Mobile: logo left, icons right */}
           <div className="flex items-center gap-3 lg:hidden w-full">
-            <button
-              onClick={() => setDrawerOpen(true)}
-              className="p-1.5 rounded-lg hover:bg-muted transition-colors shrink-0"
-              aria-label="Open menu"
-            >
-              <Menu className="h-5 w-5 text-foreground" />
-            </button>
-            <div className="flex-1 flex justify-center">
-              <Link to="/" onClick={() => setDrawerOpen(false)}>
+            <div className="flex-1 flex justify-start">
+              <Link to="/">
                 <div className="bg-white rounded-lg p-1 flex items-center justify-center">
                   <img src={arkeLogo} alt="ARKE Logo" className="h-9 w-auto object-contain" />
                 </div>
@@ -376,6 +311,7 @@ const StudentLayout = () => {
                 avatarUrl={user?.avatar_url}
                 initials={fullName?.split(" ").map((n) => n[0]).join("").slice(0, 2) || "U"}
                 onLogout={handleLogout}
+                navItems={navItems}
               />
             </div>
           </div>

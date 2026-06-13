@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-
 export type ZoomMeetingRoomProps = {
   /** live_classes.id (UUID) — credentials and role are derived server-side */
   classId: string;
@@ -13,16 +12,24 @@ export type ZoomMeetingRoomProps = {
 
 type Status = "loading" | "ready" | "error";
 
+// Zoom's embedded toolbar is ~56px tall; subtract so it stays on-screen.
+const ZOOM_TOOLBAR_HEIGHT = 56;
+
 const ZoomMeetingRoom = ({ classId, classSlug, displayName, onLeave }: ZoomMeetingRoomProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const clientRef = useRef<any>(null);
   const joinedRef = useRef(false);
+  const initializedRef = useRef(false); // guard against double-init (StrictMode / re-render)
 
   const [status, setStatus] = useState<Status>("loading");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Only ever init once per mount — Zoom SDK throws if init is called twice.
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
     let cancelled = false;
 
     const init = async () => {
@@ -31,9 +38,10 @@ const ZoomMeetingRoom = ({ classId, classSlug, displayName, onLeave }: ZoomMeeti
         if (cancelled) return;
 
         const ZoomMtgEmbedded = module.default || module;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const createClientFn = ZoomMtgEmbedded.createClient || (ZoomMtgEmbedded as any).default?.createClient;
         if (!createClientFn) {
-          throw new Error("Zoom Meeting SDK: createClient not found. Make sure the SDK is installed properly.");
+          throw new Error("Zoom Meeting SDK: createClient not found.");
         }
         const client = createClientFn.call(ZoomMtgEmbedded);
         clientRef.current = client;
@@ -41,7 +49,9 @@ const ZoomMeetingRoom = ({ classId, classSlug, displayName, onLeave }: ZoomMeeti
         if (!containerRef.current) throw new Error("Meeting container not mounted");
 
         const w = containerRef.current.clientWidth || window.innerWidth;
-        const h = containerRef.current.clientHeight || window.innerHeight;
+        // Subtract toolbar height so the controls bar stays within the visible viewport.
+        const h = (containerRef.current.clientHeight || window.innerHeight) - ZOOM_TOOLBAR_HEIGHT;
+
         await client.init({
           zoomAppRoot: containerRef.current,
           language: "en-US",
@@ -88,35 +98,32 @@ const ZoomMeetingRoom = ({ classId, classSlug, displayName, onLeave }: ZoomMeeti
         joinedRef.current = true;
         if (!cancelled) setStatus("ready");
 
-        // Force Zoom's suspension-view panel to fill the container.
-        // Zoom renders a react-draggable + react-resizable popper at fixed px;
-        // these overrides pin it to fill 100% and remove drag/resize chrome.
-        const style = document.createElement("style");
-        style.id = "zoom-fill-override";
-        style.textContent = `
-          #meetingSDKElement .react-resizable-handle {
-            display: none !important;
-          }
-          #meetingSDKElement .zoommtg-drag-handle {
-            cursor: default !important;
-          }
-          /* Zoom sets inline px on VIDEO-PLAYER-CONTAINER — override to fill */
-          #meetingSDKElement video-player-container {
-            width: 100% !important;
-            height: 100% !important;
-            top: 0 !important;
-            left: 0 !important;
-          }
-          #meetingSDKElement video {
-            width: 100% !important;
-            height: 100% !important;
-            object-fit: cover !important;
-          }
-        `;
-        document.head.appendChild(style);
+        // Inject CSS to pin the video panel in place and hide drag/resize chrome.
+        // Zoom renders video-player-container with fixed inline px — !important overrides it.
+        if (!document.getElementById("zoom-fill-override")) {
+          const style = document.createElement("style");
+          style.id = "zoom-fill-override";
+          style.textContent = `
+            #meetingSDKElement .react-resizable-handle { display: none !important; }
+            #meetingSDKElement .zoommtg-drag-handle { cursor: default !important; }
+            #meetingSDKElement video-player-container {
+              width: 100% !important;
+              height: 100% !important;
+              top: 0 !important;
+              left: 0 !important;
+            }
+            #meetingSDKElement video {
+              width: 100% !important;
+              height: 100% !important;
+              object-fit: cover !important;
+            }
+          `;
+          document.head.appendChild(style);
+        }
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         client.on("connection-change", (payload: any) => {
+          // "Reconnecting" is a transient state — do NOT leave. Only leave on terminal states.
           if (payload?.state === "Closed" || payload?.state === "Fail") {
             onLeave?.();
           }
@@ -138,8 +145,10 @@ const ZoomMeetingRoom = ({ classId, classSlug, displayName, onLeave }: ZoomMeeti
         joinedRef.current = false;
       }
     };
+    // classId is intentionally excluded — re-mounting for a new class requires
+    // navigating away and back, which unmounts/remounts this component cleanly.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [classId]);
+  }, []);
 
   if (status === "error") {
     return (

@@ -76,7 +76,7 @@ serve(async (req) => {
     }
 
     const now = Math.floor(Date.now() / 1000);
-    const exp = now + 7200;
+    const exp = now + 172800; // 48h — covers the longest possible class session
     const meetingNumber = liveClass.zoom_meeting_id.replace(/\D/g, "");
 
     const key = await crypto.subtle.importKey(
