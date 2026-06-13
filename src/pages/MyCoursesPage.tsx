@@ -89,7 +89,6 @@ const MyCoursesPage = () => {
     );
   }
 
-  const continueLearning = enrollments.filter((e) => e.progress_percent < 100).slice(0, 4);
   const allEnrolled = enrollments;
   const inProgress = enrollments.filter((e) => e.progress_percent > 0 && e.progress_percent < 100);
   const completed = enrollments.filter((e) => e.progress_percent >= 100);
@@ -117,18 +116,6 @@ const MyCoursesPage = () => {
             <StatCard icon={<Trophy className="h-5 w-5" />} value={completed.length} label="Completed" color="bg-secondary/10 text-secondary" />
             <StatCard icon={<Sparkles className="h-5 w-5" />} value={`${avgProgress}%`} label="Avg Progress" color="bg-primary/10 text-primary" />
           </div>
-        )}
-
-        {/* Continue Learning row */}
-        {continueLearning.length > 0 && (
-          <section className="animate-fade-in-up">
-            <SectionHeader title="Continue Learning" />
-            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 stagger-children">
-              {continueLearning.map((e, idx) => (
-                <CourseCard key={e.id} enrollment={e} isFirst={idx === 0} />
-              ))}
-            </div>
-          </section>
         )}
 
         {/* All My Courses */}

@@ -21,6 +21,7 @@ const ProfilePage = () => {
 
   const [form, setForm] = useState({
     full_name: "",
+    email: "",
     phone: "",
     city: "",
     state: "",
@@ -58,6 +59,8 @@ const ProfilePage = () => {
       if (p) {
         setForm({
           full_name: p.full_name || "",
+          // Email is an auth identity, not a profiles column — seed from authUser.
+          email: authUser.email || "",
           phone: p.phone || "",
           city: p.city || "",
           state: p.state || "",
@@ -138,11 +141,30 @@ const ProfilePage = () => {
         school_id: schoolId,
       } as any)
       .eq("user_id", authUser.id);
-    setSaving(false);
     if (error) {
+      setSaving(false);
       toast.error("Could not save profile");
       return;
     }
+
+    // Email is an auth identity, not a profiles column. Only touch it when it
+    // actually changed: auth.updateUser sends a confirmation link to the new
+    // address and applies the change only after the user clicks it.
+    const newEmail = form.email.trim();
+    const emailChanged = newEmail && newEmail.toLowerCase() !== (authUser.email || "").toLowerCase();
+    if (emailChanged) {
+      const { error: emailErr } = await supabase.auth.updateUser({ email: newEmail });
+      setSaving(false);
+      if (emailErr) {
+        toast.error(emailErr.message || "Profile saved, but email change failed");
+        return;
+      }
+      toast.success("Profile updated. Check your new email to confirm the change.");
+      await refreshProfile();
+      return;
+    }
+
+    setSaving(false);
     toast.success("Profile updated");
     await refreshProfile();
   };
@@ -251,7 +273,7 @@ const ProfilePage = () => {
             <h3 className="text-sm font-bold font-display text-foreground">Personal Information</h3>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Full Name" value={form.full_name} onChange={(v) => setForm({ ...form, full_name: v })} />
-              <Field label="Email" value={user?.email || ""} disabled />
+              <Field label="Email" type="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} />
               <Field label="Phone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
               <SelectField label="Target Exam" value={form.target_exam} options={EXAMS} onChange={(v) => setForm({ ...form, target_exam: v })} />
               <SelectField label="Class Level" value={form.class_level} options={CLASS_LEVELS} onChange={(v) => setForm({ ...form, class_level: v })} />
@@ -339,16 +361,18 @@ const Field = ({
   value,
   onChange,
   disabled,
+  type = "text",
 }: {
   label: string;
   value: string;
   onChange?: (v: string) => void;
   disabled?: boolean;
+  type?: string;
 }) => (
   <div>
     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{label}</label>
     <input
-      type="text"
+      type={type}
       value={value}
       disabled={disabled}
       onChange={(e) => onChange?.(e.target.value)}

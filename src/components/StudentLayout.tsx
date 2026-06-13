@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, BookOpen, Video, ClipboardCheck, MessageCircle, Swords, BarChart3, Trophy, User, Settings, Search, Users, Menu, X, LogOut, Flame } from "lucide-react";
+import { Home, BookOpen, Video, ClipboardCheck, MessageCircle, Swords, BarChart3, Trophy, User, Settings, Search, Users, Menu, X, LogOut, Flame, Store } from "lucide-react";
 import LogoutButton from "@/components/LogoutButton";
 import { memo, useCallback, useMemo, useRef, useState, useEffect } from "react";
 import arkeLogo from "@/assets/arke-logo.png";
@@ -172,10 +172,10 @@ const StudentMobileNav = memo(() => {
 
   const sideItems = [
     { icon: Home, label: "Home", path: "/dashboard" },
-    { icon: BookOpen, label: "Courses", path: "/my-courses" },
+    { icon: BookOpen, label: "My Courses", path: "/my-courses" },
     // center slot reserved for Compete
+    { icon: Store, label: "Store", path: "/explore-courses" },
     { icon: MessageCircle, label: "Doubts", path: "/doubts" },
-    { icon: User, label: "Profile", path: "/profile" },
   ];
 
   const competeActive = pathname === "/compete" || pathname.startsWith("/compete/");

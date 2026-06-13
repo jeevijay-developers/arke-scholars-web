@@ -654,6 +654,21 @@ const AddStaffDialog = ({ open, roles, onClose, onCreated }: {
     }
     setBusy(true);
     try {
+      // Block creation if the phone already belongs to ANY user (any role).
+      // phone_exists is a security-definer RPC matching on normalized digits;
+      // the DB unique index on profiles.phone is the server-side backstop.
+      if (phone.trim()) {
+        const { data: exists, error: checkError } = await (
+          supabase as unknown as {
+            rpc: (
+              fn: "phone_exists",
+              args: { p_phone: string },
+            ) => Promise<{ data: boolean | null; error: { message: string } | null }>;
+          }
+        ).rpc("phone_exists", { p_phone: phone.trim() });
+        if (checkError) throw new Error(checkError.message);
+        if (exists) { setBusy(false); toast.error("User already exist with this phone number"); return; }
+      }
       const res = await callFn("create", { full_name, email, phone: phone || null, password, app_role: appRole });
       if (category === "staff" && staffRoleId) {
         const { error } = await supabase.from("staff_role_assignments")

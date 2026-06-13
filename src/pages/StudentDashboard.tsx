@@ -1,5 +1,4 @@
-import { Zap, Target, ClipboardCheck, Trophy, AlertTriangle, PhoneCall, FlaskConical, Compass, BadgeCheck, BookOpen, Bot, BarChart3, Video, Calendar, Users } from "lucide-react";
-import StatCard from "@/components/StatCard";
+import { Zap, ClipboardCheck, AlertTriangle, PhoneCall, FlaskConical, Compass, BadgeCheck, BookOpen, Bot, BarChart3, Video, Calendar, Users, PlayCircle } from "lucide-react";
 import SectionHeader from "@/components/SectionHeader";
 import LiveBadge from "@/components/LiveBadge";
 import GoalSetupCard from "@/components/GoalSetupCard";
@@ -77,13 +76,55 @@ const StudentDashboard = () => {
           ))}
         </div>
 
-        {/* Stats Row */}
-        <div className="grid grid-cols-2 gap-3 mb-6 lg:grid-cols-4 stagger-children">
-          <StatCard icon={Zap} value={`${data.streak} day${data.streak === 1 ? "" : "s"}`} label="Current Streak" trend={data.streak > 0 ? "Keep going!" : "Start today"} stripeColor="primary" />
-          <StatCard icon={Target} value={data.accuracyPct !== null ? `${data.accuracyPct}%` : "—"} label="Overall Accuracy" trend={data.accuracyPct !== null ? "Based on practice" : "No data yet"} stripeColor="secondary" />
-          <StatCard icon={ClipboardCheck} value={String(data.testsCompleted)} label="Tests Completed" trend={data.testsCompleted > 0 ? "Nice progress" : "Take your first"} stripeColor="accent" />
-          <StatCard icon={Trophy} value={data.percentile !== null ? `${data.percentile}%ile` : "—"} label="All India Percentile" trend={data.percentile !== null ? "Last 5 tests avg" : "No data yet"} stripeColor="purple" />
-        </div>
+        {/* Last Accessed Course — Resume */}
+        {(() => {
+          const last = data.continueWatching[0];
+          if (!last) {
+            return (
+              <div className="rounded-2xl border border-border bg-card p-5 mb-6 animate-fade-in-up">
+                <div className="flex flex-col items-center gap-2 py-6 text-center sm:flex-row sm:justify-between sm:text-left">
+                  <div className="flex items-center gap-3">
+                    <div className="h-12 w-12 shrink-0 rounded-xl bg-orange-50 flex items-center justify-center">
+                      <BookOpen className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-foreground">No course in progress yet</p>
+                      <p className="text-xs text-muted-foreground">Pick a course and start learning.</p>
+                    </div>
+                  </div>
+                  <Link to="/courses" className="rounded-pill bg-primary px-5 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity">Browse Courses</Link>
+                </div>
+              </div>
+            );
+          }
+          return (
+            <Link
+              to={last.course_slug ? `/courses/${last.course_slug}/learn` : "/my-courses"}
+              className="block rounded-2xl border border-border bg-card p-5 mb-6 animate-fade-in-up hover-lift"
+            >
+              <div className="mb-3 flex items-center gap-2">
+                <PlayCircle className="h-4 w-4 text-primary" />
+                <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Pick up where you left off</span>
+              </div>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                <div className="h-14 w-14 shrink-0 rounded-2xl bg-orange-50 flex items-center justify-center">
+                  <BookOpen className="h-6 w-6 text-primary" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-base font-black font-display text-foreground truncate">{last.course_name || "Course"}</p>
+                  <p className="text-xs text-muted-foreground truncate">{last.lesson_title || last.educator_name || ""}</p>
+                  <div className="mt-2 flex items-center gap-3">
+                    <div className="h-2 flex-1 rounded-full bg-muted">
+                      <div className="h-2 rounded-full bg-primary transition-all" style={{ width: `${last.progress_pct}%` }} />
+                    </div>
+                    <span className="text-xs font-bold text-primary shrink-0">{last.progress_pct}%</span>
+                  </div>
+                </div>
+                <span className="shrink-0 rounded-pill bg-primary px-5 py-2 text-center text-xs font-bold text-primary-foreground">Resume</span>
+              </div>
+            </Link>
+          );
+        })()}
 
         {/* Continue Watching */}
         <div className="rounded-2xl border border-border bg-card p-5 mb-6 animate-fade-in-up">

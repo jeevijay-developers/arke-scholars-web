@@ -105,6 +105,14 @@ Deno.serve(async (req) => {
       if (callerIsAdminOnly && (app_role === "admin" || app_role === "super_admin"))
         return json(403, { error: "Admins can only create mentor, teacher, or lead_manager accounts" });
 
+      // Phone must be unique across ALL users (any role). Check via the same
+      // normalized RPC the client uses; the profiles unique index is the final
+      // backstop if this races.
+      if (phone) {
+        const { data: phoneTaken } = await admin.rpc("phone_exists", { p_phone: phone });
+        if (phoneTaken) return json(409, { error: "User already exist with this phone number" });
+      }
+
       const { data: existing } = await admin.auth.admin.listUsers({ perPage: 1000 });
       let user = existing?.users.find((u: any) => u.email?.toLowerCase() === email);
       if (!user) {
@@ -124,9 +132,16 @@ Deno.serve(async (req) => {
           app_metadata: { ...(user.app_metadata ?? {}), must_change_password: true },
         });
       }
-      await admin
+      const { error: upErr } = await admin
         .from("profiles")
         .upsert({ user_id: user.id, full_name, phone }, { onConflict: "user_id" });
+      if (upErr) {
+        // 23505 = phone unique-index violation (number taken between the check
+        // above and now). Surface the same friendly message.
+        if ((upErr as { code?: string }).code === "23505")
+          return json(409, { error: "User already exist with this phone number" });
+        throw upErr;
+      }
       await admin.from("user_roles").delete().eq("user_id", user.id);
       const { error: rErr } = await admin
         .from("user_roles")

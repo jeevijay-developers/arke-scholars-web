@@ -90,7 +90,7 @@ const SignupPage = () => {
     if (checkError) { setSending(false); toast.error(checkError.message); return; }
     if (exists) {
       setSending(false);
-      toast.error("User already exists with this number, please login");
+      toast.error("User already exist with this phone number");
       return;
     }
     const { error } = await supabase.auth.signInWithOtp({ phone: fullPhone });
@@ -156,13 +156,24 @@ const SignupPage = () => {
     setSubmitting(true);
     const { data } = await supabase.auth.getUser();
     if (data.user) {
-      await supabase.from("profiles").upsert({
+      const { error: upsertError } = await supabase.from("profiles").upsert({
         user_id: data.user.id,
         full_name: profile.full_name.trim(),
         phone: fullPhone,
         target_exam: profile.target_exam,
         class_level: profile.class_level,
       }, { onConflict: "user_id" });
+      if (upsertError) {
+        setSubmitting(false);
+        // 23505 = unique_violation on the phone index (number taken by another
+        // account between the pre-check and now). Show the same phone message.
+        if (upsertError.code === "23505") {
+          toast.error("User already exist with this phone number");
+        } else {
+          toast.error("Could not complete signup. Please try again.");
+        }
+        return;
+      }
     }
     setSubmitting(false);
     toast.success("Welcome to ARKE!");
