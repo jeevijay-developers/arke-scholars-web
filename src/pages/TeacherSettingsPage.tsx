@@ -164,7 +164,7 @@ const TeacherSettingsPage = () => {
 
   return (
     <div className="p-4 lg:p-6 space-y-6 max-w-2xl">
-      <div className="rounded-2xl bg-gradient-to-r from-primary via-accent to-secondary p-6 text-white">
+      <div className="rounded-2xl bg-primary p-6 text-white">
         <div className="flex items-center gap-3">
           <Settings className="h-7 w-7" />
           <h1 className="text-2xl font-black font-display">Settings</h1>
