@@ -18,6 +18,12 @@ export interface DashboardData {
     course_name?: string;
     educator_name?: string;
     subject?: string;
+    target?: string;
+    class?: string;
+    thumbnail_url?: string | null;
+    rating?: number | null;
+    is_course_free?: boolean;
+    completed_lessons?: number;
   }>;
   todaySchedule: Array<{
     id: string;
@@ -71,7 +77,7 @@ export const useDashboardData = (): DashboardData => {
       const tomorrowISO = new Date(todayISO);
       tomorrowISO.setDate(tomorrowISO.getDate() + 1);
 
-      const [streakRes, sessionsRes, testsRes, lessonsRes, scheduleRes, followsRes] = await Promise.all([
+      const [streakRes, sessionsRes, testsRes, enrollmentRes, scheduleRes, followsRes] = await Promise.all([
         supabase.rpc("get_user_streak", { _user_id: user.id }),
         supabase
           .from("study_sessions")
@@ -82,12 +88,19 @@ export const useDashboardData = (): DashboardData => {
           .select("id, test_name, subject, score, total_questions, correct_answers, percentile, attempted_at")
           .eq("user_id", user.id)
           .order("attempted_at", { ascending: false }),
+        // Last accessed enrollment — ordered by last_accessed_at so opening any
+        // course from My Courses immediately updates the dashboard resume card.
         supabase
-          .from("lesson_progress")
-          .select("course_id, lesson_title, lesson_slug, watched_seconds, total_seconds, last_watched_at")
+          .from("enrollments")
+          .select(`
+            course_id, progress_percent, completed_lessons, last_lesson_title, last_accessed_at,
+            course:courses(id, slug, name, target, class, thumbnail_url, rating, badge, is_course_free)
+          `)
           .eq("user_id", user.id)
-          .order("last_watched_at", { ascending: false })
-          .limit(2),
+          .eq("is_active", true)
+          .not("last_accessed_at", "is", null)
+          .order("last_accessed_at", { ascending: false })
+          .limit(1),
         supabase
           .from("live_classes")
           .select("id, slug, title, subject, educator_name, starts_at, status, meeting_url")
@@ -121,29 +134,62 @@ export const useDashboardData = (): DashboardData => {
           ) / 10
         : null;
 
-      // Continue watching
-      const lessons = lessonsRes.data ?? [];
-      const courseIds = Array.from(new Set(lessons.map((l) => l.course_id)));
-      let coursesMap: Record<string, { name: string; slug: string; educator_name: string; subject: string }> = {};
-      if (courseIds.length > 0) {
-        const { data: courses } = await supabase
-          .from("courses")
-          .select("id, name, slug, educator_name, subject")
-          .in("id", courseIds);
-        (courses ?? []).forEach((c) => {
-          coursesMap[c.id] = { name: c.name, slug: c.slug, educator_name: c.educator_name, subject: c.subject };
-        });
+      // Last accessed course for the resume card.
+      // Primary source: enrollments.last_accessed_at (updated when the student
+      // enters any course from My Courses). Falls back to lesson_progress for the
+      // most-recently-watched lesson title within that course.
+      const lastEnrollment = (enrollmentRes.data ?? [])[0] as {
+        course_id: string;
+        progress_percent: number;
+        completed_lessons: number;
+        last_lesson_title: string | null;
+        last_accessed_at: string | null;
+        course: {
+          id: string;
+          name: string;
+          slug: string;
+          target: string;
+          class: string;
+          thumbnail_url: string | null;
+          rating: number | null;
+          badge: string | null;
+          is_course_free: boolean;
+        } | null;
+      } | undefined;
+
+      let continueWatching: DashboardData["continueWatching"] = [];
+      if (lastEnrollment?.course) {
+        const c = lastEnrollment.course;
+        // Fetch the most recent lesson progress entry for this course to get
+        // the lesson title and accurate video-level progress percentage.
+        const { data: lp } = await supabase
+          .from("lesson_progress")
+          .select("lesson_title, lesson_slug, watched_seconds, total_seconds")
+          .eq("user_id", user.id)
+          .eq("course_id", lastEnrollment.course_id)
+          .order("last_watched_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        continueWatching = [{
+          course_id: lastEnrollment.course_id,
+          course_slug: c.slug,
+          lesson_title: lp?.lesson_title ?? lastEnrollment.last_lesson_title ?? null,
+          lesson_slug: lp?.lesson_slug ?? "",
+          progress_pct: lp
+            ? calcLessonProgress(lp.watched_seconds, lp.total_seconds)
+            : lastEnrollment.progress_percent,
+          course_name: c.name,
+          educator_name: undefined,
+          subject: undefined,
+          target: c.target,
+          class: c.class,
+          thumbnail_url: c.thumbnail_url,
+          rating: c.rating,
+          is_course_free: c.is_course_free,
+          completed_lessons: lastEnrollment.completed_lessons,
+        }];
       }
-      const continueWatching = lessons.map((l) => ({
-        course_id: l.course_id,
-        course_slug: coursesMap[l.course_id]?.slug,
-        lesson_title: l.lesson_title,
-        lesson_slug: l.lesson_slug,
-        progress_pct: calcLessonProgress(l.watched_seconds, l.total_seconds),
-        course_name: coursesMap[l.course_id]?.name,
-        educator_name: coursesMap[l.course_id]?.educator_name,
-        subject: coursesMap[l.course_id]?.subject,
-      }));
 
       // Today's schedule + user status per class
       const schedule = scheduleRes.data ?? [];

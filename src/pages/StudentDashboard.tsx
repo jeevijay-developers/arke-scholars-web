@@ -1,8 +1,5 @@
-import { Zap, ClipboardCheck, AlertTriangle, PhoneCall, FlaskConical, Compass, BadgeCheck, BookOpen, Bot, BarChart3, Video, Calendar, Users, PlayCircle } from "lucide-react";
-import SectionHeader from "@/components/SectionHeader";
-import LiveBadge from "@/components/LiveBadge";
+import { Zap, ClipboardCheck, AlertTriangle, FlaskConical, Compass, BookOpen, Bot, BarChart3, Video, PlayCircle, GraduationCap, Trophy, Star, Clock } from "lucide-react";
 import GoalSetupCard from "@/components/GoalSetupCard";
-import OnboardingTracker from "@/components/OnboardingTracker";
 import StudentMentorMeetingCard from "@/components/StudentMentorMeetingCard";
 
 import { useAppStore } from "@/store/useAppStore";
@@ -53,15 +50,8 @@ const StudentDashboard = () => {
             <h1 className="text-xl font-black font-display text-foreground lg:text-2xl">{greeting}, {firstName}</h1>
             <p className="text-sm text-muted-foreground">{new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
           </div>
-          {/* <div className="flex gap-2">
-            <Link to="/contact" className="inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-xs font-semibold text-foreground hover:bg-background transition-colors">
-              <PhoneCall className="h-3.5 w-3.5" /> Talk to Counsellor
-            </Link>
-            <Link to="/courses" className="rounded-lg bg-[#F97415] px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity">Enroll in Course</Link>
-          </div> */}
         </div>
 
-        <OnboardingTracker />
         <GoalSetupCard />
         <StudentMentorMeetingCard />
 
@@ -92,116 +82,74 @@ const StudentDashboard = () => {
                       <p className="text-xs text-muted-foreground">Pick a course and start learning.</p>
                     </div>
                   </div>
-                  <Link to="/courses" className="rounded-pill bg-primary px-5 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity">Browse Courses</Link>
+                  <Link to="/explore-courses" className="rounded-pill bg-primary px-5 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity">Browse Courses</Link>
                 </div>
               </div>
             );
           }
+          const isDone = last.progress_pct >= 100;
+          const thumb = last.thumbnail_url;
           return (
-            <Link
-              to={last.course_slug ? `/courses/${last.course_slug}/learn` : "/my-courses"}
-              className="block rounded-2xl border border-border bg-card p-5 mb-6 animate-fade-in-up hover-lift"
-            >
+            <div className="mb-6 animate-fade-in-up">
               <div className="mb-3 flex items-center gap-2">
                 <PlayCircle className="h-4 w-4 text-primary" />
                 <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Pick up where you left off</span>
               </div>
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                <div className="h-14 w-14 shrink-0 rounded-2xl bg-orange-50 flex items-center justify-center">
-                  <BookOpen className="h-6 w-6 text-primary" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-base font-black font-display text-foreground truncate">{last.course_name || "Course"}</p>
-                  <p className="text-xs text-muted-foreground truncate">{last.lesson_title || last.educator_name || ""}</p>
-                  <div className="mt-2 flex items-center gap-3">
-                    <div className="h-2 flex-1 rounded-full bg-muted">
-                      <div className="h-2 rounded-full bg-primary transition-all" style={{ width: `${last.progress_pct}%` }} />
+              <div className="w-full md:max-w-md">
+                <Link
+                  to={`/learn/${last.course_id}`}
+                  className="group block overflow-hidden rounded-2xl border border-border bg-card hover-lift animate-fade-in-up"
+                >
+                  <div className="relative flex h-32 items-center justify-center bg-gradient-to-br from-primary to-accent overflow-hidden">
+                    {thumb ? (
+                      <img src={thumb} alt={last.course_name} className="absolute inset-0 h-full w-full object-cover" />
+                    ) : (
+                      <GraduationCap className="h-12 w-12 text-white/40" />
+                    )}
+                    <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary z-10">
+                      <Zap className="h-3 w-3" /> Resume
+                    </span>
+                    {last.is_course_free && (
+                      <span className="absolute left-3 bottom-3 inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold text-secondary-foreground z-10">
+                        FREE
+                      </span>
+                    )}
+                    <div className={`absolute right-3 top-3 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold backdrop-blur-sm z-10 ${isDone ? "bg-secondary text-secondary-foreground" : "bg-black/40 text-white"}`}>
+                      {isDone && <Trophy className="h-3 w-3" />} {last.progress_pct}%
                     </div>
-                    <span className="text-xs font-bold text-primary shrink-0">{last.progress_pct}%</span>
                   </div>
-                </div>
-                <span className="shrink-0 rounded-pill bg-primary px-5 py-2 text-center text-xs font-bold text-primary-foreground">Resume</span>
+                  <div className="p-4">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      {last.target} · Class {last.class}
+                    </p>
+                    <h3 className="mt-0.5 line-clamp-2 font-display text-sm font-bold text-foreground group-hover:text-primary transition-colors">
+                      {last.course_name}
+                    </h3>
+                    {last.lesson_title && (
+                      <p className="mt-1 truncate text-[10px] text-muted-foreground">Up next: {last.lesson_title}</p>
+                    )}
+                    <div className="mt-3 flex items-center gap-3 text-[10px] text-muted-foreground">
+                      {last.rating != null && (
+                        <span className="inline-flex items-center gap-1">
+                          <Star className="h-3 w-3 fill-secondary text-secondary" /> {last.rating.toFixed(1)}
+                        </span>
+                      )}
+                      <span className="inline-flex items-center gap-1">
+                        <Clock className="h-3 w-3" /> {last.progress_pct}% done
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <BookOpen className="h-3 w-3" /> {last.completed_lessons || 0} lessons
+                      </span>
+                    </div>
+                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
+                      <div className="h-full rounded-full bg-[#F97415] transition-all" style={{ width: `${last.progress_pct}%` }} />
+                    </div>
+                  </div>
+                </Link>
               </div>
-            </Link>
+            </div>
           );
         })()}
-
-        {/* Continue Watching */}
-        <div className="rounded-2xl border border-border bg-card p-5 mb-6 animate-fade-in-up">
-          <SectionHeader title="Continue Watching" viewAllLink="/my-courses" />
-          {data.continueWatching.length === 0 ? (
-            <div className="py-8 text-center">
-              <BookOpen className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-              <p className="text-xs text-muted-foreground">Nothing in progress yet — <Link to="/courses" className="text-primary font-bold">browse courses</Link></p>
-            </div>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {data.continueWatching.map(cw => (
-                <Link key={cw.lesson_slug + cw.course_id} to={cw.course_slug ? `/courses/${cw.course_slug}/learn` : "/my-courses"} className="flex items-center gap-3 rounded-xl border border-border p-3 hover-lift">
-                  <div className="h-12 w-12 shrink-0 rounded-xl bg-orange-50 flex items-center justify-center">
-                    <BookOpen className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-foreground truncate">{cw.course_name || "Course"}</p>
-                    <p className="text-[10px] text-muted-foreground truncate">{cw.lesson_title || cw.educator_name || ""}</p>
-                    <div className="mt-1.5 h-1.5 rounded-full bg-muted">
-                      <div className="h-1.5 rounded-full bg-primary transition-all" style={{ width: `${cw.progress_pct}%` }} />
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-bold text-primary">{cw.progress_pct}%</span>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Today's Schedule */}
-        <div className="rounded-2xl border border-border bg-card p-5 mb-6 animate-fade-in-up">
-          <SectionHeader title="Today's Schedule" viewAllLink="/my-live-classes" />
-          {data.todaySchedule.length === 0 ? (
-            <div className="py-8 text-center">
-              <Calendar className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-              <p className="text-xs text-muted-foreground">No classes today — <Link to="/my-live-classes" className="text-primary font-bold">view all classes</Link></p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {data.todaySchedule.map((cls) => {
-                const SubjectIcon = subjectIcons[cls.subject] || Zap;
-                const isLive = cls.status === "live";
-                const isCompleted = cls.status === "completed";
-                return (
-                  <div key={cls.id} className="flex items-center gap-3 rounded-xl border border-border p-3 hover:bg-background/50 transition-colors hover-lift">
-                    <div className="h-12 w-12 shrink-0 rounded-xl bg-orange-500 flex items-center justify-center">
-                      <SubjectIcon className="h-5 w-5 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs font-bold ${isLive ? 'text-destructive' : isCompleted ? 'text-muted-foreground' : 'text-primary'}`}>
-                          {formatTime(cls.starts_at)}
-                        </span>
-                        {isLive && <LiveBadge />}
-                      </div>
-                      <p className="text-sm font-bold text-foreground truncate">{cls.title}</p>
-                      <p className="text-xs text-muted-foreground">{cls.educator_name}</p>
-                    </div>
-                    <div className="shrink-0">
-                      {isLive && (
-                        <Link to={`/live-classes/${cls.slug}`} className="rounded-lg bg-secondary px-4 py-1.5 text-xs font-bold text-secondary-foreground hover:bg-secondary-dark transition-colors">Join Now</Link>
-                      )}
-                      {!isLive && !isCompleted && (
-                        <span className="text-xs font-medium text-muted-foreground">{cls.user_status === "registered" ? "Registered" : "Upcoming"}</span>
-                      )}
-                      {isCompleted && (
-                        <span className="text-xs font-medium text-muted-foreground">Recording ▶</span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
       </div>
 
       {/* Right Panel */}

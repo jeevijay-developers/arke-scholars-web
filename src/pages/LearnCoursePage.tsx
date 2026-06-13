@@ -318,7 +318,19 @@ const LearnCoursePage = () => {
         supabase.from("folders").select("id, parent_id, name, order").eq("course_id", courseId).order("order", { ascending: true }),
       ]);
       if (courseRes.data) setCourse(courseRes.data as Course);
-      setIsEnrolled(!!enrollRes.data);
+      const enrolled = !!enrollRes.data;
+      setIsEnrolled(enrolled);
+
+      // Stamp last_accessed_at so the dashboard resume card stays current
+      if (enrolled) {
+        supabase
+          .from("enrollments")
+          .update({ last_accessed_at: new Date().toISOString() })
+          .eq("course_id", courseId)
+          .eq("user_id", user.id)
+          .then(() => {});
+      }
+
       const all = (foldersRes.data ?? []) as FolderRow[];
       const level0 = all.filter((f) => f.parent_id === null);
       const withSubs: FolderRow[] = level0.map((f) => ({
