@@ -30,19 +30,44 @@ const COPY: Record<Reason, { title: string; body: string; icon: typeof ShieldAle
 const AccessDeniedPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { session, isStaff, signOut } = useAuth();
+  const { session, isStaff, role, signOut } = useAuth();
 
   const state = (location.state ?? {}) as { reason?: Reason; from?: string };
   const reason: Reason = state.reason ?? (!session ? "not-signed-in" : "generic");
   const attemptedPath = state.from;
-  const { title, body, icon: Icon } = COPY[reason];
+  
+  let { title, body, icon: Icon } = COPY[reason];
 
-  const primaryHref = !session ? "/login" : isStaff ? "/admin/dashboard" : "/dashboard";
-  const primaryLabel = !session
+  let primaryHref = !session ? "/login" : isStaff ? "/admin/dashboard" : "/dashboard";
+  let primaryLabel = !session
     ? "Go to login"
     : isStaff
       ? "Open admin dashboard"
       : "Open student dashboard";
+
+  if (session && role) {
+    if (role === "teacher") {
+      title = "Move to teacher's dashboard";
+      body = "You are signed in as a teacher, so this area isn't available. Go to your dashboard to manage live classes and doubts.";
+      primaryHref = "/teacher/dashboard";
+      primaryLabel = "Move to teacher's dashboard";
+    } else if (role === "mentor") {
+      title = "Move to mentor's dashboard";
+      body = "You are signed in as a mentor, so this area isn't available. Go to your dashboard to manage your students.";
+      primaryHref = "/mentor/dashboard";
+      primaryLabel = "Move to mentor's dashboard";
+    } else if (role === "student") {
+      title = "Move to student's dashboard";
+      body = "You are signed in as a student, so this area isn't available. Go to your student dashboard to learn.";
+      primaryHref = "/dashboard";
+      primaryLabel = "Move to student's dashboard";
+    } else if (role === "admin" || role === "super_admin" || role === "lead_manager") {
+      title = "Move to admin's dashboard";
+      body = "You have staff privileges, so this area isn't available. Go to the admin dashboard to manage settings.";
+      primaryHref = "/admin/dashboard";
+      primaryLabel = "Move to admin's dashboard";
+    }
+  }
 
   const handleSignOut = async () => {
     await signOut();

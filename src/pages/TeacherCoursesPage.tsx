@@ -13,7 +13,7 @@ type TeacherCourse = {
   name: string;
   slug: string;
   subject: string;
-  is_published: boolean;
+  is_active: boolean;
   total_lessons: number;
   total_enrolled: number;
   rating: number;
@@ -30,7 +30,7 @@ const TeacherCoursesPage = () => {
     setLoading(true);
     const { data } = await supabase
       .from("courses")
-      .select("id, name, slug, subject, is_published, total_lessons, total_enrolled, rating")
+      .select("id, name, slug, subject, is_active, total_lessons, total_enrolled, rating")
       .eq("created_by", user.id)
       .order("created_at", { ascending: false });
     setCourses((data ?? []) as TeacherCourse[]);
@@ -43,7 +43,7 @@ const TeacherCoursesPage = () => {
   }, [user]);
 
   const togglePublish = async (c: TeacherCourse) => {
-    if (c.is_published) {
+    if (c.is_active) {
       const ok = await confirm({
         title: `Unpublish "${c.name}"?`,
         description: "Students will no longer see this course in the catalog or be able to enroll. Existing enrolled students keep their access. You can republish at any time.",
@@ -51,9 +51,9 @@ const TeacherCoursesPage = () => {
       });
       if (!ok) return;
     }
-    const { error } = await supabase.from("courses").update({ is_published: !c.is_published }).eq("id", c.id);
+    const { error } = await supabase.from("courses").update({ is_active: !c.is_active }).eq("id", c.id);
     if (error) return toast.error(error.message);
-    toast.success(c.is_published ? "Course unpublished" : "Course published");
+    toast.success(c.is_active ? "Course unpublished" : "Course published");
     load();
   };
 
@@ -99,10 +99,10 @@ const TeacherCoursesPage = () => {
                       <h3 className="text-sm font-bold text-foreground">{c.name}</h3>
                       <span
                         className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                          c.is_published ? "bg-secondary/20 text-secondary" : "bg-muted text-muted-foreground"
+                          c.is_active ? "bg-secondary/20 text-secondary" : "bg-muted text-muted-foreground"
                         }`}
                       >
-                        {c.is_published ? "Published" : "Draft"}
+                        {c.is_active ? "Published" : "Draft"}
                       </span>
                     </div>
                     <div className="flex flex-wrap gap-4 mt-2 text-xs text-muted-foreground">
@@ -124,9 +124,9 @@ const TeacherCoursesPage = () => {
                     <button
                       onClick={() => togglePublish(c)}
                       className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted transition-colors"
-                      title={c.is_published ? "Unpublish" : "Publish"}
+                      title={c.is_active ? "Unpublish" : "Publish"}
                     >
-                      {c.is_published ? <Lock className="h-4 w-4" /> : <Globe className="h-4 w-4" />}
+                      {c.is_active ? <Lock className="h-4 w-4" /> : <Globe className="h-4 w-4" />}
                     </button>
                   </div>
                 </div>

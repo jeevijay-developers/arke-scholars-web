@@ -26,10 +26,15 @@ const ZoomMeetingRoom = ({ classId, classSlug, displayName, onLeave }: ZoomMeeti
 
     const init = async () => {
       try {
-        const { ZoomMtgEmbedded } = await import("@zoom/meetingsdk");
+        const module = await import("@zoom/meetingsdk/embedded");
         if (cancelled) return;
 
-        const client = ZoomMtgEmbedded.createClient();
+        const ZoomMtgEmbedded = module.default || module;
+        const createClientFn = ZoomMtgEmbedded.createClient || (ZoomMtgEmbedded as any).default?.createClient;
+        if (!createClientFn) {
+          throw new Error("Zoom Meeting SDK: createClient not found. Make sure the SDK is installed properly.");
+        }
+        const client = createClientFn.call(ZoomMtgEmbedded);
         clientRef.current = client;
 
         if (!containerRef.current) throw new Error("Meeting container not mounted");

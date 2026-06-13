@@ -87,7 +87,7 @@ export const useTeacherDashboard = (): TeacherDashboardData => {
         supabase.from("profiles").select("full_name").eq("user_id", teacherId).maybeSingle(),
         supabase
           .from("courses")
-          .select("id, is_published, rating, total_enrolled, subject")
+          .select("id, is_active, rating, total_enrolled, subject")
           .eq("created_by", teacherId),
         supabase
           .from("live_classes")
@@ -108,7 +108,7 @@ export const useTeacherDashboard = (): TeacherDashboardData => {
       const courses = coursesRes.data ?? [];
       const courseIds = courses.map((c) => c.id);
       const subjects = Array.from(new Set(courses.map((c) => c.subject).filter(Boolean))) as string[];
-      const activeCourses = courses.filter((c) => c.is_published).length;
+      const activeCourses = courses.filter((c) => c.is_active).length;
 
       // Avg rating weighted by enrollments
       let totalReviews = 0;

@@ -39,7 +39,7 @@ type AdminLive = {
 };
 
 type Teacher = { user_id: string; full_name: string | null };
-type Course = { id: string; name: string };
+type Course = { id: string; name: string; target?: string | null; class?: string | null };
 type Exam = { id: string; name: string };
 
 type Template = {
@@ -81,6 +81,7 @@ type FormState = {
   duration_minutes: number;
   description: string;
   target_exam: string;
+  class: string;
 };
 
 const emptyForm: FormState = {
@@ -92,6 +93,7 @@ const emptyForm: FormState = {
   duration_minutes: 60,
   description: "",
   target_exam: "",
+  class: "",
 };
 
 
@@ -99,6 +101,17 @@ const toLocalInput = (iso: string) => {
   const d = new Date(iso);
   const tz = d.getTimezoneOffset() * 60000;
   return new Date(d.getTime() - tz).toISOString().slice(0, 16);
+};
+
+const getClassesForExam = (examName: string) => {
+  const name = examName?.toUpperCase() || "";
+  if (name.includes("JEE") || name.includes("NEET")) {
+    return ["11", "12", "dropper"];
+  }
+  if (name.includes("FOUNDATION")) {
+    return ["8", "9", "10"];
+  }
+  return [];
 };
 
 const PAGE_SIZE = 25;
@@ -161,7 +174,7 @@ const AdminLiveClassesPage = () => {
         .order("starts_at", { ascending: false }),
       supabase.from("user_roles").select("user_id").eq("role", "teacher"),
       supabase.from("live_class_templates").select("*").order("created_at", { ascending: false }),
-      supabase.from("courses").select("id, name").order("name"),
+      supabase.from("courses").select("id, name, target, class").order("name"),
       supabase.from("exams").select("id, name").order("name"),
     ]);
     const teacherIds = (rolesRes.data ?? []).map((r) => r.user_id);
@@ -286,6 +299,20 @@ const AdminLiveClassesPage = () => {
 
   const { paged: paged, page, setPage, totalPages, total, pageSize } = usePagination(filtered, PAGE_SIZE);
 
+  const filteredCoursesForForm = useMemo(() => {
+    return courses.filter((c) => {
+      if (form.target_exam) {
+        const matchesExam = c.target?.toLowerCase() === form.target_exam.toLowerCase();
+        if (!matchesExam) return false;
+      }
+      if (form.class) {
+        const matchesClass = c.class?.toLowerCase() === form.class.toLowerCase();
+        if (!matchesClass) return false;
+      }
+      return true;
+    });
+  }, [courses, form.target_exam, form.class]);
+
   const openCreate = () => {
     setEditingId(null);
     setForm(emptyForm);
@@ -297,6 +324,7 @@ const AdminLiveClassesPage = () => {
     const end = cls.ends_at ? new Date(cls.ends_at).getTime() : start + 60 * 60 * 1000;
     const duration = Math.max(15, Math.round((end - start) / 60000));
     setEditingId(cls.id);
+    const course = cls.course_id ? courses.find((c) => c.id === cls.course_id) : null;
     setForm({
       title: cls.title,
       subject: cls.subject,
@@ -305,7 +333,8 @@ const AdminLiveClassesPage = () => {
       starts_at: toLocalInput(cls.starts_at),
       duration_minutes: duration,
       description: cls.description ?? "",
-      target_exam: cls.target_exam ?? "",
+      target_exam: course?.target || cls.target_exam || "",
+      class: course?.class || "",
     });
     setShowForm(true);
   };
@@ -316,6 +345,7 @@ const AdminLiveClassesPage = () => {
     const end = cls.ends_at ? new Date(cls.ends_at).getTime() : start + 60 * 60 * 1000;
     const duration = Math.max(15, Math.round((end - start) / 60000));
     setEditingId(null);
+    const course = cls.course_id ? courses.find((c) => c.id === cls.course_id) : null;
     setForm({
       title: cls.title,
       subject: cls.subject,
@@ -324,7 +354,8 @@ const AdminLiveClassesPage = () => {
       starts_at: "",
       duration_minutes: duration,
       description: cls.description ?? "",
-      target_exam: cls.target_exam ?? "",
+      target_exam: course?.target || cls.target_exam || "",
+      class: course?.class || "",
     });
     setShowForm(true);
     toast.success("Class duplicated — pick a new start time");
@@ -518,6 +549,7 @@ const AdminLiveClassesPage = () => {
       duration_minutes: t.duration_minutes,
       description: t.description ?? "",
       target_exam: t.target_exam ?? "",
+      class: "",
     });
     setShowTemplates(false);
     setShowForm(true);
@@ -907,7 +939,15 @@ const AdminLiveClassesPage = () => {
                   <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Exam</label>
                   <select
                     value={form.target_exam}
-                    onChange={(e) => setForm({ ...form, target_exam: e.target.value })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setForm(prev => ({
+                        ...prev,
+                        target_exam: val,
+                        class: "",
+                        courseId: ""
+                      }));
+                    }}
                     className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
                   >
                     <option value="">Select exam</option>
@@ -918,17 +958,49 @@ const AdminLiveClassesPage = () => {
                     ))}
                   </select>
                 </div>
+                <div>
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Class</label>
+                  <select
+                    value={form.class}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setForm(prev => ({
+                        ...prev,
+                        class: val,
+                        courseId: ""
+                      }));
+                    }}
+                    disabled={!form.target_exam}
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary disabled:opacity-50"
+                  >
+                    <option value="">Select class</option>
+                    {getClassesForExam(form.target_exam).map((clsOpt) => (
+                      <option key={clsOpt} value={clsOpt}>
+                        Class {clsOpt}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div>
                 <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Course (optional)</label>
                 <select
                   value={form.courseId}
-                  onChange={(e) => setForm({ ...form, courseId: e.target.value })}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const selectedCourse = courses.find((c) => c.id === val);
+                    setForm((prev) => ({
+                      ...prev,
+                      courseId: val,
+                      target_exam: selectedCourse?.target || prev.target_exam,
+                      class: selectedCourse?.class || prev.class,
+                    }));
+                  }}
                   className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
                 >
                   <option value="">No course — standalone class</option>
-                  {courses.map((c) => (
+                  {filteredCoursesForForm.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
                     </option>

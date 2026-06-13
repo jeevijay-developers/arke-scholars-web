@@ -31,7 +31,7 @@ const fetchDashboard = async () => {
       .limit(200),
     supabase.from("courses")
       .select("id, name, educator_name, total_enrolled, rating, price")
-      .eq("is_published", true),
+      .eq("is_active", true),
     supabase.from("enrollments")
       .select("id, course_id, created_at")
       .gte("created_at", thirtyDaysAgo),

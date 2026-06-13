@@ -58,7 +58,7 @@ serve(async (req) => {
     const admin = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const { data: course, error: courseErr } = await admin
       .from("courses")
-      .select("id, name, price, is_published")
+      .select("id, name, sale_price, is_active, is_course_free")
       .eq("id", courseId)
       .maybeSingle();
 
@@ -68,13 +68,19 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    if (!course.is_published) {
+    if (!course.is_active) {
       return new Response(JSON.stringify({ error: "Course is not available for purchase" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    if (!course.price || Number(course.price) <= 0) {
+    if (course.is_course_free) {
+      return new Response(JSON.stringify({ error: "Course is free, no payment required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!course.sale_price || Number(course.sale_price) <= 0) {
       return new Response(JSON.stringify({ error: "Course has no price configured" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -82,7 +88,7 @@ serve(async (req) => {
     }
 
     // Amount in paise derived from DB — client-supplied amount ignored
-    const amountInPaise = Math.round(Number(course.price) * 100);
+    const amountInPaise = Math.round(Number(course.sale_price) * 100);
     const receipt = `course_${courseId.slice(0, 8)}_${Date.now()}`;
 
     const rzpResp = await fetch("https://api.razorpay.com/v1/orders", {

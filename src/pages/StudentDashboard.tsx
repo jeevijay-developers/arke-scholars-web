@@ -95,10 +95,10 @@ const StudentDashboard = () => {
                 <PlayCircle className="h-4 w-4 text-primary" />
                 <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Pick up where you left off</span>
               </div>
-              <div className="w-full md:max-w-md">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 stagger-children">
                 <Link
                   to={`/learn/${last.course_id}`}
-                  className="group block overflow-hidden rounded-2xl border border-border bg-card hover-lift animate-fade-in-up"
+                  className="group overflow-hidden rounded-2xl border border-border bg-card hover-lift"
                 >
                   <div className="relative flex h-32 items-center justify-center bg-gradient-to-br from-primary to-accent overflow-hidden">
                     {thumb ? (

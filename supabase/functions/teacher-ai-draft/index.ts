@@ -55,65 +55,88 @@ serve(async (req) => {
       userContent.push({ type: "image_url", image_url: { url: imageUrl } });
     }
 
-    const aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${GOOGLE_AI_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: [
-              "You are drafting an answer for a human educator who will REVIEW and EDIT it before sending to the student.",
-              "Read both the question text and any attached image carefully (it may contain the actual problem, a diagram, or handwriting).",
-              "Reply in clean GitHub-Flavored Markdown:",
-              "",
-              "**Concept**",
-              "1–2 line plain-language definition.",
-              "",
-              "**Step-by-step solution (if any)**",
-              "Numbered steps. Use inline math like v = u + at (no LaTeX).",
-              "",
-              "**Final answer (if any)**",
-              "Result with units.",
-              "",
-              "**Key formulas / facts used (if any)**",
-              "- Bullets.",
-              "",
-              "**Common mistakes to avoid (if any)**",
-              "- Bullets.",
-              "",
-              "Rules: precise, concise (max ~350 words). No meta commentary. No code-fence wrapping the whole reply.",
-            ].join("\n"),
-          },
-          { role: "user", content: userContent },
-        ],
-      }),
-    });
+    const models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+    let aiJson: any = null;
+    let lastErrorStatus = 500;
+    let lastErrorText = "Unknown AI gateway error";
 
-    if (aiResp.status === 429) {
-      return new Response(JSON.stringify({ error: "AI is busy. Try again in a moment or teacher may response soon" }), {
-        status: 429,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    for (const model of models) {
+      try {
+        const aiResp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${GOOGLE_AI_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: model,
+            messages: [
+              {
+                role: "system",
+                content: [
+                  "You are drafting an answer for a human educator who will REVIEW and EDIT it before sending to the student.",
+                  "Read both the question text and any attached image carefully (it may contain the actual problem, a diagram, or handwriting).",
+                  "Reply in clean GitHub-Flavored Markdown:",
+                  "",
+                  "**Concept**",
+                  "1–2 line plain-language definition.",
+                  "",
+                  "**Step-by-step solution (if any)**",
+                  "Numbered steps. Use inline math like v = u + at (no LaTeX).",
+                  "",
+                  "**Final answer (if any)**",
+                  "Result with units.",
+                  "",
+                  "**Key formulas / facts used (if any)**",
+                  "- Bullets.",
+                  "",
+                  "**Common mistakes to avoid (if any)**",
+                  "- Bullets.",
+                  "",
+                  "Rules: precise, concise (max ~350 words). No meta commentary. No code-fence wrapping the whole reply.",
+                ].join("\n"),
+              },
+              { role: "user", content: userContent },
+            ],
+          }),
+        });
+
+        if (aiResp.status === 429) {
+          console.warn(`[AI] ${model} rate-limited, trying next...`);
+          lastErrorStatus = 429;
+          lastErrorText = "AI is busy. Try again in a moment.";
+          continue;
+        }
+        if (aiResp.status === 402) {
+          console.warn(`[AI] ${model} payment/quota exceeded, trying next...`);
+          lastErrorStatus = 402;
+          lastErrorText = "AI credits exhausted. Please contact support.";
+          continue;
+        }
+        if (!aiResp.ok) {
+          const t = await aiResp.text();
+          console.error(`[AI] ${model} error ${aiResp.status}:`, t);
+          lastErrorStatus = aiResp.status;
+          lastErrorText = t || `AI gateway error ${aiResp.status}`;
+          continue;
+        }
+
+        aiJson = await aiResp.json();
+        if (aiJson.choices?.[0]?.message?.content) {
+          console.log(`[AI] Success with model: ${model}`);
+          break;
+        }
+      } catch (err) {
+        console.error(`[AI] Error calling model ${model}:`, err);
+        lastErrorText = err instanceof Error ? err.message : String(err);
+      }
     }
-    if (aiResp.status === 402) {
-      return new Response(JSON.stringify({ error: "AI credits exhausted. Please contact support." }), {
-        status: 402,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    if (!aiResp.ok) {
-      const t = await aiResp.text();
-      console.error("AI gateway error:", aiResp.status, t);
-      return new Response(JSON.stringify({ error: "AI gateway error" }), {
-        status: 500,
+
+    if (!aiJson || !aiJson.choices?.[0]?.message?.content) {
+      return new Response(JSON.stringify({ error: lastErrorText }), {
+        status: lastErrorStatus,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const aiJson = await aiResp.json();
-    const draft: string = aiJson.choices?.[0]?.message?.content ?? "";
+    const draft: string = aiJson.choices[0].message.content ?? "";
 
     return new Response(JSON.stringify({ draft }), {
       status: 200,
