@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Video,
-
   Loader2,
   Plus,
   X,
@@ -617,11 +616,10 @@ const AdminLiveClassesPage = () => {
       <div className="flex gap-2 border-b border-border">
         <button
           onClick={() => setActiveTab("live")}
-          className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
-            activeTab === "live"
+          className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${activeTab === "live"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
+            }`}
         >
           Live Classes
         </button>
@@ -630,11 +628,10 @@ const AdminLiveClassesPage = () => {
             setActiveTab("recorded");
             loadRecordedVideos();
           }}
-          className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
-            activeTab === "recorded"
+          className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${activeTab === "recorded"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
+            }`}
         >
           Recorded Content
         </button>
@@ -711,9 +708,8 @@ const AdminLiveClassesPage = () => {
                         <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(cls.starts_at).toLocaleString()}</td>
                         <td className="px-4 py-3 text-center">
                           <span
-                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                              statusColors[cls.status] ?? statusColors.scheduled
-                            }`}
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${statusColors[cls.status] ?? statusColors.scheduled
+                              }`}
                           >
                             {cls.status}
                           </span>
