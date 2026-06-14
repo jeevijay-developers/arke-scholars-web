@@ -12,9 +12,6 @@ export type ZoomMeetingRoomProps = {
 
 type Status = "loading" | "ready" | "error";
 
-// Zoom's embedded toolbar is ~56px tall; subtract so it stays on-screen.
-const ZOOM_TOOLBAR_HEIGHT = 56;
-
 // Force Zoom's internal fixed-size wrappers to fill our container.
 // Zoom renders .meeting-client with inline px dimensions — !important overrides them.
 const injectZoomFillStyles = () => {
@@ -91,7 +88,8 @@ const ZoomMeetingRoom = ({ classId, classSlug, displayName, onLeave }: ZoomMeeti
 
         const ZoomMtgEmbedded = module.default || module;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const createClientFn = ZoomMtgEmbedded.createClient || (ZoomMtgEmbedded as any).default?.createClient;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const createClientFn = (ZoomMtgEmbedded as any).createClient || (ZoomMtgEmbedded as any).default?.createClient;
         if (!createClientFn) {
           throw new Error("Zoom Meeting SDK: createClient not found.");
         }
@@ -100,22 +98,15 @@ const ZoomMeetingRoom = ({ classId, classSlug, displayName, onLeave }: ZoomMeeti
 
         if (!containerRef.current) throw new Error("Meeting container not mounted");
 
-        // Use full viewport for dimensions — this page has no sidebar (immersive route).
-        // Subtract toolbar height so the Zoom controls bar stays visible.
-        const w = window.innerWidth;
-        const h = window.innerHeight - ZOOM_TOOLBAR_HEIGHT;
-
         await client.init({
           zoomAppRoot: containerRef.current,
           language: "en-US",
           customize: {
             meetingInfo: ["topic", "host", "mn", "pwd", "telPwd", "invite", "participant", "dc", "enctype"],
             video: {
-              isResizable: false,
               popper: { disableDraggable: true },
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               defaultViewType: "speaker" as any,
-              viewSizes: { default: { width: w, height: h } },
             },
             chat: { popper: { disableDraggable: true } },
             participants: { popper: { disableDraggable: true } },
@@ -209,7 +200,7 @@ const ZoomMeetingRoom = ({ classId, classSlug, displayName, onLeave }: ZoomMeeti
   }
 
   return (
-    <div className="relative h-full w-full bg-[#0a0a0a] overflow-hidden">
+    <div className="relative h-full w-full bg-[#0a0a0a]">
       {status === "loading" && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10 bg-[#0a0a0a]">
           <Loader2 className="h-8 w-8 animate-spin text-white/50" />
