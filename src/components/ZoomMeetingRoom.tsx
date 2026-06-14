@@ -15,12 +15,64 @@ type Status = "loading" | "ready" | "error";
 // Zoom's embedded toolbar is ~56px tall; subtract so it stays on-screen.
 const ZOOM_TOOLBAR_HEIGHT = 56;
 
+// Force Zoom's internal fixed-size wrappers to fill our container.
+// Zoom renders .meeting-client with inline px dimensions — !important overrides them.
+const injectZoomFillStyles = () => {
+  if (document.getElementById("zoom-fill-override")) return;
+  const style = document.createElement("style");
+  style.id = "zoom-fill-override";
+  style.textContent = `
+    #meetingSDKElement,
+    #meetingSDKElement > div,
+    #meetingSDKElement .meeting-client,
+    #meetingSDKElement .meeting-client-inner {
+      width: 100% !important;
+      height: 100% !important;
+      max-width: 100% !important;
+      max-height: 100% !important;
+      position: absolute !important;
+      inset: 0 !important;
+    }
+    #meetingSDKElement .react-resizable-handle { display: none !important; }
+    #meetingSDKElement .zoommtg-drag-handle { cursor: default !important; }
+    #meetingSDKElement video-player-container,
+    #meetingSDKElement [class*="video-player"],
+    #meetingSDKElement [class*="main-layout"],
+    #meetingSDKElement [class*="speaker-active"],
+    #meetingSDKElement [class*="gallery-video"] {
+      width: 100% !important;
+      height: 100% !important;
+      top: 0 !important;
+      left: 0 !important;
+    }
+    #meetingSDKElement video {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: contain !important;
+    }
+  `;
+  document.head.appendChild(style);
+};
+
+// Directly patch inline styles on Zoom's internal .meeting-client element,
+// since some versions set width/height via JS after the style tag is parsed.
+const patchZoomInlineStyles = (root: HTMLElement) => {
+  const client = root.querySelector(".meeting-client") as HTMLElement | null;
+  if (client) {
+    client.style.setProperty("width", "100%", "important");
+    client.style.setProperty("height", "100%", "important");
+    client.style.setProperty("position", "absolute", "important");
+    client.style.setProperty("inset", "0", "important");
+  }
+};
+
 const ZoomMeetingRoom = ({ classId, classSlug, displayName, onLeave }: ZoomMeetingRoomProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const clientRef = useRef<any>(null);
   const joinedRef = useRef(false);
   const initializedRef = useRef(false); // guard against double-init (StrictMode / re-render)
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
   const [status, setStatus] = useState<Status>("loading");
   const [error, setError] = useState<string | null>(null);
@@ -48,9 +100,10 @@ const ZoomMeetingRoom = ({ classId, classSlug, displayName, onLeave }: ZoomMeeti
 
         if (!containerRef.current) throw new Error("Meeting container not mounted");
 
-        const w = containerRef.current.clientWidth || window.innerWidth;
-        // Subtract toolbar height so the controls bar stays within the visible viewport.
-        const h = (containerRef.current.clientHeight || window.innerHeight) - ZOOM_TOOLBAR_HEIGHT;
+        // Use full viewport for dimensions — this page has no sidebar (immersive route).
+        // Subtract toolbar height so the Zoom controls bar stays visible.
+        const w = window.innerWidth;
+        const h = window.innerHeight - ZOOM_TOOLBAR_HEIGHT;
 
         await client.init({
           zoomAppRoot: containerRef.current,
@@ -98,27 +151,16 @@ const ZoomMeetingRoom = ({ classId, classSlug, displayName, onLeave }: ZoomMeeti
         joinedRef.current = true;
         if (!cancelled) setStatus("ready");
 
-        // Inject CSS to pin the video panel in place and hide drag/resize chrome.
-        // Zoom renders video-player-container with fixed inline px — !important overrides it.
-        if (!document.getElementById("zoom-fill-override")) {
-          const style = document.createElement("style");
-          style.id = "zoom-fill-override";
-          style.textContent = `
-            #meetingSDKElement .react-resizable-handle { display: none !important; }
-            #meetingSDKElement .zoommtg-drag-handle { cursor: default !important; }
-            #meetingSDKElement video-player-container {
-              width: 100% !important;
-              height: 100% !important;
-              top: 0 !important;
-              left: 0 !important;
-            }
-            #meetingSDKElement video {
-              width: 100% !important;
-              height: 100% !important;
-              object-fit: cover !important;
-            }
-          `;
-          document.head.appendChild(style);
+        // Inject CSS overrides and patch inline styles set by the SDK after join.
+        injectZoomFillStyles();
+        if (containerRef.current) patchZoomInlineStyles(containerRef.current);
+
+        // Re-patch whenever the container resizes (window resize, orientation change, etc.)
+        if (containerRef.current) {
+          resizeObserverRef.current = new ResizeObserver(() => {
+            if (containerRef.current) patchZoomInlineStyles(containerRef.current);
+          });
+          resizeObserverRef.current.observe(containerRef.current);
         }
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -140,6 +182,7 @@ const ZoomMeetingRoom = ({ classId, classSlug, displayName, onLeave }: ZoomMeeti
 
     return () => {
       cancelled = true;
+      resizeObserverRef.current?.disconnect();
       if (joinedRef.current && clientRef.current) {
         clientRef.current.leaveMeeting().catch(() => {});
         joinedRef.current = false;

@@ -7,6 +7,7 @@ import { useAppStore } from "@/store/useAppStore";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import EnrollmentModal from "@/components/EnrollmentModal";
+import { useEnrolledCourseIds } from "@/hooks/useEnrolledCourseIds";
 
 // ── Filter config (mirrors the public /courses catalog) ─────────────────────────
 
@@ -137,6 +138,8 @@ const StorePage = () => {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  const { enrolledCourseIds } = useEnrolledCourseIds();
+
   const { courses, loading } = useCourses(
     targetFilter === "All" ? undefined : targetFilter,
     activeClass || undefined,
@@ -158,7 +161,7 @@ const StorePage = () => {
   const classOptions = activeExam.classes;
 
   return (
-    <div className="p-4 lg:p-6 space-y-6">
+    <div className="p-4 lg:p-6 space-y-6 pb-24 lg:pb-6">
       <SEO title="Course Store" description="Explore all courses available on ARKE Scholars." />
 
       {/* Dashboard-style header (no marketing banner — we're inside the student shell) */}
@@ -320,12 +323,21 @@ const StorePage = () => {
                   >
                     View Details
                   </Link>
-                  <button
-                    onClick={() => handleEnroll(c)}
-                    className="flex-1 rounded-xl bg-[#F97415] py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity"
-                  >
-                    {c.is_course_free ? "Enroll Free" : "Enroll Now"}
-                  </button>
+                  {enrolledCourseIds.has(c.id) ? (
+                    <Link
+                      to={`/learn/${c.id}`}
+                      className="flex-1 rounded-xl bg-[#F97415] py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity text-center"
+                    >
+                      Continue
+                    </Link>
+                  ) : (
+                    <button
+                      onClick={() => handleEnroll(c)}
+                      className="flex-1 rounded-xl bg-[#F97415] py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity"
+                    >
+                      {c.is_course_free ? "Enroll Free" : "Enroll Now"}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
