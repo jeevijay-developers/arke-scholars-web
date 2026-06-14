@@ -29,62 +29,150 @@ const resetZoomState = () => {
   // Don't null out zoomClient — createClient() always returns the same instance anyway.
 };
 
-// Zoom SDK v6.x uses react-draggable + react-resizable + zoom-MuiBox-root classes
-// (not .meeting-client). We inject CSS overrides and patch inline styles via JS because
-// the SDK re-applies inline transforms after every resize/drag event.
+// Zoom SDK v6.x uses react-draggable + react-resizable + zoom-MuiBox-root classes.
+// The main meeting panel is the .react-draggable that does NOT have .zoom-MuiBox-root
+// (the chat/participants panels DO have .zoom-MuiBox-root — we must not touch those or
+// their popper behaviour breaks).
+// We use top/right/bottom/left:0 instead of height:100% for the absolutely-positioned
+// elements — stretching via all-sides is more reliable than percentage heights.
 const injectZoomFillStyles = () => {
   if (document.getElementById("zoom-fill-override")) return;
   const style = document.createElement("style");
   style.id = "zoom-fill-override";
   style.textContent = `
-    #meetingSDKElement > div > .react-draggable {
+    /* zoomRoot (first child) must be a positioned ancestor for the absolute panel */
+    #meetingSDKElement > div {
+      position: relative !important;
       width: 100% !important;
       height: 100% !important;
+    }
+    /* Main meeting panel only — NOT the chat/participants draggables (.zoom-MuiBox-root) */
+    #meetingSDKElement > div > .react-draggable:not(.zoom-MuiBox-root) {
+      position: absolute !important;
+      top: 0 !important; right: 0 !important;
+      bottom: 0 !important; left: 0 !important;
       transform: none !important;
-      position: absolute !important;
-      inset: 0 !important;
     }
-    #meetingSDKElement > div > .react-draggable > .zoom-MuiBox-root:first-child {
-      width: 100% !important;
-      height: 100% !important;
+    #meetingSDKElement > div > .react-draggable:not(.zoom-MuiBox-root) > .zoom-MuiBox-root:first-child {
       position: absolute !important;
-      inset: 0 !important;
+      top: 0 !important; right: 0 !important;
+      bottom: 0 !important; left: 0 !important;
     }
-    #meetingSDKElement > div > .react-draggable .react-resizable {
+    #meetingSDKElement > div > .react-draggable:not(.zoom-MuiBox-root) .react-resizable {
       width: 100% !important;
       height: 100% !important;
       max-width: 100% !important;
       max-height: 100% !important;
     }
+    /* Zoom v6 renders nested MuiPaper blocks with hardcoded pixel heights.
+       The first child of .react-resizable is the outer "meeting window" paper.
+       Make it fill its parent and act as a flex column so deeper content stretches. */
+    #meetingSDKElement > div > .react-draggable:not(.zoom-MuiBox-root) .react-resizable > div:first-child {
+      height: 100% !important;
+      display: flex !important;
+      flex-direction: column !important;
+      overflow: hidden !important;
+    }
+    /* innerPaper (video area) — flex-grows above the fixed bottom toolbar */
+    #meetingSDKElement > div > .react-draggable:not(.zoom-MuiBox-root) .react-resizable > div:first-child > div:first-child {
+      flex: 1 1 0 !important;
+      min-height: 0 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      overflow: hidden !important;
+    }
+    /* videoBox — 3rd child of innerPaper, flex-grows below the Zoom top toolbar */
+    #meetingSDKElement > div > .react-draggable:not(.zoom-MuiBox-root) .react-resizable > div:first-child > div:first-child > div:nth-child(3) {
+      flex: 1 1 0 !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
+    }
     #meetingSDKElement .react-resizable-handle { display: none !important; }
+
+    /* Zoom renders chat/participants as body-level poppers (Floating UI anchored to
+       toolbar buttons). Their transform uses the original 254px panel width as the
+       reference, so they land off-screen when we expand to full-width.
+       Re-anchor them as a fixed side panel on the right, between header and toolbar. */
+    .zoom-MuiPopper-root {
+      position: fixed !important;
+      transform: none !important;
+      top: 60px !important;
+      right: 0 !important;
+      bottom: 60px !important;
+      left: auto !important;
+      width: 380px !important;
+      overflow-y: auto !important;
+      border-left: 1px solid rgba(255,255,255,0.1) !important;
+    }
   `;
   document.head.appendChild(style);
 };
 
 const patchZoomInlineStyles = (root: HTMLElement) => {
   const zoomRoot = root.firstElementChild as HTMLElement | null;
-  const draggable = zoomRoot?.querySelector(":scope > .react-draggable") as HTMLElement | null;
-  const panel = draggable?.firstElementChild as HTMLElement | null;
-  const resizable = panel?.firstElementChild as HTMLElement | null;
+  if (!zoomRoot) return;
 
-  if (draggable) {
-    draggable.style.setProperty("width", "100%", "important");
-    draggable.style.setProperty("height", "100%", "important");
-    draggable.style.setProperty("transform", "none", "important");
-    draggable.style.setProperty("position", "absolute", "important");
-    draggable.style.setProperty("inset", "0", "important");
-  }
-  if (panel) {
-    panel.style.setProperty("width", "100%", "important");
-    panel.style.setProperty("height", "100%", "important");
-    panel.style.setProperty("position", "absolute", "important");
-    panel.style.setProperty("inset", "0", "important");
-  }
+  // Main panel = the react-draggable WITHOUT .zoom-MuiBox-root
+  // (chat/participants panels have .zoom-MuiBox-root and must NOT be touched)
+  const draggable = Array.from(zoomRoot.children).find(
+    (el) => el.classList.contains("react-draggable") && !el.classList.contains("zoom-MuiBox-root"),
+  ) as HTMLElement | null;
+  if (!draggable) return;
+
+  // Stretch an absolutely-positioned element to fill its positioned ancestor
+  const stretch = (el: HTMLElement) => {
+    el.style.setProperty("position", "absolute", "important");
+    el.style.setProperty("top", "0", "important");
+    el.style.setProperty("right", "0", "important");
+    el.style.setProperty("bottom", "0", "important");
+    el.style.setProperty("left", "0", "important");
+    el.style.removeProperty("width");
+    el.style.removeProperty("height");
+  };
+
+  draggable.style.setProperty("transform", "none", "important");
+  stretch(draggable);
+
+  const panel = draggable.firstElementChild as HTMLElement | null;
+  if (panel) stretch(panel);
+
+  const resizable = panel?.firstElementChild as HTMLElement | null;
   if (resizable) {
     resizable.style.setProperty("width", "100%", "important");
     resizable.style.setProperty("height", "100%", "important");
     resizable.style.setProperty("max-width", "100%", "important");
     resizable.style.setProperty("max-height", "100%", "important");
+  }
+
+  // Zoom SDK v6.x renders its meeting "window" as nested MuiPaper blocks with
+  // hardcoded pixel heights (e.g. 358px). We override them so the content fills
+  // the resizable wrapper instead of leaving a black gap at the bottom.
+  const outerPaper = resizable?.firstElementChild as HTMLElement | null;
+  if (outerPaper) {
+    outerPaper.style.setProperty("height", "100%", "important");
+    outerPaper.style.setProperty("display", "flex", "important");
+    outerPaper.style.setProperty("flex-direction", "column", "important");
+    outerPaper.style.setProperty("overflow", "hidden", "important");
+  }
+
+  // innerPaper = video area (flex-grows above the fixed-height bottom toolbar)
+  const innerPaper = outerPaper?.firstElementChild as HTMLElement | null;
+  if (innerPaper) {
+    innerPaper.style.setProperty("flex", "1 1 0", "important");
+    innerPaper.style.setProperty("min-height", "0", "important");
+    innerPaper.style.setProperty("height", "0", "important");
+    innerPaper.style.setProperty("display", "flex", "important");
+    innerPaper.style.setProperty("flex-direction", "column", "important");
+    innerPaper.style.setProperty("overflow", "hidden", "important");
+  }
+
+  // videoBox = 3rd child of innerPaper (flex-grows below the Zoom top toolbar)
+  const videoBox = innerPaper?.children[2] as HTMLElement | null;
+  if (videoBox) {
+    videoBox.style.setProperty("flex", "1 1 0", "important");
+    videoBox.style.setProperty("min-height", "0", "important");
+    videoBox.style.setProperty("height", "0", "important");
+    videoBox.style.setProperty("overflow", "hidden", "important");
   }
 };
 
@@ -100,6 +188,15 @@ const ZoomMeetingRoom = ({ classId, classSlug, displayName, onLeave }: ZoomMeeti
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Zoom SDK v6 has an internal bug where it renders lists without key props.
+    // The warning fires from inside @zoom_meetingsdk_embedded.js and cannot be
+    // fixed from outside. Suppress only that exact React message while mounted.
+    const origError = console.error; // eslint-disable-line no-console
+    console.error = (...args: unknown[]) => { // eslint-disable-line no-console
+      if (typeof args[0] === "string" && args[0].includes("unique") && args[0].includes("key")) return;
+      origError(...args);
+    };
+
     let cancelled = false;
 
     const run = async () => {
@@ -180,12 +277,23 @@ const ZoomMeetingRoom = ({ classId, classSlug, displayName, onLeave }: ZoomMeeti
         });
         resizeObserverRef.current.observe(containerRef.current);
 
-        // Re-patch whenever Zoom re-applies its inline transform (drag/resize events).
+        // Re-patch whenever Zoom re-applies its inline transform or adds new children.
+        // rAF debounce prevents the observer from looping (each setProperty call is
+        // itself a DOM mutation that would re-trigger a synchronous observer).
+        let patchPending = false;
         mutationObserverRef.current = new MutationObserver(() => {
-          if (containerRef.current) patchZoomInlineStyles(containerRef.current);
+          if (patchPending) return;
+          patchPending = true;
+          requestAnimationFrame(() => {
+            patchPending = false;
+            if (containerRef.current) patchZoomInlineStyles(containerRef.current);
+          });
         });
         mutationObserverRef.current.observe(containerRef.current, {
-          subtree: true, attributes: true, attributeFilter: ["style"],
+          subtree: true,
+          attributes: true,
+          attributeFilter: ["style"],
+          childList: true,
         });
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -205,6 +313,7 @@ const ZoomMeetingRoom = ({ classId, classSlug, displayName, onLeave }: ZoomMeeti
     run();
 
     return () => {
+      console.error = origError; // eslint-disable-line no-console
       cancelled = true;
       resizeObserverRef.current?.disconnect();
       mutationObserverRef.current?.disconnect();
@@ -237,7 +346,7 @@ const ZoomMeetingRoom = ({ classId, classSlug, displayName, onLeave }: ZoomMeeti
   }
 
   return (
-    <div className="relative h-full w-full bg-[#0a0a0a]">
+    <div className="absolute inset-0 bg-[#0a0a0a]">
       {status === "loading" && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10 bg-[#0a0a0a]">
           <Loader2 className="h-8 w-8 animate-spin text-white/50" />
