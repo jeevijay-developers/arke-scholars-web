@@ -89,14 +89,15 @@ serve(async (req) => {
 
     const signature = await create(
       { alg: "HS256", typ: "JWT" },
-      { sdkKey, mn: meetingNumber, role, iat: now - 30, exp, tokenExp: exp },
+      // SDK v4+: use "appKey" instead of "sdkKey" in the JWT payload
+      { appKey: sdkKey, mn: meetingNumber, role, iat: now - 30, exp, tokenExp: exp },
       key,
     );
 
     return new Response(
       JSON.stringify({
         signature,
-        sdkKey,
+        appKey: sdkKey,
         meetingNumber,
         password: liveClass.zoom_meeting_password ?? "",
         role,

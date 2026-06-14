@@ -12,111 +12,137 @@ export type ZoomMeetingRoomProps = {
 
 type Status = "loading" | "ready" | "error";
 
-// Force Zoom's internal fixed-size wrappers to fill our container.
-// Zoom renders .meeting-client with inline px dimensions — !important overrides them.
+// ─── Module-level Zoom singleton ──────────────────────────────────────────────
+// createClient() always returns the same object (global singleton inside the SDK).
+// Calling init() twice on it causes it to hang silently, which is why we gate
+// both operations at module scope rather than inside the React effect.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let zoomClient: any = null;
+// Promise that resolves when init() has completed; reused across Strict Mode remounts.
+let zoomInitPromise: Promise<void> | null = null;
+// Reset when the component unmounts for real (not Strict Mode cleanup).
+let zoomJoined = false;
+
+const resetZoomState = () => {
+  zoomInitPromise = null;
+  zoomJoined = false;
+  // Don't null out zoomClient — createClient() always returns the same instance anyway.
+};
+
+// Zoom SDK v6.x uses react-draggable + react-resizable + zoom-MuiBox-root classes
+// (not .meeting-client). We inject CSS overrides and patch inline styles via JS because
+// the SDK re-applies inline transforms after every resize/drag event.
 const injectZoomFillStyles = () => {
   if (document.getElementById("zoom-fill-override")) return;
   const style = document.createElement("style");
   style.id = "zoom-fill-override";
   style.textContent = `
-    #meetingSDKElement,
-    #meetingSDKElement > div,
-    #meetingSDKElement .meeting-client,
-    #meetingSDKElement .meeting-client-inner {
+    #meetingSDKElement > div > .react-draggable {
+      width: 100% !important;
+      height: 100% !important;
+      transform: none !important;
+      position: absolute !important;
+      inset: 0 !important;
+    }
+    #meetingSDKElement > div > .react-draggable > .zoom-MuiBox-root:first-child {
+      width: 100% !important;
+      height: 100% !important;
+      position: absolute !important;
+      inset: 0 !important;
+    }
+    #meetingSDKElement > div > .react-draggable .react-resizable {
       width: 100% !important;
       height: 100% !important;
       max-width: 100% !important;
       max-height: 100% !important;
-      position: absolute !important;
-      inset: 0 !important;
     }
     #meetingSDKElement .react-resizable-handle { display: none !important; }
-    #meetingSDKElement .zoommtg-drag-handle { cursor: default !important; }
-    #meetingSDKElement video-player-container,
-    #meetingSDKElement [class*="video-player"],
-    #meetingSDKElement [class*="main-layout"],
-    #meetingSDKElement [class*="speaker-active"],
-    #meetingSDKElement [class*="gallery-video"] {
-      width: 100% !important;
-      height: 100% !important;
-      top: 0 !important;
-      left: 0 !important;
-    }
-    #meetingSDKElement video {
-      width: 100% !important;
-      height: 100% !important;
-      object-fit: contain !important;
-    }
   `;
   document.head.appendChild(style);
 };
 
-// Directly patch inline styles on Zoom's internal .meeting-client element,
-// since some versions set width/height via JS after the style tag is parsed.
 const patchZoomInlineStyles = (root: HTMLElement) => {
-  const client = root.querySelector(".meeting-client") as HTMLElement | null;
-  if (client) {
-    client.style.setProperty("width", "100%", "important");
-    client.style.setProperty("height", "100%", "important");
-    client.style.setProperty("position", "absolute", "important");
-    client.style.setProperty("inset", "0", "important");
+  const zoomRoot = root.firstElementChild as HTMLElement | null;
+  const draggable = zoomRoot?.querySelector(":scope > .react-draggable") as HTMLElement | null;
+  const panel = draggable?.firstElementChild as HTMLElement | null;
+  const resizable = panel?.firstElementChild as HTMLElement | null;
+
+  if (draggable) {
+    draggable.style.setProperty("width", "100%", "important");
+    draggable.style.setProperty("height", "100%", "important");
+    draggable.style.setProperty("transform", "none", "important");
+    draggable.style.setProperty("position", "absolute", "important");
+    draggable.style.setProperty("inset", "0", "important");
+  }
+  if (panel) {
+    panel.style.setProperty("width", "100%", "important");
+    panel.style.setProperty("height", "100%", "important");
+    panel.style.setProperty("position", "absolute", "important");
+    panel.style.setProperty("inset", "0", "important");
+  }
+  if (resizable) {
+    resizable.style.setProperty("width", "100%", "important");
+    resizable.style.setProperty("height", "100%", "important");
+    resizable.style.setProperty("max-width", "100%", "important");
+    resizable.style.setProperty("max-height", "100%", "important");
   }
 };
 
 const ZoomMeetingRoom = ({ classId, classSlug, displayName, onLeave }: ZoomMeetingRoomProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const clientRef = useRef<any>(null);
-  const joinedRef = useRef(false);
-  const initializedRef = useRef(false); // guard against double-init (StrictMode / re-render)
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  const mutationObserverRef = useRef<MutationObserver | null>(null);
+  // Tracks whether THIS effect instance did the join (used to decide whether to
+  // call leaveMeeting in the cleanup).
+  const didJoinRef = useRef(false);
 
   const [status, setStatus] = useState<Status>("loading");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Only ever init once per mount — Zoom SDK throws if init is called twice.
-    if (initializedRef.current) return;
-    initializedRef.current = true;
-
     let cancelled = false;
 
-    const init = async () => {
+    const run = async () => {
       try {
+        // ── 1. Load SDK and create (singleton) client ──────────────────────
         const module = await import("@zoom/meetingsdk/embedded");
         if (cancelled) return;
 
-        const ZoomMtgEmbedded = module.default || module;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const createClientFn = (ZoomMtgEmbedded as any).createClient || (ZoomMtgEmbedded as any).default?.createClient;
-        if (!createClientFn) {
-          throw new Error("Zoom Meeting SDK: createClient not found.");
+        const ZoomMtgEmbedded = (module.default || module) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+        if (!zoomClient) {
+          const createClientFn =
+            ZoomMtgEmbedded.createClient ??
+            ZoomMtgEmbedded.default?.createClient;
+          if (!createClientFn) throw new Error("Zoom Meeting SDK: createClient not found.");
+          zoomClient = createClientFn.call(ZoomMtgEmbedded);
         }
-        const client = createClientFn.call(ZoomMtgEmbedded);
-        clientRef.current = client;
 
         if (!containerRef.current) throw new Error("Meeting container not mounted");
 
-        await client.init({
-          zoomAppRoot: containerRef.current,
-          language: "en-US",
-          customize: {
-            meetingInfo: ["topic", "host", "mn", "pwd", "telPwd", "invite", "participant", "dc", "enctype"],
-            video: {
-              popper: { disableDraggable: true },
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              defaultViewType: "speaker" as any,
+        // ── 2. init() — only called once, even across Strict Mode remounts ─
+        if (!zoomInitPromise) {
+          zoomInitPromise = zoomClient.init({
+            zoomAppRoot: containerRef.current,
+            language: "en-US",
+            customize: {
+              meetingInfo: ["topic", "host", "mn", "pwd", "telPwd", "invite", "participant", "dc", "enctype"],
+              video: {
+                popper: { disableDraggable: true },
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                defaultViewType: "speaker" as any,
+              },
+              chat: { popper: { disableDraggable: true } },
+              participants: { popper: { disableDraggable: true } },
+              setting: { popper: { disableDraggable: true } },
+              invite: { popper: { disableDraggable: true } },
+              meeting: { popper: { disableDraggable: true } },
             },
-            chat: { popper: { disableDraggable: true } },
-            participants: { popper: { disableDraggable: true } },
-            setting: { popper: { disableDraggable: true } },
-            invite: { popper: { disableDraggable: true } },
-            meeting: { popper: { disableDraggable: true } },
-          },
-        });
+          });
+        }
+        await zoomInitPromise;
+        if (cancelled) return;
 
-        // Fetch signature + meeting credentials from server (role derived server-side)
+        // ── 3. Fetch credentials ───────────────────────────────────────────
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.access_token) throw new Error("Not authenticated");
 
@@ -124,39 +150,46 @@ const ZoomMeetingRoom = ({ classId, classSlug, displayName, onLeave }: ZoomMeeti
           body: { classId, classSlug },
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
-
         if (fnErr || !data?.signature) {
           throw new Error(fnErr?.message ?? "Failed to get meeting signature");
         }
-
         if (cancelled) return;
 
-        await client.join({
-          signature: data.signature,
-          sdkKey: data.sdkKey,
-          meetingNumber: data.meetingNumber,
-          password: data.password ?? "",
-          userName: displayName,
-        });
+        // ── 4. join() — only once per session ─────────────────────────────
+        if (!zoomJoined) {
+          zoomJoined = true;
+          await zoomClient.join({
+            signature: data.signature,
+            // SDK v4+: appKey replaces sdkKey in joinOptions
+            appKey: data.appKey ?? data.sdkKey,
+            meetingNumber: data.meetingNumber,
+            password: data.password ?? "",
+            userName: displayName,
+          });
+        }
+        if (cancelled) return;
 
-        joinedRef.current = true;
-        if (!cancelled) setStatus("ready");
+        didJoinRef.current = true;
+        setStatus("ready");
 
-        // Inject CSS overrides and patch inline styles set by the SDK after join.
         injectZoomFillStyles();
         if (containerRef.current) patchZoomInlineStyles(containerRef.current);
 
-        // Re-patch whenever the container resizes (window resize, orientation change, etc.)
-        if (containerRef.current) {
-          resizeObserverRef.current = new ResizeObserver(() => {
-            if (containerRef.current) patchZoomInlineStyles(containerRef.current);
-          });
-          resizeObserverRef.current.observe(containerRef.current);
-        }
+        resizeObserverRef.current = new ResizeObserver(() => {
+          if (containerRef.current) patchZoomInlineStyles(containerRef.current);
+        });
+        resizeObserverRef.current.observe(containerRef.current);
+
+        // Re-patch whenever Zoom re-applies its inline transform (drag/resize events).
+        mutationObserverRef.current = new MutationObserver(() => {
+          if (containerRef.current) patchZoomInlineStyles(containerRef.current);
+        });
+        mutationObserverRef.current.observe(containerRef.current, {
+          subtree: true, attributes: true, attributeFilter: ["style"],
+        });
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        client.on("connection-change", (payload: any) => {
-          // "Reconnecting" is a transient state — do NOT leave. Only leave on terminal states.
+        zoomClient.on("connection-change", (payload: any) => {
           if (payload?.state === "Closed" || payload?.state === "Fail") {
             onLeave?.();
           }
@@ -169,18 +202,22 @@ const ZoomMeetingRoom = ({ classId, classSlug, displayName, onLeave }: ZoomMeeti
       }
     };
 
-    init();
+    run();
 
     return () => {
       cancelled = true;
       resizeObserverRef.current?.disconnect();
-      if (joinedRef.current && clientRef.current) {
-        clientRef.current.leaveMeeting().catch(() => {});
-        joinedRef.current = false;
+      mutationObserverRef.current?.disconnect();
+      // Only leave if this effect instance completed the join.
+      // Strict Mode cleanup fires before join completes, so didJoinRef is false
+      // on the first (simulated) mount — we don't call leaveMeeting then.
+      if (didJoinRef.current && zoomClient) {
+        zoomClient.leaveMeeting().catch(() => {});
+        didJoinRef.current = false;
+        resetZoomState();
       }
     };
-    // classId is intentionally excluded — re-mounting for a new class requires
-    // navigating away and back, which unmounts/remounts this component cleanly.
+    // classId excluded intentionally — changing class requires a full navigation.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
