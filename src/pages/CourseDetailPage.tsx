@@ -128,7 +128,7 @@ const CourseDetailPage = () => {
   const initials = "AR";
 
   const allNotes = [...pdfs, ...notes];
-  const tabs = ["About", "Lectures", "Tests", "Notes"];
+  const tabs = ["About" /*, "Lectures", "Tests", "Notes" */];
 
   const stats = enrolled
     ? [
@@ -320,22 +320,25 @@ const CourseDetailPage = () => {
       </section>
 
       {/* Body */}
-      <div className="container mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
+      <div className="container mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8 items-start">
         <div className="min-w-0">
-          <div className="flex gap-6 border-b border-border overflow-x-auto">
-            {tabs.map((tab, i) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(i)}
-                className={`pb-3 text-sm font-semibold whitespace-nowrap transition-colors ${i === activeTab
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                  }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
+          {/* Tab bar hidden — only About tab active; restore tabs array to re-enable */}
+          {tabs.length > 1 && (
+            <div className="flex gap-6 border-b border-border overflow-x-auto">
+              {tabs.map((tab, i) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(i)}
+                  className={`pb-3 text-sm font-semibold whitespace-nowrap transition-colors ${i === activeTab
+                      ? "text-primary border-b-2 border-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                    }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* About */}
           {activeTab === 0 && (
@@ -607,7 +610,7 @@ const CourseDetailPage = () => {
         </div>
 
         {/* Sticky purchase / progress card — desktop only */}
-        <aside className="hidden lg:block lg:sticky lg:top-24 self-start">
+        <aside className="hidden lg:block sticky top-6 self-start">
           <div className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-sm">
             <div className="aspect-video rounded-xl border-2 border-dashed border-border bg-muted/30 flex items-center justify-center text-xs text-muted-foreground overflow-hidden">
               {course.thumbnail_url ? (
@@ -679,7 +682,7 @@ const CourseDetailPage = () => {
                   onClick={handleEnrollClick}
                   className="w-full rounded-xl bg-foreground py-3 text-sm font-bold text-background hover:opacity-90 transition-opacity"
                 >
-                  {course.is_course_free ? "Enroll Free →" : "Enroll Now →"}
+                  {course.is_course_free ? "Enroll →" : "Enroll Now →"}
                 </button>
 
                 <button
@@ -740,7 +743,7 @@ const CourseDetailPage = () => {
               onClick={handleEnrollClick}
               className="flex-1 rounded-xl bg-foreground py-3.5 text-sm font-bold text-background hover:opacity-90 transition-opacity"
             >
-              {course.is_course_free ? "Enroll Free →" : "Enroll Now →"}
+              {course.is_course_free ? "Enroll →" : "Enroll Now →"}
             </button>
           </>
         )}

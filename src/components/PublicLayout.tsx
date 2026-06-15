@@ -93,7 +93,7 @@ const PublicLayout = () => {
             )}
             {user ? (
               <Link
-                to="/dashboard"
+                to="/my-courses"
                 className="flex items-center gap-2 rounded-pill border border-border bg-card px-2 py-1 pr-4 hover:border-primary/50 transition-colors"
                 aria-label="Go to dashboard"
               >

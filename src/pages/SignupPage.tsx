@@ -22,7 +22,7 @@ const SENIOR_CLASSES = [
 
 const SignupPage = () => {
   const navigate = useNavigate();
-  const { isStaff, isTeacher, isMentor, isLeadManager } = useAuth();
+  const { isStaff, isTeacher, isMentor, isLeadManager, refreshProfile } = useAuth();
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
   const [countryCode] = useState("+91");
@@ -99,6 +99,7 @@ const SignupPage = () => {
     toast.success("OTP sent to your phone!");
     startCooldown();
     setStep("otp");
+    setTimeout(() => inputRefs.current[0]?.focus(), 50);
   };
 
   const handleResend = async () => {
@@ -175,6 +176,8 @@ const SignupPage = () => {
         return;
       }
     }
+    // Refresh the app store so the sidebar/header shows the student's real name.
+    await refreshProfile();
     setSubmitting(false);
     toast.success("Welcome to ARKE!");
     if (isStaff) navigate("/admin/dashboard", { replace: true });
@@ -268,7 +271,7 @@ const SignupPage = () => {
                     ref={(el) => { inputRefs.current[i] = el; }}
                     type="text"
                     inputMode="numeric"
-                    maxLength={OTP_LENGTH}
+                    maxLength={1}
                     value={d}
                     onChange={(e) => handleDigitChange(i, e.target.value)}
                     onKeyDown={(e) => handleKeyDown(i, e)}

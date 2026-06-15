@@ -13,7 +13,7 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get("redirect");
-  const { session, user, isStaff, isLeadManager, roleReady, loading } = useAuth();
+  const { session, user, isStaff, isLeadManager, roleReady, loading, refreshProfile } = useAuth();
 
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
@@ -78,6 +78,15 @@ const LoginPage = () => {
   const focusPrev = (idx: number) => inputRefs.current[idx - 1]?.focus();
 
   const handleDigitChange = (idx: number, val: string) => {
+    // Handle paste: fill all boxes from the pasted string
+    if (val.length > 1) {
+      const pasted = val.replace(/\D/g, "").slice(0, OTP_LENGTH);
+      const next = [...digits];
+      for (let i = 0; i < pasted.length; i++) next[i] = pasted[i];
+      setDigits(next);
+      inputRefs.current[Math.min(pasted.length, OTP_LENGTH - 1)]?.focus();
+      return;
+    }
     const digit = val.replace(/\D/g, "");
     const next = [...digits];
     next[idx] = digit;
@@ -101,6 +110,7 @@ const LoginPage = () => {
     toast.success("OTP sent to your phone!");
     setStep("otp");
     startCooldown();
+    setTimeout(() => inputRefs.current[0]?.focus(), 50);
   };
 
   const handleResend = async () => {
@@ -120,6 +130,8 @@ const LoginPage = () => {
     const { error } = await supabase.auth.verifyOtp({ phone: fullPhone, token: otp, type: "sms" });
     setVerifying(false);
     if (error) { toast.error(error.message); return; }
+    // Re-fetch profile so the store has the latest name (clears any stale cache).
+    await refreshProfile();
     // Session established — auth context useEffect above handles redirect
   };
 
@@ -218,7 +230,7 @@ const LoginPage = () => {
                     ref={(el) => { inputRefs.current[i] = el; }}
                     type="text"
                     inputMode="numeric"
-                    maxLength={OTP_LENGTH}
+                    maxLength={1}
                     value={d}
                     onChange={(e) => handleDigitChange(i, e.target.value)}
                     onKeyDown={(e) => handleKeyDown(i, e)}

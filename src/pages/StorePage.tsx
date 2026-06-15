@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import SEO from "@/components/SEO";
 import { ShoppingBag, Star, Loader2, GraduationCap, ChevronDown } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { useCourses, type CourseRow } from "@/hooks/useCourses";
-import { useAppStore } from "@/store/useAppStore";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import EnrollmentModal from "@/components/EnrollmentModal";
@@ -89,7 +89,6 @@ function CoursePrice({ course }: { course: CourseRow }) {
 // courses relevant to them, but they can switch to any exam/class to explore.
 
 const StorePage = () => {
-  const { user } = useAppStore();
   const { user: authUser } = useAuth();
   const navigate = useNavigate();
 
@@ -145,8 +144,21 @@ const StorePage = () => {
     activeClass || undefined,
   );
 
-  const handleEnroll = (c: CourseRow) => {
-    if (!user) { navigate("/login"); return; }
+  const handleEnroll = async (c: CourseRow) => {
+    console.log("handleEnroll called", { id: c.id, is_course_free: c.is_course_free, authUser: authUser?.id });
+    if (!authUser) { navigate("/login"); return; }
+    if (c.is_course_free) {
+      const { error } = await supabase
+        .from("enrollments")
+        .insert({ user_id: authUser.id, course_id: c.id, is_active: true });
+      if (error && !error.message.includes("duplicate")) {
+        toast.error("Could not enroll. Please try again.");
+        return;
+      }
+      toast.success("You're enrolled! Redirecting to your course…");
+      navigate(`/learn/${c.id}`);
+      return;
+    }
     setEnrollFor(c);
   };
 
@@ -335,7 +347,7 @@ const StorePage = () => {
                       onClick={() => handleEnroll(c)}
                       className="flex-1 rounded-xl bg-[#F97415] py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity"
                     >
-                      {c.is_course_free ? "Enroll Free" : "Enroll Now"}
+                      {c.is_course_free ? "Enroll" : "Enroll Now"}
                     </button>
                   )}
                 </div>
