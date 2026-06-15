@@ -5,7 +5,6 @@ import {
   CheckCircle2,
   Star,
   Clock,
-  Heart,
   ChevronDown,
   Loader2,
   Lock,
@@ -21,7 +20,6 @@ import { toast } from "sonner";
 import { useCourseDetail } from "@/hooks/useCourseDetail";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useFavourites } from "@/hooks/useFavourites";
 import { CourseReviews } from "@/components/CourseReviews";
 import EnrollmentModal from "@/components/EnrollmentModal";
 
@@ -54,7 +52,6 @@ const CourseDetailPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { course, chapters, pdfs, notes, tests, reviewCount, loading } = useCourseDetail(slug);
-  const { favouriteIds, toggle: toggleFav } = useFavourites();
   const [activeTab, setActiveTab] = useState(0);
   const [expandedChapter, setExpandedChapter] = useState(0);
   const [enrollment, setEnrollment] = useState<EnrollmentInfo | null>(null);
@@ -146,13 +143,9 @@ const CourseDetailPage = () => {
       { value: `${course.rating ? Number(course.rating).toFixed(1) : "N/A"}★`, label: "Rating" },
     ];
 
-  const courseAny = course as unknown as { what_youll_learn?: string[] | null; requirements?: string[] | null };
+  const courseAny = course as unknown as { what_youll_learn?: string[] | null };
   const whatYoullLearn = (courseAny.what_youll_learn && courseAny.what_youll_learn.length > 0)
     ? courseAny.what_youll_learn
-    : [];
-
-  const requirements = (courseAny.requirements && courseAny.requirements.length > 0)
-    ? courseAny.requirements
     : [];
 
   const includes = [
@@ -205,7 +198,7 @@ const CourseDetailPage = () => {
   const discount = Number(course.discount_percent ?? 0);
 
   return (
-    <div className="bg-background pb-28 lg:pb-16">
+    <div className="bg-background pb-28 lg:pb-8">
       {course && (
         <SEO
           title={`${course.name} – ${course.target} · Class ${course.class}`}
@@ -260,457 +253,420 @@ const CourseDetailPage = () => {
           ]}
         />
       )}
-      {/* Hero */}
-      <section className="border-b border-border bg-[hsl(var(--muted))]/30">
-        <div className="container mx-auto px-4 py-6">
-          <div className="text-xs text-muted-foreground mb-4">
-            <Link to="/" className="hover:text-primary">Home</Link>
-            {" / "}
-            <Link to="/courses" className="hover:text-primary">Courses</Link>
-            {" / "}
-            <span className="text-foreground font-medium">{course.name}</span>
-          </div>
 
-          <div className="flex flex-col md:flex-row gap-6 items-start">
-            <div className="w-full md:w-72 shrink-0">
-              <div className="aspect-video rounded-2xl border-2 border-dashed border-border bg-card flex items-center justify-center overflow-hidden">
-                {course.thumbnail_url ? (
-                  <img src={course.thumbnail_url} alt={course.name} className="h-full w-full object-cover" />
-                ) : (
-                  <span className="text-xs text-muted-foreground">course image</span>
-                )}
-              </div>
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase mb-2">
-                {course.target} · Class {course.class} · {course.language}
-              </p>
-              <h1 className="font-display text-3xl md:text-4xl font-black text-foreground leading-tight">
-                {course.name}
-              </h1>
-              {course.description && (
-                <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{course.description}</p>
-              )}
-
-              <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Star className="h-3.5 w-3.5 fill-primary text-primary" />
-                  <strong className="text-foreground">{course.rating ? Number(course.rating).toFixed(1) : "N/A"}</strong>
-                  <span>({reviewCount.toLocaleString()} reviews)</span>
-                </span>
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3.5 w-3.5 text-primary" />
-                  {totalHours} hrs
-                </span>
-                {course.badge && (
-                  <span className="rounded-full border border-border bg-card px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-foreground">
-                    {course.badge}
-                  </span>
-                )}
-                {enrolled && (
-                  <span className="flex items-center gap-1.5 rounded-full bg-secondary/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-secondary">
-                    <CheckCircle2 className="h-3 w-3" /> Enrolled
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
+      <div className="container mx-auto px-4 pt-6">
+        {/* Breadcrumb */}
+        <div className="text-xs text-muted-foreground mb-6">
+          <Link to="/" className="hover:text-primary">Home</Link>
+          {" / "}
+          <Link to="/courses" className="hover:text-primary">Courses</Link>
+          {" / "}
+          <span className="text-foreground font-medium">{course.name}</span>
         </div>
-      </section>
 
-      {/* Body */}
-      <div className="container mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8 items-start">
-        <div className="min-w-0">
-          {/* Tab bar hidden — only About tab active; restore tabs array to re-enable */}
-          {tabs.length > 1 && (
-            <div className="flex gap-6 border-b border-border overflow-x-auto">
-              {tabs.map((tab, i) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(i)}
-                  className={`pb-3 text-sm font-semibold whitespace-nowrap transition-colors ${i === activeTab
-                      ? "text-primary border-b-2 border-primary"
-                      : "text-muted-foreground hover:text-foreground"
-                    }`}
-                >
-                  {tab}
-                </button>
-              ))}
+        {/* Two-column layout: scrollable left, sticky card right */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8 items-start">
+
+          {/* Left column: hero info + course details (scrollable naturally) */}
+          <div className="min-w-0 space-y-8">
+
+            {/* Hero */}
+            <div className="flex flex-col md:flex-row gap-6 items-start">
+              <div className="w-full md:w-64 shrink-0">
+                <div className="aspect-video rounded-2xl border-2 border-dashed border-border bg-card flex items-center justify-center overflow-hidden">
+                  {course.thumbnail_url ? (
+                    <img src={course.thumbnail_url} alt={course.name} className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="text-xs text-muted-foreground">course image</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase mb-2">
+                  {course.target} · Class {course.class} · {course.language}
+                </p>
+                <h1 className="font-display text-3xl md:text-4xl font-black text-foreground leading-tight">
+                  {course.name}
+                </h1>
+                {course.description && (
+                  <p className="mt-2 text-sm text-muted-foreground line-clamp-3">{course.description}</p>
+                )}
+                <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <Star className="h-3.5 w-3.5 fill-primary text-primary" />
+                    <strong className="text-foreground">{course.rating ? Number(course.rating).toFixed(1) : "N/A"}</strong>
+                    <span>({reviewCount.toLocaleString()} reviews)</span>
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3.5 w-3.5 text-primary" />
+                    {totalHours} hrs
+                  </span>
+                  {course.badge && (
+                    <span className="rounded-full border border-border bg-card px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-foreground">
+                      {course.badge}
+                    </span>
+                  )}
+                  {enrolled && (
+                    <span className="flex items-center gap-1.5 rounded-full bg-secondary/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-secondary">
+                      <CheckCircle2 className="h-3 w-3" /> Enrolled
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
-          )}
 
-          {/* About */}
-          {activeTab === 0 && (
-            <div className="mt-6 space-y-8">
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                {stats.map((s) => (
-                  <div key={s.label} className="rounded-2xl border border-border bg-card p-4 text-center">
-                    <p className="font-display text-2xl font-black text-foreground">{s.value}</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">{s.label}</p>
-                    {s.label === "Progress" && (
-                      <div className="h-1 rounded-full bg-muted mt-2 overflow-hidden">
-                        <div className="h-1 bg-secondary transition-all" style={{ width: `${progressPercent}%` }} />
-                      </div>
-                    )}
-                  </div>
+            {/* Tab bar hidden — only About tab active; restore tabs array to re-enable */}
+            {tabs.length > 1 && (
+              <div className="flex gap-6 border-b border-border overflow-x-auto">
+                {tabs.map((tab, i) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(i)}
+                    className={`pb-3 text-sm font-semibold whitespace-nowrap transition-colors ${i === activeTab
+                        ? "text-primary border-b-2 border-primary"
+                        : "text-muted-foreground hover:text-foreground"
+                      }`}
+                  >
+                    {tab}
+                  </button>
                 ))}
               </div>
+            )}
 
-              <div>
-                <h3 className="text-[11px] font-bold tracking-wider uppercase text-muted-foreground mb-2">About this course</h3>
-                <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">
-                  {course.description ||
-                    "Full course description text explaining the scope, depth, and approach of this course."}
-                </p>
-              </div>
-
-              <div>
-                <h3 className="text-[11px] font-bold tracking-wider uppercase text-muted-foreground mb-3">What you'll learn</h3>
-                {whatYoullLearn.length === 0 ? (
-                  <p className="text-sm text-muted-foreground italic">No details added yet.</p>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
-                    {whatYoullLearn.map((item) => (
-                      <div key={item} className="flex items-start gap-2 text-sm text-foreground">
-                        <span className="text-muted-foreground mt-0.5">—</span>
-                        <span>{item}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <h3 className="text-[11px] font-bold tracking-wider uppercase text-muted-foreground mb-3">Requirements</h3>
-                {requirements.length === 0 ? (
-                  <p className="text-sm text-muted-foreground italic">No requirements listed.</p>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
-                    {requirements.map((item) => (
-                      <div key={item} className="flex items-start gap-2 text-sm text-foreground">
-                        <span className="text-muted-foreground mt-0.5">—</span>
-                        <span>{item}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <CourseReviews courseId={course.id} enrolled={enrolled} />
-            </div>
-          )}
-
-          {/* Lectures */}
-          {activeTab === 1 && (
-            <div className="mt-6 space-y-4">
-              {freeLessons.length > 0 && (
-                <div className="rounded-2xl border border-border bg-card p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <p className="text-sm font-bold text-foreground">Free preview videos</p>
-                    <span className="rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-bold text-secondary">
-                      {freeLessons.length} FREE
-                    </span>
-                  </div>
-                  <div className="space-y-1">
-                    {freeLessons.map((l) => (
-                      <button
-                        key={l.id}
-                        onClick={() => navigate(`/learn/${course.id}?lesson=${l.slug}`)}
-                        className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-sm text-left hover:bg-muted/30 transition-colors"
-                      >
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                          <Play className="h-3.5 w-3.5 text-primary" />
-                        </span>
-                        <span className="flex-1 truncate text-foreground">{l.title}</span>
-                        <span className="text-xs text-muted-foreground shrink-0">{Math.round(l.duration_seconds / 60)} min</span>
-                      </button>
-                    ))}
-                  </div>
+            {/* About */}
+            {activeTab === 0 && (
+              <div className="space-y-8">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                  {stats.map((s) => (
+                    <div key={s.label} className="rounded-2xl border border-border bg-card p-4 text-center">
+                      <p className="font-display text-2xl font-black text-foreground">{s.value}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">{s.label}</p>
+                      {s.label === "Progress" && (
+                        <div className="h-1 rounded-full bg-muted mt-2 overflow-hidden">
+                          <div className="h-1 bg-secondary transition-all" style={{ width: `${progressPercent}%` }} />
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              )}
 
-              {chapters.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No lectures published yet.</p>
-              ) : (
-                chapters.map((ch, i) => (
-                  <div key={ch.id} className="rounded-2xl border border-border bg-card overflow-hidden">
-                    <button
-                      onClick={() => setExpandedChapter(expandedChapter === i ? -1 : i)}
-                      className="flex items-center justify-between w-full px-4 py-3 hover:bg-muted/30 transition-colors"
-                    >
-                      <span className="text-sm font-bold text-foreground text-left">{ch.title}</span>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-muted-foreground">{ch.lessons.length} lessons</span>
-                        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${expandedChapter === i ? "rotate-180" : ""}`} />
-                      </div>
-                    </button>
-                    {expandedChapter === i && (
-                      <div className="border-t border-border px-4 py-2 space-y-1">
-                        {ch.lessons.map((l) => {
-                          const isDone = completedSlugs.has(l.slug);
-                          return (
-                            <div key={l.id} className="flex items-center gap-2 text-sm py-2 pl-2">
-                              {isDone ? (
-                                <CheckCircle2 className="h-3.5 w-3.5 text-secondary" />
-                              ) : enrolled || l.is_free_preview ? (
-                                <Play className="h-3.5 w-3.5 text-primary" />
-                              ) : (
-                                <Lock className="h-3.5 w-3.5 text-muted-foreground" />
-                              )}
-                              <span className={`flex-1 ${isDone ? "text-muted-foreground line-through" : "text-foreground"}`}>
-                                {l.title}
-                              </span>
-                              <span className="text-xs text-muted-foreground">{Math.round(l.duration_seconds / 60)} min</span>
-                              {l.is_free_preview && (
-                                <span className="rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-bold text-secondary">FREE</span>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          )}
-
-          {/* Tests */}
-          {activeTab === 2 && (
-            <div className="mt-6">
-              {tests.length === 0 ? (
-                <EmptyTab icon={ClipboardCheck} title="Practice Tests" description="Topic-wise and full-length mock tests will appear here once published." />
-              ) : (
-                <div className="space-y-2">
-                  {tests.map((test) => {
-                    const canTake = enrolled;
-                    return (
-                      <div
-                        key={test.id}
-                        className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4"
-                      >
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                          <ClipboardCheck className="h-5 w-5 text-primary" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-bold text-foreground truncate">{test.title}</p>
-                          <p className="text-[11px] text-muted-foreground uppercase mt-0.5">
-                            {test.test_type} · {test.duration_minutes} min · {test.total_questions} questions
-                          </p>
-                        </div>
-                        {canTake ? (
-                          <Link
-                            to={`/tests/${test.slug}/take`}
-                            className="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground hover:bg-primary-dark transition-colors shrink-0"
-                          >
-                            Take Test <ArrowRight className="h-3.5 w-3.5" />
-                          </Link>
-                        ) : (
-                          <span className="flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-semibold text-muted-foreground shrink-0">
-                            <Lock className="h-3.5 w-3.5" /> Enroll to start
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
+                <div>
+                  <h3 className="text-[11px] font-bold tracking-wider uppercase text-muted-foreground mb-2">About this course</h3>
+                  <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">
+                    {course.description ||
+                      "Full course description text explaining the scope, depth, and approach of this course."}
+                  </p>
                 </div>
-              )}
-            </div>
-          )}
 
-          {/* Notes */}
-          {activeTab === 3 && (
-            <div className="mt-6">
-              {allNotes.length === 0 ? (
-                <EmptyTab icon={FileText} title="Notes" description="Downloadable notes and formula sheets will appear here once your educator uploads them." />
-              ) : (
-                <div className="space-y-2">
-                  {allNotes.map((note) => {
-                    const canDownload = enrolled;
-                    return (
-                      <div
-                        key={note.id}
-                        className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4"
-                      >
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                          <FileText className="h-5 w-5 text-primary" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-bold text-foreground truncate">{note.title}</p>
-                          <p className="text-[11px] text-muted-foreground">{note.size_bytes ? formatBytes(note.size_bytes) : "Note"}</p>
-                        </div>
-                        {canDownload ? (
-                          <a
-                            href={note.file_url}
-                            download
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground hover:bg-primary-dark transition-colors shrink-0"
-                          >
-                            <Download className="h-3.5 w-3.5" /> Download
-                          </a>
-                        ) : (
-                          <span className="flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-semibold text-muted-foreground shrink-0">
-                            <Lock className="h-3.5 w-3.5" /> Enroll to download
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Time */}
-          {activeTab === 4 && (
-            <div className="mt-6">
-              {enrolled ? (
-                <div className="rounded-2xl border border-border bg-card p-6 space-y-5">
+                {whatYoullLearn.length > 0 && (
                   <div>
-                    <h3 className="font-display text-lg font-black text-foreground">Time Tracker</h3>
-                    <p className="text-xs text-muted-foreground">Your progress through this course</p>
+                    <h3 className="text-[11px] font-bold tracking-wider uppercase text-muted-foreground mb-3">What you'll learn</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+                      {whatYoullLearn.map((item) => (
+                        <div key={item} className="flex items-start gap-2 text-sm text-foreground">
+                          <span className="text-muted-foreground mt-0.5">—</span>
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
+                )}
 
-                  <div className="grid grid-cols-3 gap-3">
-                    <TimeStat label="Total" value={`${totalHours}h`} />
-                    <TimeStat label="Completed" value={`${completedHours}h`} accent="text-secondary" />
-                    <TimeStat label="Remaining" value={`${remainingHours}h`} />
+                <CourseReviews courseId={course.id} enrolled={enrolled} />
+              </div>
+            )}
+
+            {/* Lectures */}
+            {activeTab === 1 && (
+              <div className="space-y-4">
+                {freeLessons.length > 0 && (
+                  <div className="rounded-2xl border border-border bg-card p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <p className="text-sm font-bold text-foreground">Free preview videos</p>
+                      <span className="rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-bold text-secondary">
+                        {freeLessons.length} FREE
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      {freeLessons.map((l) => (
+                        <button
+                          key={l.id}
+                          onClick={() => navigate(`/learn/${course.id}?lesson=${l.slug}`)}
+                          className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-sm text-left hover:bg-muted/30 transition-colors"
+                        >
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                            <Play className="h-3.5 w-3.5 text-primary" />
+                          </span>
+                          <span className="flex-1 truncate text-foreground">{l.title}</span>
+                          <span className="text-xs text-muted-foreground shrink-0">{Math.round(l.duration_seconds / 60)} min</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
+                )}
 
+                {chapters.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No lectures published yet.</p>
+                ) : (
+                  chapters.map((ch, i) => (
+                    <div key={ch.id} className="rounded-2xl border border-border bg-card overflow-hidden">
+                      <button
+                        onClick={() => setExpandedChapter(expandedChapter === i ? -1 : i)}
+                        className="flex items-center justify-between w-full px-4 py-3 hover:bg-muted/30 transition-colors"
+                      >
+                        <span className="text-sm font-bold text-foreground text-left">{ch.title}</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-muted-foreground">{ch.lessons.length} lessons</span>
+                          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${expandedChapter === i ? "rotate-180" : ""}`} />
+                        </div>
+                      </button>
+                      {expandedChapter === i && (
+                        <div className="border-t border-border px-4 py-2 space-y-1">
+                          {ch.lessons.map((l) => {
+                            const isDone = completedSlugs.has(l.slug);
+                            return (
+                              <div key={l.id} className="flex items-center gap-2 text-sm py-2 pl-2">
+                                {isDone ? (
+                                  <CheckCircle2 className="h-3.5 w-3.5 text-secondary" />
+                                ) : enrolled || l.is_free_preview ? (
+                                  <Play className="h-3.5 w-3.5 text-primary" />
+                                ) : (
+                                  <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                                )}
+                                <span className={`flex-1 ${isDone ? "text-muted-foreground line-through" : "text-foreground"}`}>
+                                  {l.title}
+                                </span>
+                                <span className="text-xs text-muted-foreground">{Math.round(l.duration_seconds / 60)} min</span>
+                                {l.is_free_preview && (
+                                  <span className="rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-bold text-secondary">FREE</span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {/* Tests */}
+            {activeTab === 2 && (
+              <div>
+                {tests.length === 0 ? (
+                  <EmptyTab icon={ClipboardCheck} title="Practice Tests" description="Topic-wise and full-length mock tests will appear here once published." />
+                ) : (
+                  <div className="space-y-2">
+                    {tests.map((test) => {
+                      const canTake = enrolled;
+                      return (
+                        <div
+                          key={test.id}
+                          className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4"
+                        >
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                            <ClipboardCheck className="h-5 w-5 text-primary" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-bold text-foreground truncate">{test.title}</p>
+                            <p className="text-[11px] text-muted-foreground uppercase mt-0.5">
+                              {test.test_type} · {test.duration_minutes} min · {test.total_questions} questions
+                            </p>
+                          </div>
+                          {canTake ? (
+                            <Link
+                              to={`/tests/${test.slug}/take`}
+                              className="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground hover:bg-primary-dark transition-colors shrink-0"
+                            >
+                              Take Test <ArrowRight className="h-3.5 w-3.5" />
+                            </Link>
+                          ) : (
+                            <span className="flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-semibold text-muted-foreground shrink-0">
+                              <Lock className="h-3.5 w-3.5" /> Enroll to start
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Notes */}
+            {activeTab === 3 && (
+              <div>
+                {allNotes.length === 0 ? (
+                  <EmptyTab icon={FileText} title="Notes" description="Downloadable notes and formula sheets will appear here once your educator uploads them." />
+                ) : (
+                  <div className="space-y-2">
+                    {allNotes.map((note) => {
+                      const canDownload = enrolled;
+                      return (
+                        <div
+                          key={note.id}
+                          className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4"
+                        >
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                            <FileText className="h-5 w-5 text-primary" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-bold text-foreground truncate">{note.title}</p>
+                            <p className="text-[11px] text-muted-foreground">{note.size_bytes ? formatBytes(note.size_bytes) : "Note"}</p>
+                          </div>
+                          {canDownload ? (
+                            <a
+                              href={note.file_url}
+                              download
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-primary-foreground hover:bg-primary-dark transition-colors shrink-0"
+                            >
+                              <Download className="h-3.5 w-3.5" /> Download
+                            </a>
+                          ) : (
+                            <span className="flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-semibold text-muted-foreground shrink-0">
+                              <Lock className="h-3.5 w-3.5" /> Enroll to download
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Time */}
+            {activeTab === 4 && (
+              <div>
+                {enrolled ? (
+                  <div className="rounded-2xl border border-border bg-card p-6 space-y-5">
+                    <div>
+                      <h3 className="font-display text-lg font-black text-foreground">Time Tracker</h3>
+                      <p className="text-xs text-muted-foreground">Your progress through this course</p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <TimeStat label="Total" value={`${totalHours}h`} />
+                      <TimeStat label="Completed" value={`${completedHours}h`} accent="text-secondary" />
+                      <TimeStat label="Remaining" value={`${remainingHours}h`} />
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between text-xs mb-1.5">
+                        <span className="font-semibold text-foreground">{progressPercent}% complete</span>
+                        <span className="text-muted-foreground">{completedCount}/{totalLessons} lessons</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-muted overflow-hidden">
+                        <div className="h-2 bg-secondary transition-all" style={{ width: `${progressPercent}%` }} />
+                      </div>
+                    </div>
+                    {enrollment?.last_accessed_at && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                        <Timer className="h-3.5 w-3.5" /> Last accessed {formatRelative(enrollment.last_accessed_at)}
+                      </p>
+                    )}
+                    <button
+                      onClick={() => navigate(`/learn/${course.id}`)}
+                      className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground hover:bg-primary-dark transition-colors"
+                    >
+                      Continue Learning <ArrowRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <EmptyTab icon={Timer} title="Track your time" description="Enroll in this course to start tracking your study time and progress." />
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Right column: sticky purchase / progress card — desktop only */}
+          <aside className="hidden lg:block sticky top-6 self-start">
+            <div className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-sm">
+              <div className="aspect-video rounded-xl border-2 border-dashed border-border bg-muted/30 flex items-center justify-center text-xs text-muted-foreground overflow-hidden">
+                {course.thumbnail_url ? (
+                  <img src={course.thumbnail_url} alt="preview" className="h-full w-full object-cover" />
+                ) : (
+                  "course preview"
+                )}
+              </div>
+
+              {enrolled ? (
+                <>
+                  <div className="flex items-center gap-2 rounded-xl bg-secondary/10 px-3 py-2 text-secondary">
+                    <CheckCircle2 className="h-5 w-5" />
+                    <span className="text-sm font-bold">You're enrolled</span>
+                  </div>
                   <div>
                     <div className="flex items-center justify-between text-xs mb-1.5">
                       <span className="font-semibold text-foreground">{progressPercent}% complete</span>
-                      <span className="text-muted-foreground">{completedCount}/{totalLessons} lessons</span>
+                      <span className="text-muted-foreground">{completedCount}/{totalLessons}</span>
                     </div>
                     <div className="h-2 rounded-full bg-muted overflow-hidden">
                       <div className="h-2 bg-secondary transition-all" style={{ width: `${progressPercent}%` }} />
                     </div>
                   </div>
-
-                  {enrollment?.last_accessed_at && (
-                    <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                      <Timer className="h-3.5 w-3.5" /> Last accessed {formatRelative(enrollment.last_accessed_at)}
-                    </p>
-                  )}
-
                   <button
                     onClick={() => navigate(`/learn/${course.id}`)}
-                    className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground hover:bg-primary-dark transition-colors"
+                    className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-foreground py-3 text-sm font-bold text-background hover:opacity-90 transition-opacity"
                   >
                     Continue Learning <ArrowRight className="h-4 w-4" />
                   </button>
-                </div>
+                  <button
+                    disabled
+                    className="w-full rounded-xl border border-border py-3 text-sm font-semibold text-muted-foreground bg-muted/30 cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    <CheckCircle2 className="h-4 w-4" /> Enrolled
+                  </button>
+                </>
               ) : (
-                <EmptyTab icon={Timer} title="Track your time" description="Enroll in this course to start tracking your study time and progress." />
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Sticky purchase / progress card — desktop only */}
-        <aside className="hidden lg:block sticky top-6 self-start">
-          <div className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-sm">
-            <div className="aspect-video rounded-xl border-2 border-dashed border-border bg-muted/30 flex items-center justify-center text-xs text-muted-foreground overflow-hidden">
-              {course.thumbnail_url ? (
-                <img src={course.thumbnail_url} alt="preview" className="h-full w-full object-cover" />
-              ) : (
-                "course preview"
-              )}
-            </div>
-
-            {enrolled ? (
-              <>
-                <div className="flex items-center gap-2 rounded-xl bg-secondary/10 px-3 py-2 text-secondary">
-                  <CheckCircle2 className="h-5 w-5" />
-                  <span className="text-sm font-bold">You're enrolled</span>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between text-xs mb-1.5">
-                    <span className="font-semibold text-foreground">{progressPercent}% complete</span>
-                    <span className="text-muted-foreground">{completedCount}/{totalLessons}</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-muted overflow-hidden">
-                    <div className="h-2 bg-secondary transition-all" style={{ width: `${progressPercent}%` }} />
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => navigate(`/learn/${course.id}`)}
-                  className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-foreground py-3 text-sm font-bold text-background hover:opacity-90 transition-opacity"
-                >
-                  Continue Learning <ArrowRight className="h-4 w-4" />
-                </button>
-
-                <button
-                  disabled
-                  className="w-full rounded-xl border border-border py-3 text-sm font-semibold text-muted-foreground bg-muted/30 cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  <CheckCircle2 className="h-4 w-4" /> Enrolled
-                </button>
-              </>
-            ) : (
-              <>
-                <div className="flex items-baseline gap-2 flex-wrap">
-                  {course.is_course_free ? (
-                    <span className="font-display text-3xl font-black text-secondary">Free</span>
-                  ) : (
-                    <>
-                      <span className="font-display text-3xl font-black text-foreground">
-                        ₹{Number(course.sale_price).toLocaleString()}
-                        {course.show_price_with_gst && (
-                          <span className="text-sm font-normal text-muted-foreground ml-1">+ 18% GST</span>
+                <>
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    {course.is_course_free ? (
+                      <span className="font-display text-3xl font-black text-secondary">Free</span>
+                    ) : (
+                      <>
+                        <span className="font-display text-3xl font-black text-foreground">
+                          ₹{Number(course.sale_price).toLocaleString()}
+                          {course.show_price_with_gst && (
+                            <span className="text-sm font-normal text-muted-foreground ml-1">+ 18% GST</span>
+                          )}
+                        </span>
+                        {course.mrp > course.sale_price && (
+                          <span className="text-sm text-muted-foreground line-through">
+                            ₹{Number(course.mrp).toLocaleString()}
+                          </span>
                         )}
-                      </span>
-                      {course.mrp > course.sale_price && (
-                        <span className="text-sm text-muted-foreground line-through">
-                          ₹{Number(course.mrp).toLocaleString()}
-                        </span>
-                      )}
-                      {discount > 0 && (
-                        <span className="ml-auto rounded-full bg-secondary/10 px-2 py-0.5 text-[11px] font-bold text-secondary">
-                          {discount}% OFF
-                        </span>
-                      )}
-                    </>
-                  )}
-                </div>
+                        {discount > 0 && (
+                          <span className="ml-auto rounded-full bg-secondary/10 px-2 py-0.5 text-[11px] font-bold text-secondary">
+                            {discount}% OFF
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  <button
+                    onClick={handleEnrollClick}
+                    className="w-full rounded-xl bg-foreground py-3 text-sm font-bold text-background hover:opacity-90 transition-opacity"
+                  >
+                    {course.is_course_free ? "Enroll →" : "Enroll Now →"}
+                  </button>
+                </>
+              )}
 
-                <button
-                  onClick={handleEnrollClick}
-                  className="w-full rounded-xl bg-foreground py-3 text-sm font-bold text-background hover:opacity-90 transition-opacity"
-                >
-                  {course.is_course_free ? "Enroll →" : "Enroll Now →"}
-                </button>
-
-                <button
-                  onClick={() => toggleFav(course.id)}
-                  className={`w-full rounded-xl border py-3 text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${favouriteIds.has(course.id)
-                      ? "border-rose-500 bg-rose-500/10 text-rose-500 hover:bg-rose-500/20"
-                      : "border-border text-foreground hover:bg-muted/30"
-                    }`}
-                >
-                  <Heart className={`h-4 w-4 ${favouriteIds.has(course.id) ? "fill-rose-500" : ""}`} />
-                  {favouriteIds.has(course.id) ? "Saved to Favourites" : "Add to Favourite"}
-                </button>
-              </>
-            )}
-
-            <div className="pt-3 border-t border-border space-y-2">
-              <p className="text-[11px] font-bold tracking-wider uppercase text-muted-foreground">This course includes</p>
-              {includes.map((item) => (
-                <div key={item} className="flex items-center gap-2 text-xs text-foreground">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-secondary" />
-                  {item}
-                </div>
-              ))}
+              <div className="pt-3 border-t border-border space-y-2">
+                <p className="text-[11px] font-bold tracking-wider uppercase text-muted-foreground">This course includes</p>
+                {includes.map((item) => (
+                  <div key={item} className="flex items-center gap-2 text-xs text-foreground">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-secondary" />
+                    {item}
+                  </div>
+                ))}
+              </div>
             </div>
-
-            {/* Guarantee removed */}
-          </div>
-        </aside>
+          </aside>
+        </div>
       </div>
 
       {/* Mobile sticky bottom CTA */}

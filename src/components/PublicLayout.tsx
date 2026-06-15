@@ -3,6 +3,7 @@ import { Flame, Heart, Globe, Phone } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { useEffect } from "react";
 import arkeLogo from "@/assets/arke-logo.png";
+import arkeLogoLight from "@/assets/arke-logo-light.png";
 import { useFavourites } from "@/hooks/useFavourites";
 
 const PublicLayout = () => {
@@ -157,7 +158,7 @@ const PublicLayout = () => {
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <img
-                  src={"/src/assets/arke-logo-light.png"}
+                  src={arkeLogoLight}
                   alt="ARKE"
                   className="h-8 md:h-10 w-auto object-contain"
                 />
