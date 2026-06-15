@@ -205,7 +205,7 @@ const LandingPage = () => {
                 <span className="block text-[1.75rem] leading-tight sm:text-3xl font-black text-primary md:text-5xl lg:text-6xl">Exam Prep That Works</span>
               </h1>
               <p className="mt-3 md:mt-4 mx-auto md:mx-0 max-w-md text-sm md:text-base text-white/70 leading-relaxed">
-                <strong className="text-white/90">ARKE Scholars</strong> helps you master JEE, NEET &amp; Foundation exams with live classes from top educators, AI-powered doubt solving, and smart test analytics.
+                <strong className="text-white/90">ARKE Scholars</strong> helps you master JEE, NEET &amp; Foundation exams with live classes from top educators, AI-powered doubts solving, and smart test analytics.
               </p>
               <div className="mt-6 md:mt-8 flex items-center justify-center md:justify-start gap-3">
                 <Link to={user ? "/courses" : "/signup"} className="inline-flex items-center gap-1.5 rounded-pill bg-primary px-6 py-3 md:px-8 md:py-3.5 text-sm md:text-base font-bold text-primary-foreground hover:bg-primary/90 transition-colors">
