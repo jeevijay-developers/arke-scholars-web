@@ -196,7 +196,7 @@ const LandingPage = () => {
       <section className="bg-[hsl(var(--navy))] overflow-hidden">
         <div className="max-w-[70rem] mx-auto px-4 pt-10 pb-12 md:pt-10 md:pb-0">
           <div className="grid items-end gap-8 md:gap-4 md:grid-cols-2">
-            <div className="text-center md:text-left md:pb-40 order-2 md:order-1">
+            <div className="text-center md:text-left md:pb-[8rem] order-2 md:order-1">
               <span className="inline-flex items-center gap-1.5 rounded-pill border border-primary/40 bg-primary/10 px-3 py-1 text-xs md:text-sm font-semibold text-primary">
                 India's Rising EdTech Platform
               </span>
