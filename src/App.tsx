@@ -9,7 +9,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import LandingPage from "./pages/LandingPage";
 import CareerPage from "./pages/CareerPage";
 import LoginPage from "./pages/LoginPage";
-import SignupPage from "./pages/SignupPage";
 import VerifyEmailPage from "./pages/VerifyEmailPage";
 import AuthCallbackPage from "./pages/AuthCallbackPage";
 import ForceChangePasswordPage from "./pages/ForceChangePasswordPage";
@@ -140,7 +139,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/signup" element={<SignupPage />} />
+            <Route path="/signup" element={<LoginPage />} />
             <Route path="/verify-email" element={<VerifyEmailPage />} />
             <Route path="/auth/callback" element={<AuthCallbackPage />} />
             <Route path="/auth/change-password" element={<ForceChangePasswordPage />} />

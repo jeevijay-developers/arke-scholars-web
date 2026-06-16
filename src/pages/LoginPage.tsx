@@ -1,19 +1,30 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, Phone, Check, Sparkles, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, Phone, User, Check, Sparkles, Loader2, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import logoLight from "@/assets/arke-logo-light.png";
 
 const OTP_LENGTH = 6;
-type Step = "phone" | "otp";
+type Step = "phone" | "otp" | "profile";
+
+const FOUNDATION_CLASSES = [
+  { value: "8", label: "Class 8" },
+  { value: "9", label: "Class 9" },
+  { value: "10", label: "Class 10" },
+];
+const SENIOR_CLASSES = [
+  { value: "11", label: "Class 11" },
+  { value: "12", label: "Class 12" },
+  { value: "dropper", label: "12th Pass (Dropper)" },
+];
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get("redirect");
-  const { session, user, isStaff, isLeadManager, roleReady, loading, refreshProfile } = useAuth();
+  const { session, user, isStaff, isTeacher, isMentor, isLeadManager, roleReady, loading, refreshProfile } = useAuth();
 
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
@@ -22,6 +33,8 @@ const LoginPage = () => {
   const [verifying, setVerifying] = useState(false);
   const [resending, setResending] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  const [profile, setProfile] = useState({ full_name: "", target_exam: "JEE", class_level: "11" });
+  const [submitting, setSubmitting] = useState(false);
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -29,37 +42,16 @@ const LoginPage = () => {
   const fullPhone = `+91${phone}`;
   const otp = digits.join("");
 
+  // Redirect already-signed-in users (skip when on profile setup step)
   useEffect(() => {
-    if (loading || !session || !roleReady) return;
-    const mustChange = Boolean(
-      (user?.app_metadata as Record<string, unknown> | undefined)?.must_change_password,
-    );
-    if (mustChange) {
-      const createdAt = user?.created_at ? new Date(user.created_at).getTime() : 0;
-      const updatedAt = user?.updated_at ? new Date(user.updated_at).getTime() : 0;
-      const alreadyChanged = createdAt && updatedAt && updatedAt - createdAt > 60_000;
-      if (!alreadyChanged) {
-        navigate("/auth/change-password", { replace: true });
-        return;
-      }
-      void supabase.functions.invoke("clear-password-flag").then(({ error }) => {
-        if (!error) void supabase.auth.refreshSession();
-      });
-    }
-    if (isLeadManager) {
-      navigate("/lead-manager/dashboard", { replace: true });
-      return;
-    }
-    if (isStaff) {
-      navigate("/admin/dashboard", { replace: true });
-      return;
-    }
-    if (redirectTo) {
-      navigate(redirectTo, { replace: true });
-      return;
-    }
+    if (loading || !session || !roleReady || step === "profile") return;
+    if (isLeadManager) { navigate("/lead-manager/dashboard", { replace: true }); return; }
+    if (isStaff) { navigate("/admin/dashboard", { replace: true }); return; }
+    if (isTeacher) { navigate("/teacher/dashboard", { replace: true }); return; }
+    if (isMentor) { navigate("/mentor/dashboard", { replace: true }); return; }
+    if (redirectTo) { navigate(redirectTo, { replace: true }); return; }
     navigate("/my-courses", { replace: true });
-  }, [loading, session, user, roleReady, isStaff, isLeadManager, navigate, redirectTo]);
+  }, [loading, session, user, roleReady, isStaff, isTeacher, isMentor, isLeadManager, navigate, redirectTo, step]);
 
   useEffect(() => () => { if (cooldownRef.current) clearInterval(cooldownRef.current); }, []);
 
@@ -78,7 +70,6 @@ const LoginPage = () => {
   const focusPrev = (idx: number) => inputRefs.current[idx - 1]?.focus();
 
   const handleDigitChange = (idx: number, val: string) => {
-    // Handle paste: fill all boxes from the pasted string
     if (val.length > 1) {
       const pasted = val.replace(/\D/g, "").slice(0, OTP_LENGTH);
       const next = [...digits];
@@ -130,9 +121,68 @@ const LoginPage = () => {
     const { error } = await supabase.auth.verifyOtp({ phone: fullPhone, token: otp, type: "sms" });
     setVerifying(false);
     if (error) { toast.error(error.message); return; }
-    // Re-fetch profile so the store has the latest name (clears any stale cache).
+
+    // Check if this user already has a profile
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (authUser) {
+      const { data: existingProfile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("user_id", authUser.id)
+        .maybeSingle();
+
+      if (existingProfile?.full_name) {
+        // Existing user — refresh and let the session useEffect redirect
+        await refreshProfile();
+        return;
+      }
+    }
+
+    // New user — show profile setup
+    setStep("profile");
+  };
+
+  const isFoundation = profile.target_exam === "Foundation";
+  const classOptions = isFoundation ? FOUNDATION_CLASSES : SENIOR_CLASSES;
+
+  const updateProfile = (k: keyof typeof profile, v: string) =>
+    setProfile((p) => {
+      if (k === "target_exam") {
+        return { ...p, target_exam: v, class_level: v === "Foundation" ? "8" : "11" };
+      }
+      return { ...p, [k]: v };
+    });
+
+  const handleCompleteProfile = async () => {
+    if (!profile.full_name.trim()) { toast.error("Please enter your name"); return; }
+    setSubmitting(true);
+    const { data } = await supabase.auth.getUser();
+    if (data.user) {
+      const { error: upsertError } = await supabase.from("profiles").upsert({
+        user_id: data.user.id,
+        full_name: profile.full_name.trim(),
+        phone: fullPhone,
+        target_exam: profile.target_exam,
+        class_level: profile.class_level,
+      }, { onConflict: "user_id" });
+      if (upsertError) {
+        setSubmitting(false);
+        if (upsertError.code === "23505") {
+          toast.error("This phone number is already linked to another account.");
+        } else {
+          toast.error("Could not complete setup. Please try again.");
+        }
+        return;
+      }
+    }
     await refreshProfile();
-    // Session established — auth context useEffect above handles redirect
+    setSubmitting(false);
+    toast.success("Welcome to ARKE!");
+    if (isStaff) navigate("/admin/dashboard", { replace: true });
+    else if (isTeacher) navigate("/teacher/dashboard", { replace: true });
+    else if (isMentor) navigate("/mentor/dashboard", { replace: true });
+    else if (isLeadManager) navigate("/lead-manager/dashboard", { replace: true });
+    else navigate("/my-courses", { replace: true });
   };
 
   return (
@@ -163,7 +213,7 @@ const LoginPage = () => {
       </div>
 
       {/* Right Panel */}
-      <div className="flex flex-1 items-center justify-center bg-card p-8">
+      <div className="flex flex-1 items-center justify-center bg-card p-8 overflow-y-auto">
         <div className="w-full max-w-sm animate-fade-in-up">
 
           {/* Step 1 — Phone */}
@@ -172,8 +222,8 @@ const LoginPage = () => {
               <Link to="/" className="inline-flex items-center gap-1.5 mb-4 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                 <ArrowLeft className="h-4 w-4" /> Back to home
               </Link>
-              <h2 className="text-2xl font-black font-display text-foreground">Welcome Back</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Enter your phone number to log in</p>
+              <h2 className="text-2xl font-black font-display text-foreground">Welcome to ARKE</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Enter your phone number to continue</p>
               <div className="mt-6 space-y-4">
                 <div>
                   <label className="text-sm font-medium text-foreground">Phone Number</label>
@@ -201,10 +251,6 @@ const LoginPage = () => {
                 >
                   {sending ? <><Loader2 className="h-4 w-4 animate-spin" /> Sending OTP...</> : "Send OTP"}
                 </button>
-              </div>
-              <div className="mt-6 text-center">
-                <span className="text-sm text-muted-foreground">New here? </span>
-                <Link to="/signup" className="text-sm font-semibold text-primary hover:text-primary-dark">Create Account →</Link>
               </div>
             </>
           )}
@@ -244,7 +290,7 @@ const LoginPage = () => {
                 disabled={verifying || otp.length < OTP_LENGTH}
                 className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-[#F97415] py-3 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-60 transition-opacity"
               >
-                {verifying ? <><Loader2 className="h-4 w-4 animate-spin" /> Logging in...</> : "Verify & Login"}
+                {verifying ? <><Loader2 className="h-4 w-4 animate-spin" /> Verifying...</> : "Verify & Continue"}
               </button>
               <button
                 onClick={handleResend}
@@ -254,6 +300,63 @@ const LoginPage = () => {
                 <RefreshCw className={`h-4 w-4 ${resending ? "animate-spin" : ""}`} />
                 {cooldown > 0 ? `Resend in ${cooldown}s` : resending ? "Sending..." : "Resend OTP"}
               </button>
+            </>
+          )}
+
+          {/* Step 3 — Profile Setup (new users only) */}
+          {step === "profile" && (
+            <>
+              <h2 className="text-2xl font-black font-display text-foreground">Almost there!</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Tell us a bit about yourself</p>
+              <div className="mt-6 space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-foreground">Full Name</label>
+                  <div className="relative mt-1">
+                    <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      value={profile.full_name}
+                      onChange={(e) => updateProfile("full_name", e.target.value)}
+                      type="text"
+                      placeholder="Enter your name"
+                      onKeyDown={(e) => e.key === "Enter" && handleCompleteProfile()}
+                      className="w-full rounded-lg border border-border bg-card py-2.5 pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-medium text-foreground">Target Exam</label>
+                    <select
+                      value={profile.target_exam}
+                      onChange={(e) => updateProfile("target_exam", e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground"
+                    >
+                      <option>JEE</option>
+                      <option>NEET</option>
+                      <option>Foundation</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground">Class</label>
+                    <select
+                      value={profile.class_level}
+                      onChange={(e) => updateProfile("class_level", e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground"
+                    >
+                      {classOptions.map((c) => (
+                        <option key={c.value} value={c.value}>{c.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <button
+                  onClick={handleCompleteProfile}
+                  disabled={submitting}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#F97415] py-3 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-60 transition-opacity"
+                >
+                  {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Setting up...</> : "Get Started"}
+                </button>
+              </div>
             </>
           )}
 

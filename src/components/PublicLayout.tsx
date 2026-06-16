@@ -115,7 +115,7 @@ const PublicLayout = () => {
                   Login
                 </Link>
                 <Link
-                  to="/signup"
+                  to="/login"
                   className="rounded-pill bg-[#F97415] px-3 md:px-5 py-2 text-xs md:text-sm font-bold text-primary-foreground shadow-blue hover:opacity-90 transition-opacity whitespace-nowrap"
                 >
                   Get Started
