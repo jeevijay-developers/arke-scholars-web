@@ -247,7 +247,7 @@ const LoginPage = () => {
                 <button
                   onClick={handleSendOtp}
                   disabled={sending}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#F97415] py-3 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-60 transition-opacity"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-3 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-60 transition-opacity"
                 >
                   {sending ? <><Loader2 className="h-4 w-4 animate-spin" /> Sending OTP...</> : "Send OTP"}
                 </button>
@@ -288,7 +288,7 @@ const LoginPage = () => {
               <button
                 onClick={handleVerifyOtp}
                 disabled={verifying || otp.length < OTP_LENGTH}
-                className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-[#F97415] py-3 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-60 transition-opacity"
+                className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-3 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-60 transition-opacity"
               >
                 {verifying ? <><Loader2 className="h-4 w-4 animate-spin" /> Verifying...</> : "Verify & Continue"}
               </button>
@@ -352,7 +352,7 @@ const LoginPage = () => {
                 <button
                   onClick={handleCompleteProfile}
                   disabled={submitting}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#F97415] py-3 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-60 transition-opacity"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-3 text-sm font-bold text-primary-foreground hover:opacity-90 disabled:opacity-60 transition-opacity"
                 >
                   {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Setting up...</> : "Get Started"}
                 </button>

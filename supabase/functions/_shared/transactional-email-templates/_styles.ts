@@ -1,5 +1,4 @@
-// Shared brand styling for Arke Scholars transactional emails.
-// Brand: Primary #F97316 (orange), Navy #1E293B, bg #FFFBF5, font: Plus Jakarta Sans
+// Brand: Primary #C99A2E (gold), Navy #07182E, bg #FAF7EF, font: Plus Jakarta Sans
 // Email body bg MUST be white (#ffffff) per email rules.
 
 export const SITE_NAME = 'Arke Scholars'
@@ -26,22 +25,22 @@ export const header = {
 export const brand = {
   fontSize: '22px',
   fontWeight: '800',
-  color: '#F97316',
+  color: '#C99A2E',
   letterSpacing: '-0.5px',
   margin: '0',
 }
 
 export const card = {
-  backgroundColor: '#FFFBF5',
+  backgroundColor: '#FAF7EF',
   borderRadius: '16px',
   padding: '32px 28px',
-  border: '1px solid #FFE5CC',
+  border: '1px solid #E5E7EB',
 }
 
 export const h1 = {
   fontSize: '22px',
   fontWeight: '800',
-  color: '#1E293B',
+  color: '#07182E',
   margin: '0 0 12px',
   lineHeight: '1.3',
 }
@@ -61,7 +60,7 @@ export const muted = {
 }
 
 export const button = {
-  backgroundColor: '#F97316',
+  backgroundColor: '#C99A2E',
   color: '#ffffff',
   fontSize: '15px',
   fontWeight: '700',

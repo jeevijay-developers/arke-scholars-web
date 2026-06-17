@@ -18,6 +18,7 @@ const PublicLayout = () => {
     { label: "JEE", path: "/courses?exam=JEE Main" },
     { label: "NEET", path: "/courses?exam=NEET" },
     { label: "Foundation", path: "/courses?exam=Foundation" },
+    { label: "Mentorship", path: "/mentorship" },
     { label: "Contact", path: "/contact" },
     { label: "About Us", path: "/about" },
   ];
@@ -39,7 +40,7 @@ const PublicLayout = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Region banner */}
-      <div className="bg-[#F97415] py-1.5">
+      <div className="bg-gradient-to-r from-[#E4B94F] to-[#C99A2E] py-1.5">
         <div className="container mx-auto flex items-center justify-center gap-2 px-4">
           <Globe className="h-3.5 w-3.5 text-primary-foreground" />
           <span className="text-[11px] font-medium text-primary-foreground">Serving students across</span>
@@ -48,14 +49,14 @@ const PublicLayout = () => {
       </div>
 
       {/* Navbar */}
-      <nav className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md">
+      <nav className="sticky bg-[hsl(var(--navy))] top-0 z-50 border-b border-white/10 rounded-b-2xl backdrop-blur-md">
         <div className="container mx-auto flex items-center justify-between gap-2 md:gap-4 px-4 py-3">
           <Link
             to="/"
             className="flex items-center gap-2 shrink-0"
           >
             <img
-              src={arkeLogo}
+              src={arkeLogoLight}
               alt="ARKE"
               className="h-8 md:h-9 w-auto object-contain"
             />
@@ -67,7 +68,7 @@ const PublicLayout = () => {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`text-sm font-medium transition-colors ${active ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+                  className={`text-sm font-medium transition-colors ${active ? "text-primary" : "text-white/90 hover:text-white"}`}
                 >
                   {item.label}
                 </Link>
@@ -75,13 +76,13 @@ const PublicLayout = () => {
             })}
           </div>
           <div className="flex items-center gap-2 md:gap-3 shrink-0">
-            <Link to="/contact" className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" aria-label="Contact us">
+            <Link to="/contact" className="flex h-8 w-8 items-center justify-center rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors" aria-label="Contact us">
               <Phone className="h-4 w-4" />
             </Link>
             {user && (
               <Link
                 to="/favourite-courses"
-                className="relative flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-rose-500 hover:bg-muted transition-colors"
+                className="relative flex h-8 w-8 items-center justify-center rounded-lg text-white/75 hover:text-rose-400 hover:bg-white/10 transition-colors"
                 aria-label="Favourite courses"
               >
                 <Heart className="h-4 w-4" />
@@ -111,12 +112,12 @@ const PublicLayout = () => {
               </Link>
             ) : (
               <>
-                <Link to="/login" className="hidden xs:text-sm xs:font-semibold xs:text-foreground xs:hover:text-primary xs:transition-colors sm:block">
+                <Link to="/login" className="hidden text-sm font-semibold text-white/80 hover:text-primary transition-colors sm:block">
                   Login
                 </Link>
                 <Link
                   to="/login"
-                  className="rounded-pill bg-[#F97415] px-3 md:px-5 py-2 text-xs md:text-sm font-bold text-primary-foreground shadow-blue hover:opacity-90 transition-opacity whitespace-nowrap"
+                  className="rounded-pill bg-gradient-to-r from-[#E4B94F] to-[#C99A2E] px-3 md:px-5 py-2 text-xs md:text-sm font-bold text-primary-foreground shadow-blue hover:opacity-90 transition-opacity whitespace-nowrap"
                 >
                   Get Started
                 </Link>

@@ -172,7 +172,7 @@ const CoursesPage = () => {
           {authUser && (
             <Link
               to="/my-courses"
-              className="inline-flex items-center gap-1 rounded-pill bg-[#F97415] px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity"
+              className="inline-flex items-center gap-1 rounded-pill bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity"
             >
               My Learning <ArrowRight className="h-3.5 w-3.5" />
             </Link>
@@ -198,7 +198,7 @@ const CoursesPage = () => {
                     <button
                       onClick={() => { selectExam(i); setJeeOpen((v) => !v); }}
                       className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-semibold transition-colors inline-flex items-center gap-1 ${isActive
-                          ? "bg-[#F97415] text-primary-foreground"
+                          ? "bg-primary text-primary-foreground"
                           : "border border-border text-muted-foreground hover:bg-muted/30"
                         }`}
                     >
@@ -230,7 +230,7 @@ const CoursesPage = () => {
                   key={opt.value}
                   onClick={() => selectExam(i)}
                   className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${isActive
-                      ? "bg-[#F97415] text-primary-foreground"
+                      ? "bg-primary text-primary-foreground"
                       : "border border-border text-muted-foreground hover:bg-muted/30"
                     }`}
                 >
@@ -295,9 +295,12 @@ const CoursesPage = () => {
                       </div>
                     )}
                     {c.badge && (
-                      <span className="absolute top-3 left-3 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-bold text-foreground">
-                        {c.badge}
-                      </span>
+                      <span className={`absolute top-3 left-3 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                        c.badge === "Bestseller" ? "bg-amber-400 text-amber-950"
+                        : c.badge === "Hot" ? "bg-red-500 text-white"
+                        : c.badge === "New Launch" ? "bg-emerald-500 text-white"
+                        : "bg-white/95 text-foreground"
+                      }`}>{c.badge}</span>
                     )}
                     <span className="absolute top-3 right-3 rounded-full bg-black/40 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
                       {c.target} · Class {c.class}
@@ -327,7 +330,7 @@ const CoursesPage = () => {
                     </Link>
                     <button
                       onClick={() => handleEnroll(c)}
-                      className="flex-1 rounded-xl bg-[#F97415] py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity"
+                      className="flex-1 rounded-xl bg-gradient-to-r from-accent to-primary py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity"
                     >
                       {c.is_course_free ? "Enroll" : "Enroll Now"}
                     </button>

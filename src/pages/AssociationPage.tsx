@@ -141,7 +141,7 @@ const AssociationPage = () => {
               </p>
               <Link
                 to="/contact"
-                className="inline-flex items-center gap-2 rounded-pill bg-[#F97415] px-6 py-3 text-sm font-bold text-primary-foreground shadow-blue hover:opacity-90 transition-opacity"
+                className="inline-flex items-center gap-2 rounded-pill bg-gradient-to-r from-accent to-primary px-6 py-3 text-sm font-bold text-primary-foreground shadow-blue hover:opacity-90 transition-opacity"
               >
                 Become a partner
                 <ArrowRight className="h-4 w-4" />

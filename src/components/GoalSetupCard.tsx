@@ -125,7 +125,7 @@ const GoalSetupCard = () => {
         <button
           onClick={save}
           disabled={!selected || saving}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#F97415] px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 disabled:opacity-60 transition-opacity"
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 disabled:opacity-60 transition-opacity"
         >
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
           Save

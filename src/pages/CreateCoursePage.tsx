@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import RichTextEditor from "@/components/RichTextEditor";
 
 const slugify = (s: string) =>
   s
@@ -13,9 +14,8 @@ const slugify = (s: string) =>
     .replace(/^-|-$/g, "")
     .slice(0, 60);
 
-type TeacherOption = { id: string; full_name: string };
-
 const TARGET_OPTIONS = ["JEE", "NEET", "Foundation"] as const;
+const BADGE_OPTIONS = ["Bestseller", "Hot", "New Launch"] as const;
 
 const CLASS_OPTIONS_BY_TARGET: Record<string, { label: string; value: string }[]> = {
   JEE:        [{ label: "Class 11", value: "11" }, { label: "Class 12", value: "12" }],
@@ -37,11 +37,10 @@ const CreateCoursePage = () => {
   const [name, setName] = useState("");
   const [internalName, setInternalName] = useState("");
   const [description, setDescription] = useState("");
+  const [detailedDescription, setDetailedDescription] = useState("");
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [existingThumbnail, setExistingThumbnail] = useState<string | null>(null);
   const [language, setLanguage] = useState<"Hinglish" | "English">("Hinglish");
-  const [assignedTeacherId, setAssignedTeacherId] = useState("");
-  const [teachers, setTeachers] = useState<TeacherOption[]>([]);
 
   // ── Targeting ───────────────────────────────────────────────────────────────
   const [target, setTarget] = useState<string>("JEE");
@@ -80,27 +79,6 @@ const CreateCoursePage = () => {
     if (!valid) setSelectedClass(DEFAULT_CLASS[target] ?? availableClasses[0]?.value ?? "11");
   }, [target]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Load all teachers on mount
-  useEffect(() => {
-    const loadTeachers = async () => {
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "teacher");
-      const ids = (roles ?? []).map((r: any) => r.user_id);
-      if (ids.length === 0) return;
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("user_id, full_name")
-        .in("user_id", ids)
-        .order("full_name");
-      setTeachers(
-        ((profiles ?? []) as any[]).map((p) => ({ id: p.user_id, full_name: p.full_name ?? "—" })),
-      );
-    };
-    loadTeachers();
-  }, []);
-
   // Load existing course for edit mode
   useEffect(() => {
     if (!isEditMode || !courseId) return;
@@ -119,9 +97,9 @@ const CreateCoursePage = () => {
       setName(course.name ?? "");
       setInternalName((course as any).internal_name ?? "");
       setDescription(course.description ?? "");
+      setDetailedDescription((course as any).detailed_description ?? "");
       setExistingThumbnail(course.thumbnail_url ?? null);
       setLanguage(((course as any).language ?? "Hinglish") as "Hinglish" | "English");
-      setAssignedTeacherId((course as any).assigned_teacher_id ?? "");
       setTarget((course as any).target ?? "JEE");
       setSelectedClass((course as any).class ?? "11");
       setCourseEndDate((course as any).course_end_date ?? "");
@@ -161,9 +139,9 @@ const CreateCoursePage = () => {
       name: name.trim(),
       internal_name: internalName.trim(),
       description: description || null,
+      detailed_description: detailedDescription || null,
       thumbnail_url: thumbnailUrl,
       language,
-      assigned_teacher_id: assignedTeacherId || null,
       target,
       class: selectedClass,
       course_end_date: courseEndDate || null,
@@ -232,8 +210,16 @@ const CreateCoursePage = () => {
         <Field label="Internal Name (not visible to students)">
           <input value={internalName} onChange={(e) => setInternalName(e.target.value)} className={inputCls} placeholder="e.g. PHY-JEE-2027-HINGLISH" />
         </Field>
-        <Field label="Description">
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className={`${inputCls} resize-none`} placeholder="Detailed course description..." />
+        <Field label="Short Description">
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className={`${inputCls} resize-none`} placeholder="One or two sentences shown as a preview…" />
+          <p className="text-[10px] text-muted-foreground mt-1">{description.length}/300 chars — shown on course cards and as the hero excerpt</p>
+        </Field>
+        <Field label="Detailed Description">
+          <RichTextEditor
+            content={detailedDescription}
+            onChange={setDetailedDescription}
+            placeholder="Describe the course in detail — topics covered, prerequisites, who it's for…"
+          />
         </Field>
 
         {/* Thumbnail */}
@@ -253,20 +239,6 @@ const CreateCoursePage = () => {
               <p className="text-[10px] text-muted-foreground mt-1">Recommended: 16:9 · 1280×720px</p>
             </div>
           </label>
-        </Field>
-
-        {/* Teacher dropdown */}
-        <Field label="Assigned Teacher">
-          <select
-            value={assignedTeacherId}
-            onChange={(e) => setAssignedTeacherId(e.target.value)}
-            className={inputCls}
-          >
-            <option value="">— Select a teacher —</option>
-            {teachers.map((t) => (
-              <option key={t.id} value={t.id}>{t.full_name}</option>
-            ))}
-          </select>
         </Field>
 
         {/* Language */}
@@ -396,21 +368,34 @@ const CreateCoursePage = () => {
             <label htmlFor="featured" className="text-sm font-medium text-foreground cursor-pointer">Featured</label>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Priority (lower = shown first, decimals allowed)">
-            <input
-              type="number"
-              value={priority}
-              onChange={(e) => setPriority(parseFloat(e.target.value) || 0)}
-              className={inputCls}
-              min={0}
-              step={0.1}
-            />
-          </Field>
-          <Field label="Badge text (optional)">
-            <input value={badge} onChange={(e) => setBadge(e.target.value)} className={inputCls} placeholder="e.g. Bestseller" />
-          </Field>
-        </div>
+        <Field label="Priority (lower = shown first, decimals allowed)">
+          <input
+            type="number"
+            value={priority}
+            onChange={(e) => setPriority(parseFloat(e.target.value) || 0)}
+            className={inputCls}
+            min={0}
+            step={0.1}
+          />
+        </Field>
+        <Field label="Badge">
+          <div className="flex gap-4 flex-wrap">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="radio" value="" checked={badge === ""} onChange={() => setBadge("")} className="accent-primary" />
+              <span className="text-sm font-medium text-foreground">None</span>
+            </label>
+            {BADGE_OPTIONS.map((b) => (
+              <label key={b} className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" value={b} checked={badge === b} onChange={() => setBadge(b)} className="accent-primary" />
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                  b === "Bestseller" ? "bg-amber-400 text-amber-950"
+                  : b === "Hot" ? "bg-red-500 text-white"
+                  : "bg-emerald-500 text-white"
+                }`}>{b}</span>
+              </label>
+            ))}
+          </div>
+        </Field>
         <Field label="Tags">
           <div className="flex gap-2 mb-2">
             <input value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }} className={`flex-1 ${inputCls}`} placeholder="Add tag..." />

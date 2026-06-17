@@ -539,7 +539,7 @@ const MentorshipPage = () => {
               </p>
               <Link
                 to="/signup"
-                className="mt-6 inline-flex items-center gap-2 rounded-pill bg-[#F97415] px-6 py-3 text-sm font-bold text-primary-foreground shadow-blue transition-opacity hover:opacity-90"
+                className="mt-6 inline-flex items-center gap-2 rounded-pill bg-gradient-to-r from-accent to-primary px-6 py-3 text-sm font-bold text-primary-foreground shadow-blue transition-opacity hover:opacity-90"
               >
                 Book Your Mentor <ArrowRight className="h-4 w-4" />
               </Link>
@@ -558,7 +558,7 @@ const MentorshipPage = () => {
           <div className="mt-12 flex overflow-x-auto snap-x snap-mandatory no-scrollbar gap-6 pb-4 pt-6 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-4 md:pb-0 md:pt-6">
             {steps.map(({ icon: Icon, title, body }, i) => (
               <div key={title} className="relative w-[260px] shrink-0 snap-start scroll-ml-4 md:scroll-ml-0 rounded-2xl border border-border bg-background p-6 text-center shadow-sm md:w-auto">
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#F97415] px-3 py-0.5 text-[10px] font-black text-primary-foreground z-10">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-0.5 text-[10px] font-black text-primary-foreground z-10">
                   STEP {i + 1}
                 </div>
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">

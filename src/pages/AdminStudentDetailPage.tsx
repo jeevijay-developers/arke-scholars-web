@@ -31,7 +31,7 @@ type EnrollmentRow = {
   created_at: string;
   is_active: boolean;
   expires_at: string | null;
-  courses: { name: string; subject: string } | null;
+  courses: { name: string; target: string } | null;
 };
 
 type PaymentRow = {
@@ -43,7 +43,7 @@ type PaymentRow = {
   status: string;
 };
 
-type CourseLite = { id: string; name: string; subject: string };
+type CourseLite = { id: string; name: string; target: string };
 
 const initials = (name: string | null) =>
   (name ?? "U").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
@@ -117,7 +117,7 @@ const AdminStudentDetailPage = () => {
     try {
       const { data, error } = await supabase
         .from("enrollments")
-        .select("id, created_at, is_active, expires_at, courses(name, subject)")
+        .select("id, created_at, is_active, expires_at, courses(name, target)")
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -153,7 +153,7 @@ const AdminStudentDetailPage = () => {
   // ── Load courses list for enroll form ────────────────────────────────────────
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from("courses").select("id, name, subject").order("name");
+      const { data } = await supabase.from("courses").select("id, name, target").order("name");
       setCourses((data as CourseLite[]) ?? []);
     })();
   }, []);
@@ -469,7 +469,7 @@ const AdminStudentDetailPage = () => {
                     >
                       <option value="">— Select a course —</option>
                       {courses.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name} · {c.subject}</option>
+                        <option key={c.id} value={c.id}>{c.name} · {c.target}</option>
                       ))}
                     </select>
                   </div>
@@ -509,7 +509,7 @@ const AdminStudentDetailPage = () => {
                 <thead className="bg-muted/40 border-b border-border">
                   <tr className="text-left">
                     <th className="px-3 py-2.5 font-semibold text-muted-foreground">Course</th>
-                    <th className="px-3 py-2.5 font-semibold text-muted-foreground hidden sm:table-cell">Subject</th>
+                    <th className="px-3 py-2.5 font-semibold text-muted-foreground hidden sm:table-cell">Target</th>
                     <th className="px-3 py-2.5 font-semibold text-muted-foreground hidden md:table-cell">Enrolled</th>
                     <th className="px-3 py-2.5 font-semibold text-muted-foreground">Valid Until</th>
                     <th className="px-3 py-2.5 font-semibold text-muted-foreground">Status</th>
@@ -527,7 +527,7 @@ const AdminStudentDetailPage = () => {
                   ) : enrollments.map((enr) => (
                     <tr key={enr.id} className="border-t border-border">
                       <td className="px-3 py-2.5 font-medium text-foreground">{enr.courses?.name ?? "—"}</td>
-                      <td className="px-3 py-2.5 text-muted-foreground hidden sm:table-cell">{enr.courses?.subject ?? "—"}</td>
+                      <td className="px-3 py-2.5 text-muted-foreground hidden sm:table-cell">{enr.courses?.target ?? "—"}</td>
                       <td className="px-3 py-2.5 text-muted-foreground hidden md:table-cell">{fmtDate(enr.created_at)}</td>
                       <td className="px-3 py-2.5">
                         {enr.expires_at ? (

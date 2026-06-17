@@ -16,7 +16,7 @@ const subjectIcons: Record<string, React.ElementType> = {
 };
 
 const quickActions = [
-  { icon: Video, label: "Attend Class", desc: "Join live session", link: "/my-live-classes", bg: "bg-orange-500" },
+  { icon: Video, label: "Attend Class", desc: "Join live session", link: "/my-live-classes", bg: "bg-primary" },
   { icon: ClipboardCheck, label: "Take Test", desc: "Start a mock test", link: "/my-tests", bg: "bg-emerald-600" },
   { icon: Bot, label: "Ask Doubt", desc: "AI doubt solver", link: "/doubts", bg: "bg-sky-500" },
   { icon: BarChart3, label: "Analytics", desc: "View progress", link: "/analytics", bg: "bg-violet-600" },
@@ -74,7 +74,7 @@ const StudentDashboard = () => {
               <div className="rounded-2xl border border-border bg-card p-5 mb-6 animate-fade-in-up">
                 <div className="flex flex-col items-center gap-2 py-6 text-center sm:flex-row sm:justify-between sm:text-left">
                   <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 shrink-0 rounded-xl bg-orange-50 flex items-center justify-center">
+                    <div className="h-12 w-12 shrink-0 rounded-xl bg-primary-light flex items-center justify-center">
                       <BookOpen className="h-5 w-5 text-primary" />
                     </div>
                     <div>
@@ -142,7 +142,7 @@ const StudentDashboard = () => {
                       </span>
                     </div>
                     <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
-                      <div className="h-full rounded-full bg-[#F97415] transition-all" style={{ width: `${last.progress_pct}%` }} />
+                      <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${last.progress_pct}%` }} />
                     </div>
                   </div>
                 </Link>
@@ -158,7 +158,7 @@ const StudentDashboard = () => {
 
         {/* Rank Cards */}
         <div className="space-y-3 mb-5">
-          <div className="rounded-xl bg-orange-500 p-4">
+          <div className="rounded-xl bg-secondary p-4">
             <p className="text-xs font-medium text-white/80">All India Percentile</p>
             <p className="text-3xl font-black font-display text-white">{data.percentile !== null ? data.percentile : "—"}</p>
             <p className="text-xs font-medium text-white/80">{data.percentile !== null ? "Last 5 tests" : "No tests yet"}</p>
@@ -200,7 +200,7 @@ const StudentDashboard = () => {
                 <YAxis tick={{ fontSize: 9 }} />
                 <Tooltip contentStyle={{ fontSize: 11 }} />
                 <Legend wrapperStyle={{ fontSize: 10 }} />
-                <Line type="monotone" dataKey="you" stroke="hsl(24, 95%, 53%)" strokeWidth={2} dot={{ r: 2 }} name="You" />
+                <Line type="monotone" dataKey="you" stroke="hsl(42, 63%, 48%)" strokeWidth={2} dot={{ r: 2 }} name="You" />
                 <Line type="monotone" dataKey="avg" stroke="hsl(215, 16%, 47%)" strokeWidth={1} strokeDasharray="4 4" dot={false} name="Average" />
               </LineChart>
             </ResponsiveContainer>

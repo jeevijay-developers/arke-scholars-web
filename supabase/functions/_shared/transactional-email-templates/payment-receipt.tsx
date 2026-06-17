@@ -67,7 +67,7 @@ const PaymentReceiptEmail = ({
           {amount && (
             <>
               <Text style={{ ...label, marginTop: '12px' }}>Amount paid</Text>
-              <Text style={{ ...stat, fontSize: '20px', color: '#F97316' }}>{amount}</Text>
+              <Text style={{ ...stat, fontSize: '20px', color: '#C99A2E' }}>{amount}</Text>
             </>
           )}
           {paymentMethod && (
