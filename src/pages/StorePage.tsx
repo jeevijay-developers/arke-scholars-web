@@ -177,7 +177,7 @@ const StorePage = () => {
       <SEO title="Course Store" description="Explore all courses available on ARKE Scholars." />
 
       {/* Dashboard-style header (no marketing banner — we're inside the student shell) */}
-      <div className="rounded-2xl bg-[#F97316] p-6 text-white animate-fade-in-up">
+      <div className="rounded-2xl bg-gradient-to-r from-secondary to-secondary-dark p-6 text-white animate-fade-in-up">
         <div className="flex items-center gap-3 mb-2">
           <ShoppingBag className="h-7 w-7" />
           <h1 className="text-2xl font-black font-display">Course Store</h1>
@@ -207,7 +207,7 @@ const StorePage = () => {
                   <button
                     onClick={() => { selectExam(i); setJeeOpen((v) => !v); }}
                     className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-semibold transition-colors inline-flex items-center gap-1 ${isActive
-                      ? "bg-[#F97415] text-primary-foreground"
+                      ? "bg-primary text-primary-foreground"
                       : "border border-border text-muted-foreground hover:bg-muted/30"
                       }`}
                   >
@@ -239,7 +239,7 @@ const StorePage = () => {
                 key={opt.value}
                 onClick={() => selectExam(i)}
                 className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${isActive
-                  ? "bg-[#F97415] text-primary-foreground"
+                  ? "bg-primary text-primary-foreground"
                   : "border border-border text-muted-foreground hover:bg-muted/30"
                   }`}
               >
@@ -296,7 +296,7 @@ const StorePage = () => {
               className="rounded-2xl border border-border bg-card overflow-hidden hover-lift group flex flex-col"
             >
               <Link to={`/courses/${c.slug}`} className="block">
-                <div className="aspect-video relative overflow-hidden bg-[#f3873c]">
+                <div className="aspect-video relative overflow-hidden bg-gradient-to-br from-primary to-accent">
                   {c.thumbnail_url ? (
                     <img src={c.thumbnail_url} alt={c.name} loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
                   ) : (
@@ -305,9 +305,12 @@ const StorePage = () => {
                     </div>
                   )}
                   {c.badge && (
-                    <span className="absolute top-3 left-3 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-bold text-foreground">
-                      {c.badge}
-                    </span>
+                    <span className={`absolute top-3 left-3 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                      c.badge === "Bestseller" ? "bg-amber-400 text-amber-950"
+                      : c.badge === "Hot" ? "bg-red-500 text-white"
+                      : c.badge === "New Launch" ? "bg-emerald-500 text-white"
+                      : "bg-white/95 text-foreground"
+                    }`}>{c.badge}</span>
                   )}
                   <span className="absolute top-3 right-3 rounded-full bg-black/40 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
                     {c.target} · Class {c.class}
@@ -338,14 +341,14 @@ const StorePage = () => {
                   {enrolledCourseIds.has(c.id) ? (
                     <Link
                       to={`/learn/${c.id}`}
-                      className="flex-1 rounded-xl bg-[#F97415] py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity text-center"
+                      className="flex-1 rounded-xl bg-gradient-to-r from-accent to-primary py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity text-center"
                     >
                       Continue
                     </Link>
                   ) : (
                     <button
                       onClick={() => handleEnroll(c)}
-                      className="flex-1 rounded-xl bg-[#F97415] py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity"
+                      className="flex-1 rounded-xl bg-gradient-to-r from-accent to-primary py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity"
                     >
                       {c.is_course_free ? "Enroll" : "Enroll Now"}
                     </button>

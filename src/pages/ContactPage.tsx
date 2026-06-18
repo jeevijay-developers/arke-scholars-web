@@ -78,12 +78,12 @@ const ContactPage = () => {
         canonical="/contact"
       />
       {/* Hero */}
-      <section className="bg-gradient-to-br from-primary/10 via-background to-accent/10 py-12 md:py-20">
+      <section className="py-12 md:py-20">
         <div className="container mx-auto px-4 text-center">
           <div className="inline-flex items-center gap-2 rounded-pill border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-bold text-primary mb-4 md:mb-6">
             <MessageCircle className="h-3.5 w-3.5" /> We're here to help
           </div>
-          <h1 className="text-3xl md:text-5xl lg:text-6xl font-black font-display gradient-text mb-3 md:mb-6">
+          <h1 className="text-3xl md:text-5xl lg:text-6xl font-black font-display mb-3 md:mb-6">
             Get in touch
           </h1>
           <p className="mx-auto max-w-2xl text-sm md:text-lg text-muted-foreground px-2">
@@ -166,7 +166,7 @@ const ContactPage = () => {
               <button
                 type="submit"
                 disabled={submitted || submitting}
-                className="inline-flex items-center gap-2 rounded-pill bg-[#F97415] px-6 md:px-8 py-2.5 md:py-3 text-sm font-bold text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-pill bg-gradient-to-r from-accent to-primary px-6 md:px-8 py-2.5 md:py-3 text-sm font-bold text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
               >
                 {submitting ? (
                   <><Loader2 className="h-4 w-4 animate-spin" /> Sending...</>

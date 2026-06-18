@@ -35,6 +35,66 @@ async function getUser(req: Request) {
 
 const QUESTION_TIME_MS = 30_000;
 const BOT_ID = "00000000-0000-0000-0000-000000000000";
+const GEMINI_TIMEOUT_MS = 2_500;
+
+async function askGeminiForBotAnswer(
+  questionText: string,
+  options: string[],
+  correctIndex: number,
+  difficulty: string,
+  subject: string,
+  botRating: number,
+): Promise<number> {
+  const apiKey = Deno.env.get("GOOGLE_AI_API_KEY");
+  if (!apiKey) throw new Error("No API key");
+
+  const prompt =
+    `You are simulating a competitive exam student with ELO rating ${botRating} (scale: 800–1800, average 1000, expert 1600+).
+Subject: ${subject}. Difficulty: ${difficulty ?? "medium"}.
+
+Question: ${questionText}
+Options:
+0) ${options[0] ?? ""}
+1) ${options[1] ?? ""}
+2) ${options[2] ?? ""}
+3) ${options[3] ?? ""}
+
+Higher rating → more likely to choose the correct answer.
+Lower rating → may pick a plausible but wrong option.
+Reply with ONLY a single digit: 0, 1, 2, or 3.`;
+
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), GEMINI_TIMEOUT_MS);
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        signal: ctrl.signal,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 4, temperature: 0.2 },
+        }),
+      },
+    );
+    clearTimeout(tid);
+    const json = await res.json();
+    const raw = (json?.candidates?.[0]?.content?.parts?.[0]?.text ?? "").trim();
+    const parsed = parseInt(raw[0], 10);
+    if ([0, 1, 2, 3].includes(parsed)) return parsed;
+    // Gemini returned the right digit but in unexpected format — fall through
+    throw new Error("unexpected response");
+  } catch {
+    clearTimeout(tid);
+    // Fallback: rating-weighted random — hitRate scales 25%–85% across 800–1800
+    const hitRate = Math.min(0.85, Math.max(0.25, (botRating - 800) / 1000));
+    if (Math.random() < hitRate) return correctIndex;
+    // Pick a plausible wrong option (any option except correct)
+    const wrong = [0, 1, 2, 3].filter((i) => i !== correctIndex && i < options.length);
+    return wrong[Math.floor(Math.random() * wrong.length)] ?? correctIndex;
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -66,9 +126,11 @@ Deno.serve(async (req) => {
     let points = 0;
 
     if (!existing) {
-      const { data: q } = await sb.from("compete_questions").select("correct_index").eq("id", qid).single();
+      const { data: q } = await sb.from("compete_questions")
+        .select("correct_index, options, question_text, difficulty")
+        .eq("id", qid).single();
+
       isCorrect = selectedIndex !== null && q?.correct_index === selectedIndex;
-      // Speed bonus: 100 base + up to 100 for speed (max 200), 0 if wrong
       const speedBonus = Math.max(0, 100 - Math.round((timeMs / QUESTION_TIME_MS) * 100));
       points = isCorrect ? 100 + speedBonus : 0;
 
@@ -83,7 +145,6 @@ Deno.serve(async (req) => {
         points,
       });
 
-      // Atomic score + answer count increment
       if (isP1) {
         await sb.rpc("increment_player1_score", { match_id: matchId, delta: points });
         await sb.rpc("increment_player1_answers", { match_id: matchId });
@@ -91,41 +152,49 @@ Deno.serve(async (req) => {
         await sb.rpc("increment_player2_score", { match_id: matchId, delta: points });
         await sb.rpc("increment_player2_answers", { match_id: matchId });
       }
-    }
 
-    // For bot matches, simulate bot answer for this question
-    if (match.is_bot && !match.player2_id) {
-      const { data: botExisting } = await sb.from("compete_match_answers")
-        .select("id").eq("match_id", matchId).eq("user_id", BOT_ID).eq("question_index", questionIndex).maybeSingle();
-      if (!botExisting) {
-        const { data: q } = await sb.from("compete_questions").select("correct_index, options").eq("id", qid).single();
-        const opts = (q?.options as unknown[]) ?? [];
-        const botCorrect = Math.random() < 0.65;
-        const botSel = botCorrect ? q!.correct_index : Math.floor(Math.random() * Math.max(1, opts.length));
-        const botTime = 4000 + Math.floor(Math.random() * 18000);
-        const botSpeed = Math.max(0, 100 - Math.round((botTime / QUESTION_TIME_MS) * 100));
-        const botPoints = botCorrect ? 100 + botSpeed : 0;
-        await sb.from("compete_match_answers").insert({
-          match_id: matchId,
-          user_id: BOT_ID,
-          question_index: questionIndex,
-          question_id: qid,
-          selected_index: botSel,
-          is_correct: botCorrect,
-          time_taken_ms: botTime,
-          points: botPoints,
-        });
-        await sb.rpc("increment_player2_score", { match_id: matchId, delta: botPoints });
-        await sb.rpc("increment_player2_answers", { match_id: matchId });
+      // Simulate bot answer using Gemini calibrated to user's rating
+      if (match.is_bot && !match.player2_id) {
+        const { data: botExisting } = await sb.from("compete_match_answers")
+          .select("id").eq("match_id", matchId).eq("user_id", BOT_ID).eq("question_index", questionIndex).maybeSingle();
+
+        if (!botExisting) {
+          const opts = (q?.options as string[]) ?? [];
+          const botRating: number = match.player2_rating_before ?? 1000;
+
+          const botSel = await askGeminiForBotAnswer(
+            q?.question_text ?? "",
+            opts,
+            q!.correct_index,
+            q?.difficulty ?? "medium",
+            match.subject ?? "Physics",
+            botRating,
+          );
+
+          const botCorrect = botSel === q!.correct_index;
+          // Realistic answer time: 3–20 s, skewed toward middle
+          const botTime = 3000 + Math.floor(Math.random() * 17_000);
+          const botSpeed = Math.max(0, 100 - Math.round((botTime / QUESTION_TIME_MS) * 100));
+          const botPoints = botCorrect ? 100 + botSpeed : 0;
+
+          await sb.from("compete_match_answers").insert({
+            match_id: matchId,
+            user_id: BOT_ID,
+            question_index: questionIndex,
+            question_id: qid,
+            selected_index: botSel,
+            is_correct: botCorrect,
+            time_taken_ms: botTime,
+            points: botPoints,
+          });
+          await sb.rpc("increment_player2_score", { match_id: matchId, delta: botPoints });
+          await sb.rpc("increment_player2_answers", { match_id: matchId });
+        }
       }
     }
 
     const totalQ = match.question_ids.length;
 
-    // Re-fetch match to get the atomically-incremented answer counts.
-    // Using match-level counts (rather than counting compete_match_answers) avoids
-    // a race condition where concurrent fire-and-forget calls haven't all committed
-    // their INSERTs yet when this COUNT query runs.
     const { data: snapshot } = await sb.from("compete_matches")
       .select("player1_answer_count, player2_answer_count")
       .eq("id", matchId)
@@ -133,12 +202,8 @@ Deno.serve(async (req) => {
 
     const myCount = isP1 ? (snapshot?.player1_answer_count ?? 0) : (snapshot?.player2_answer_count ?? 0);
     const oppCount = isP1 ? (snapshot?.player2_answer_count ?? 0) : (snapshot?.player1_answer_count ?? 0);
-    const canFinalize = myCount >= totalQ && oppCount >= totalQ;
 
-    if (canFinalize) {
-      // All ELO, streak, and match-status writes happen inside a single Postgres
-      // transaction. FOR UPDATE in finalize_match() serialises concurrent calls —
-      // the second caller waits, then sees status != 'active' and returns early.
+    if (myCount >= totalQ && oppCount >= totalQ) {
       const { error: finalizeError } = await sb.rpc("finalize_match", { p_match_id: matchId });
       if (finalizeError) throw finalizeError;
     }

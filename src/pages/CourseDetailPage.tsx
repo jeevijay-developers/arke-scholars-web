@@ -3,7 +3,6 @@ import SEO from "@/components/SEO";
 import {
   Play,
   CheckCircle2,
-  Star,
   Clock,
   ChevronDown,
   Loader2,
@@ -20,7 +19,6 @@ import { toast } from "sonner";
 import { useCourseDetail } from "@/hooks/useCourseDetail";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { CourseReviews } from "@/components/CourseReviews";
 import EnrollmentModal from "@/components/EnrollmentModal";
 
 type EnrollmentInfo = {
@@ -127,26 +125,8 @@ const CourseDetailPage = () => {
   const allNotes = [...pdfs, ...notes];
   const tabs = ["About" /*, "Lectures", "Tests", "Notes" */];
 
-  const stats = enrolled
-    ? [
-      { value: String(totalLessons), label: "Lectures" },
-      { value: String(tests.length), label: "Tests" },
-      { value: String(allNotes.length), label: "Notes" },
-      { value: `${totalHours}h`, label: "Total Time" },
-      { value: `${progressPercent}%`, label: "Progress" },
-    ]
-    : [
-      { value: String(totalLessons), label: "Lectures" },
-      { value: String(tests.length), label: "Tests" },
-      { value: String(allNotes.length), label: "Notes" },
-      { value: `${totalHours}h`, label: "Total Time" },
-      { value: `${course.rating ? Number(course.rating).toFixed(1) : "N/A"}★`, label: "Rating" },
-    ];
-
-  const courseAny = course as unknown as { what_youll_learn?: string[] | null };
-  const whatYoullLearn = (courseAny.what_youll_learn && courseAny.what_youll_learn.length > 0)
-    ? courseAny.what_youll_learn
-    : [];
+  // const stats = enrolled ... (commented out with the stats grid)
+  // const whatYoullLearn = ... (commented out with the what you'll learn section)
 
   const includes = [
     `${totalLessons} video lecture${totalLessons === 1 ? "" : "s"}`,
@@ -294,11 +274,6 @@ const CourseDetailPage = () => {
                 )}
                 <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1">
-                    <Star className="h-3.5 w-3.5 fill-primary text-primary" />
-                    <strong className="text-foreground">{course.rating ? Number(course.rating).toFixed(1) : "N/A"}</strong>
-                    <span>({reviewCount.toLocaleString()} reviews)</span>
-                  </span>
-                  <span className="flex items-center gap-1">
                     <Clock className="h-3.5 w-3.5 text-primary" />
                     {totalHours} hrs
                   </span>
@@ -336,7 +311,8 @@ const CourseDetailPage = () => {
 
             {/* About */}
             {activeTab === 0 && (
-              <div className="space-y-8">
+              <div className="space-y-6">
+                {/* Stats — commented out for now
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                   {stats.map((s) => (
                     <div key={s.label} className="rounded-2xl border border-border bg-card p-4 text-center">
@@ -350,30 +326,20 @@ const CourseDetailPage = () => {
                     </div>
                   ))}
                 </div>
+                */}
 
-                <div>
-                  <h3 className="text-[11px] font-bold tracking-wider uppercase text-muted-foreground mb-2">About this course</h3>
-                  <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">
-                    {course.description ||
-                      "Full course description text explaining the scope, depth, and approach of this course."}
-                  </p>
-                </div>
-
-                {whatYoullLearn.length > 0 && (
-                  <div>
-                    <h3 className="text-[11px] font-bold tracking-wider uppercase text-muted-foreground mb-3">What you'll learn</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
-                      {whatYoullLearn.map((item) => (
-                        <div key={item} className="flex items-start gap-2 text-sm text-foreground">
-                          <span className="text-muted-foreground mt-0.5">—</span>
-                          <span>{item}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                {/* Short description */}
+                {course.description && (
+                  <p className="text-sm text-muted-foreground leading-relaxed">{course.description}</p>
                 )}
 
-                <CourseReviews courseId={course.id} enrolled={enrolled} />
+                {/* Detailed description (rich HTML) */}
+                {(course as any).detailed_description && (
+                  <div
+                    className="rich-text-output"
+                    dangerouslySetInnerHTML={{ __html: (course as any).detailed_description }}
+                  />
+                )}
               </div>
             )}
 

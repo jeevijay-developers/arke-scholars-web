@@ -23,6 +23,7 @@ type StudentNavItem = {
 
 const buildNavItems = (doubtCount: number): StudentNavItem[] => [
   { label: "Home", icon: Home, path: "/dashboard" },
+  { label: "Store", icon: Store, path: "/explore-courses" },
   { label: "My Learning", icon: BookOpen, path: "/my-courses" },
   { label: "Compete", icon: Swords, path: "/compete", flame: true },
   { label: "Doubts", icon: MessageCircle, path: "/doubts", badge: doubtCount || undefined },
@@ -84,7 +85,7 @@ const AvatarDropdown = memo(({ fullName, avatarUrl, initials, onLogout, navItems
                 >
                   <item.icon className="h-4 w-4 shrink-0" />
                   <span className="flex-1">{item.label}</span>
-                  {item.flame && <Flame className="h-3 w-3 text-orange-500 shrink-0" />}
+                  {item.flame && <Flame className="h-3 w-3 text-accent shrink-0" />}
                   {item.badge ? (
                     <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
                       {item.badge}
@@ -144,7 +145,7 @@ const StudentSidebar = memo(({ fullName, avatarUrl, initials, onLogout, doubtCou
       >
         <item.icon className="h-4.5 w-4.5 shrink-0" />
         <span className="flex-1">{item.label}</span>
-        {item.flame && <Flame className="h-3.5 w-3.5 text-orange-500 shrink-0" />}
+        {item.flame && <Flame className="h-3.5 w-3.5 text-accent shrink-0" />}
         {item.live && <LiveBadge />}
         {item.badge ? (
           <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
@@ -209,10 +210,10 @@ const StudentMobileNav = memo(() => {
         const active = pathname === item.path || pathname.startsWith(item.path + "/");
         return (
           <Link key={item.path} to={item.path} className="flex flex-col items-center gap-0.5 px-2">
-            <div className={`flex items-center justify-center w-10 h-10 rounded-full transition-colors duration-150 ${active ? "bg-orange-500" : ""}`}>
+            <div className={`flex items-center justify-center w-10 h-10 rounded-full transition-colors duration-150 ${active ? "bg-primary" : ""}`}>
               <item.icon className={`h-5 w-5 transition-colors duration-150 ${active ? "text-white" : "text-muted-foreground"}`} />
             </div>
-            <span className={`text-[10px] font-semibold transition-colors duration-150 ${active ? "text-orange-500" : "text-muted-foreground"}`}>
+            <span className={`text-[10px] font-semibold transition-colors duration-150 ${active ? "text-primary" : "text-muted-foreground"}`}>
               {item.label}
             </span>
           </Link>
@@ -224,10 +225,10 @@ const StudentMobileNav = memo(() => {
         to="/compete"
         className="flex flex-col items-center gap-1 px-2 -mt-5"
       >
-        <div className={`flex items-center justify-center w-14 h-14 rounded-full shadow-md transition-all duration-150 ${competeActive ? "bg-orange-600 scale-105" : "bg-orange-500"}`}>
+        <div className={`flex items-center justify-center w-14 h-14 rounded-full shadow-md transition-all duration-150 ${competeActive ? "bg-gradient-to-r from-accent to-primary scale-105" : "bg-primary"}`}>
           <Trophy className="h-7 w-7 text-white" />
         </div>
-        <span className={`text-[10px] font-semibold transition-colors duration-150 ${competeActive ? "text-orange-600" : "text-orange-500"}`}>
+        <span className={`text-[10px] font-semibold transition-colors duration-150 ${competeActive ? "text-primary" : "text-primary/70"}`}>
           Compete
         </span>
       </Link>
@@ -237,10 +238,10 @@ const StudentMobileNav = memo(() => {
         const active = pathname === item.path || pathname.startsWith(item.path + "/");
         return (
           <Link key={item.path} to={item.path} className="flex flex-col items-center gap-0.5 px-2">
-            <div className={`flex items-center justify-center w-10 h-10 rounded-full transition-colors duration-150 ${active ? "bg-orange-500" : ""}`}>
+            <div className={`flex items-center justify-center w-10 h-10 rounded-full transition-colors duration-150 ${active ? "bg-primary" : ""}`}>
               <item.icon className={`h-5 w-5 transition-colors duration-150 ${active ? "text-white" : "text-muted-foreground"}`} />
             </div>
-            <span className={`text-[10px] font-semibold transition-colors duration-150 ${active ? "text-orange-500" : "text-muted-foreground"}`}>
+            <span className={`text-[10px] font-semibold transition-colors duration-150 ${active ? "text-primary" : "text-muted-foreground"}`}>
               {item.label}
             </span>
           </Link>

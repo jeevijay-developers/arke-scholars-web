@@ -64,7 +64,7 @@ const FavouriteCoursesPage = () => {
           <Heart className="mx-auto mb-3 h-10 w-10 text-rose-500" />
           <h2 className="font-display text-xl font-black text-foreground">Sign in to see your favourites</h2>
           <p className="mt-2 text-sm text-muted-foreground">Save courses you love and revisit them anytime.</p>
-          <Link to="/login" className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-[#F97415] px-5 py-2.5 text-sm font-bold text-primary-foreground hover:opacity-90">
+          <Link to="/login" className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground hover:opacity-90">
             Login <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
@@ -110,7 +110,7 @@ const FavouriteCoursesPage = () => {
             </p>
             <Link
               to="/courses"
-              className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-[#F97415] px-5 py-2.5 text-sm font-bold text-primary-foreground hover:opacity-90"
+              className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-accent to-primary px-5 py-2.5 text-sm font-bold text-primary-foreground hover:opacity-90"
             >
               Browse Courses <ArrowRight className="h-3.5 w-3.5" />
             </Link>
@@ -132,9 +132,12 @@ const FavouriteCoursesPage = () => {
                         <img src={img} alt={c.subject} loading="lazy" className="absolute inset-0 h-full w-full object-contain p-6 opacity-60" />
                       )}
                       {c.badge && (
-                        <span className="absolute top-3 left-3 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-bold text-foreground">
-                          {c.badge}
-                        </span>
+                        <span className={`absolute top-3 left-3 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                          c.badge === "Bestseller" ? "bg-amber-400 text-amber-950"
+                          : c.badge === "Hot" ? "bg-red-500 text-white"
+                          : c.badge === "New Launch" ? "bg-emerald-500 text-white"
+                          : "bg-white/95 text-foreground"
+                        }`}>{c.badge}</span>
                       )}
                     </div>
                   </Link>

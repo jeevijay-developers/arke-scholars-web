@@ -204,7 +204,7 @@ const CompeteResult = ({ match, questions, answers, onPlayAgain, onLobby }: Prop
 
       {/* Actions */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-w-2xl mx-auto">
-        <button onClick={onPlayAgain} className="rounded-lg bg-[#F97415] px-4 py-3 text-sm font-black text-primary-foreground hover:opacity-90 inline-flex items-center justify-center gap-1">
+        <button onClick={onPlayAgain} className="rounded-lg bg-primary px-4 py-3 text-sm font-black text-primary-foreground hover:opacity-90 inline-flex items-center justify-center gap-1">
           <RotateCw className="h-4 w-4" /> Play Again
         </button>
         <button onClick={onLobby} className="rounded-lg bg-white/10 px-4 py-3 text-sm font-bold text-white hover:bg-white/15 inline-flex items-center justify-center gap-1">

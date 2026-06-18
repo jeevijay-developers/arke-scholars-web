@@ -113,7 +113,7 @@ const DoubtPage = () => {
           <h2 className="text-lg font-black font-display text-foreground">My Doubts</h2>
           <button
             onClick={() => setShowAsk(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#F97415] px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-accent to-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:opacity-90 transition-opacity"
           >
             <Plus className="h-3.5 w-3.5" /> Ask New Doubt
           </button>

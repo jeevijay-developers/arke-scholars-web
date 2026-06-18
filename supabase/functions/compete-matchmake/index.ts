@@ -111,13 +111,6 @@ function randomBotName(): string {
   return `${first} ${last}`;
 }
 
-function simulateBotScore(userRating: number): number {
-  // Bot difficulty scales with user rating so the match feels competitive
-  if (userRating >= 1600) return 7 + Math.floor(Math.random() * 3);  // 7–9
-  if (userRating >= 1400) return 6 + Math.floor(Math.random() * 3);  // 6–8
-  if (userRating >= 1200) return 5 + Math.floor(Math.random() * 3);  // 5–7
-  return 3 + Math.floor(Math.random() * 4);                          // 3–6
-}
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -145,7 +138,6 @@ Deno.serve(async (req: Request) => {
     if (action === "bot") {
       await sb.from("compete_queue").delete().eq("user_id", user.id);
       const questionIds = await pickQuestionIds(sb, subject, topics, classLevel, targetExam, 10);
-      const botScore = simulateBotScore(rating.rating);
       const { data: match } = await sb.from("compete_matches").insert({
         player1_id: user.id,
         player2_id: null,
@@ -154,7 +146,7 @@ Deno.serve(async (req: Request) => {
         player2_name: randomBotName(),
         player1_rating_before: rating.rating,
         player2_rating_before: rating.rating,
-        player2_score: botScore,
+        player2_score: 0,
         player1_target_exam: exam,
         player2_target_exam: exam,
         subject, topic: topics.length > 0 ? topics.join(", ") : "Any",

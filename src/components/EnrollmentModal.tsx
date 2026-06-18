@@ -121,7 +121,7 @@ const EnrollmentModal = ({ open, onClose, courseId, courseName, coursePrice, onE
         email: user.email ?? "",
         name: user.user_metadata?.full_name ?? "",
       },
-      theme: { color: "#F97316" },
+      theme: { color: "#C99A2E" },
       modal: {
         ondismiss: () => {
           if (activeRef.current) setStep("checkout");

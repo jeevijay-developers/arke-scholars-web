@@ -123,7 +123,7 @@ const EducatorsPage = () => {
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               to={user ? "/dashboard" : "/signup"}
-              className="inline-flex items-center gap-2 rounded-pill bg-[#F97415] px-7 py-3 text-sm font-bold text-white shadow-blue hover:opacity-90 hover:scale-105 transition-all"
+              className="inline-flex items-center gap-2 rounded-pill bg-gradient-to-r from-accent to-primary px-7 py-3 text-sm font-bold text-primary-foreground shadow-blue hover:opacity-90 hover:scale-105 transition-all"
             >
               {user ? "Go to Dashboard" : "Start Learning"} <ArrowRight className="h-4 w-4" />
             </Link>
@@ -243,7 +243,7 @@ const EducatorsPage = () => {
       {/* CTA */}
       <section className="relative overflow-hidden py-20">
         <div className="absolute inset-0 bg-gradient-to-r from-[hsl(var(--navy))] to-[hsl(var(--navy2))]" />
-        <div className="absolute inset-0 opacity-20" style={{ background: "radial-gradient(circle at 50% 50%, hsl(24 95% 53% / 0.4) 0%, transparent 60%)" }} />
+        <div className="absolute inset-0 opacity-20" style={{ background: "radial-gradient(circle at 50% 50%, hsl(42 63% 48% / 0.4) 0%, transparent 60%)" }} />
         <div className="container relative z-10 mx-auto px-4 text-center animate-fade-in-up">
           <Sparkles className="mx-auto mb-4 h-8 w-8 animate-pulse text-accent" />
           <h2 className="font-display text-3xl font-black text-white md:text-5xl">
@@ -254,7 +254,7 @@ const EducatorsPage = () => {
           </p>
           <Link
             to={user ? "/dashboard" : "/signup"}
-            className="mt-8 inline-flex items-center gap-2 rounded-pill bg-[#F97415] px-10 py-4 text-lg font-bold text-white shadow-blue hover:opacity-90 hover:scale-105 transition-all"
+            className="mt-8 inline-flex items-center gap-2 rounded-pill bg-gradient-to-r from-accent to-primary px-10 py-4 text-lg font-bold text-primary-foreground shadow-blue hover:opacity-90 hover:scale-105 transition-all"
           >
             {user ? "Open My Dashboard" : "Get Started Free"} <ArrowRight className="h-5 w-5" />
           </Link>

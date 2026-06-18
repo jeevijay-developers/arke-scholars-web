@@ -166,7 +166,7 @@ const PricingPage = () => {
                     }`}
                 >
                   {p.popular && (
-                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-pill bg-[#F97415] px-4 py-1 text-xs font-bold text-primary-foreground">
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-pill bg-primary px-4 py-1 text-xs font-bold text-primary-foreground">
                       Most Popular
                     </span>
                   )}
@@ -193,7 +193,7 @@ const PricingPage = () => {
                   <Link
                     to="/signup"
                     className={`mt-6 block rounded-pill py-3 text-center text-sm font-bold transition-colors ${p.popular
-                      ? "bg-[#F97415] text-primary-foreground hover:opacity-90"
+                      ? "bg-gradient-to-r from-accent to-primary text-primary-foreground hover:opacity-90"
                       : "border border-border text-foreground hover:bg-primary/5"
                       }`}
                   >

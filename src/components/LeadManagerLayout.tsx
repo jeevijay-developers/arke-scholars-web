@@ -63,7 +63,7 @@ export default function LeadManagerLayout() {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                   isActive
-                    ? "bg-gradient-to-r from-[#f97015] to-[#d95e05] text-white shadow-md shadow-orange-500/20"
+                    ? "bg-gradient-to-r from-accent to-primary text-white shadow-md shadow-blue"
                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 }`
               }
@@ -81,7 +81,7 @@ export default function LeadManagerLayout() {
         {/* User footer */}
         <div className="p-3 border-t border-slate-100">
           <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-50 mb-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#f97015] to-[#d95e05] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent to-primary flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
               {(user?.full_name || user?.email || "L").charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">

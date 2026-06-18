@@ -6,6 +6,7 @@ import {
   ArrowRight, Play, Check, Trophy, FileText, MessageCircle,
   GraduationCap, ChevronRight, ChevronLeft,
   Brain, ClipboardList, BookOpen, FlaskConical, Sparkles, Target,
+  Lightbulb, Microscope, Medal, Layers, School,
   type LucideIcon,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
@@ -99,8 +100,10 @@ const EXAM_CARDS = [
     title: "IIT-JEE",
     image: "/exam-svgs/iit-jee.svg",
     points: [
-      { label: "Advanced Problem Solving", icon: Brain },
-      { label: "Mock Test Series", icon: ClipboardList },
+      { label: "Strong Subject Knowledge", icon: Brain },
+      { label: "Advanced Problem Solving", icon: Lightbulb },
+      { label: "JEE Main + Advanced Coverage", icon: BookOpen },
+      { label: "IIT Admission Focused", icon: GraduationCap },
     ],
     exam: "JEE Main",
   },
@@ -108,8 +111,10 @@ const EXAM_CARDS = [
     title: "NEET",
     image: "/exam-svgs/neet.svg",
     points: [
+      { label: "Medical Entrance Focused", icon: Microscope },
+      { label: "Essential Skill Sharpening", icon: Target },
       { label: "Biology Specialization", icon: FlaskConical },
-      { label: "Daily Practice Papers", icon: BookOpen },
+      { label: "Competitive Medical Prep", icon: ClipboardList },
     ],
     exam: "NEET",
   },
@@ -117,8 +122,10 @@ const EXAM_CARDS = [
     title: "Foundation",
     image: "/exam-svgs/foundation.svg",
     points: [
-      { label: "Conceptual Clarity", icon: Sparkles },
-      { label: "Olympiad Prep", icon: Target },
+      { label: "Classes 8th to 10th", icon: School },
+      { label: "Olympiad Preparation", icon: Medal },
+      { label: "Competitive Exam Groundwork", icon: Layers },
+      { label: "Conceptual Foundation", icon: Sparkles },
     ],
     exam: "Foundation",
   },
@@ -193,7 +200,7 @@ const LandingPage = () => {
       <BannerCarousel banners={banners} />
 
       {/* Hero */}
-      <section className="bg-[hsl(var(--navy))] overflow-hidden">
+      <section className="bg-white overflow-hidden">
         <div className="max-w-[70rem] mx-auto px-4 pt-10 pb-12 md:pt-10 md:pb-0">
           <div className="grid items-end gap-8 md:gap-4 md:grid-cols-2">
             <div className="text-center md:text-left md:pb-[8rem] order-2 md:order-1">
@@ -201,14 +208,14 @@ const LandingPage = () => {
                 India's Rising EdTech Platform
               </span>
               <h1 className="mt-4 md:mt-6 font-display">
-                <span className="block text-[1.75rem] leading-tight sm:text-3xl font-black text-white md:text-5xl lg:text-6xl">JEE, NEET &amp; Foundation</span>
-                <span className="block text-[1.75rem] leading-tight sm:text-3xl font-black text-primary md:text-5xl lg:text-6xl">Exam Prep That Works</span>
+                <span className="block text-[1.75rem] leading-tight sm:text-3xl font-black text-foreground md:text-5xl lg:text-6xl">JEE, NEET &amp; Foundation</span>
+                <span className="block text-[1.75rem] leading-tight sm:text-3xl font-black bg-gradient-to-r from-[#E4B94F] via-[#C99A2E] to-[#9A6E1C] bg-clip-text text-transparent md:text-5xl lg:text-6xl">Exam Prep That Works</span>
               </h1>
-              <p className="mt-3 md:mt-4 mx-auto md:mx-0 max-w-md text-sm md:text-base text-white/70 leading-relaxed">
-                <strong className="text-white/90">ARKE Scholars</strong> helps you master JEE, NEET &amp; Foundation exams with live classes from top educators, AI-powered doubts solving, and smart test analytics.
+              <p className="mt-3 md:mt-4 mx-auto md:mx-0 max-w-md text-sm md:text-base text-foreground/70 leading-relaxed">
+                <strong className="text-foreground/90">ARKE Scholars</strong> helps you master JEE, NEET &amp; Foundation exams with live classes from top educators, AI-powered doubts solving, and smart test analytics.
               </p>
               <div className="mt-6 md:mt-8 flex items-center justify-center md:justify-start gap-3">
-                <Link to={user ? "/courses" : "/signup"} className="inline-flex items-center gap-1.5 rounded-pill bg-primary px-6 py-3 md:px-8 md:py-3.5 text-sm md:text-base font-bold text-primary-foreground hover:bg-primary/90 transition-colors">
+                <Link to={user ? "/courses" : "/signup"} className="inline-flex items-center gap-1.5 rounded-pill bg-gradient-to-r from-[#E4B94F] to-[#C99A2E] px-6 py-3 md:px-8 md:py-3.5 text-sm md:text-base font-bold text-primary-foreground hover:opacity-90 transition-opacity">
                   {user ? "Explore Courses" : "Get Started"} <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
@@ -217,7 +224,7 @@ const LandingPage = () => {
             {/* Image — hidden on mobile, bottom-aligned beside the text on desktop */}
             <div className="relative hidden md:flex justify-start items-end self-stretch order-1 md:order-2">
               <img
-                src="/hero-section-img.png"
+                src="/hero-image-new-tsp.png"
                 alt="Mentor guiding students for JEE, NEET and Foundation exams"
                 width={720}
                 height={620}
@@ -429,9 +436,9 @@ function ExamCard({ exam }: { exam: typeof EXAM_CARDS[number] }) {
       to={`/courses?exam=${encodeURIComponent(exam.exam)}`}
       className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card ring-0 hover:shadow-lg transition-[box-shadow,transform,ring] duration-200"
     >
-      {/* Image panel — solid orange, rounded, sits at the top */}
+      {/* Image panel — soft gold tint, rounded, sits at the top */}
       <div className="p-3">
-        <div className="overflow-hidden rounded-xl bg-[#E1F6FF]">
+        <div className="overflow-hidden rounded-xl bg-[#F7EFD9]">
           <img
             src={exam.image}
             alt={`${exam.title} courses`}

@@ -14,6 +14,7 @@ import { useAuth } from "@/context/AuthContext";
 
 type Phase = "lobby" | "searching" | "countdown" | "match" | "result";
 const STORAGE_KEY = "compete:active_match_id";
+const BOT_TIMEOUT_MS = 15_000;
 
 const FOUNDATION_CLASSES = ["8", "9", "10"];
 const FOUNDATION_EXAM = "Foundation";
@@ -40,7 +41,16 @@ const CompetePage = () => {
   const [roomCode, setRoomCode] = useState<string | null>(null);
   const [joinCode, setJoinCode] = useState("");
   const [busy, setBusy] = useState(false);
+
   const pollTimer = useRef<number | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const realtimeChannel = useRef<any>(null);
+
+  // Capture searching params for the auto-bot fallback closure
+  const searchParamsRef = useRef({ subject, selectedTopics, classLevel, targetExam });
+  useEffect(() => {
+    searchParamsRef.current = { subject, selectedTopics, classLevel, targetExam };
+  }, [subject, selectedTopics, classLevel, targetExam]);
 
   const { match, questions, answers } = useCompeteMatch(matchId);
   const { topics: availableTopics, loading: loadingTopics } = useCompeteTopics(subject, classLevel, targetExam);
@@ -113,27 +123,78 @@ const CompetePage = () => {
     if (match.status === "pending" && phase === "lobby") setPhase("searching");
   }, [match?.status, match?.countdown_until]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const startPolling = () => {
-    stopPolling();
+  // ─── Searching lifecycle ─────────────────────────────────────────────────────
+
+  const stopSearching = () => {
+    if (pollTimer.current) { clearInterval(pollTimer.current); pollTimer.current = null; }
+    if (realtimeChannel.current) {
+      supabase.removeChannel(realtimeChannel.current);
+      realtimeChannel.current = null;
+    }
+  };
+
+  const startSearching = () => {
+    stopSearching();
+
+    // Realtime: fires instantly when opponent sets match_id on our queue row
+    const ch = supabase
+      .channel(`queue_watch_${user!.id}_${Date.now()}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "compete_queue", filter: `user_id=eq.${user!.id}` },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (payload: any) => {
+          const mid = payload.new?.match_id;
+          if (mid) {
+            stopSearching();
+            setMatchId(mid);
+          }
+        },
+      )
+      .subscribe();
+    realtimeChannel.current = ch;
+
+    // Resilience poll + auto-bot after BOT_TIMEOUT_MS
+    let elapsed = 0;
     pollTimer.current = window.setInterval(async () => {
+      elapsed += BOT_TIMEOUT_MS;
+
+      // Poll edge function as fallback in case realtime missed the update
       try {
         const { data } = await supabase.functions.invoke("compete-matchmake", { body: { action: "poll" } });
         if (data?.status === "matched" && data.match_id) {
+          stopSearching();
           setMatchId(data.match_id);
-          stopPolling();
+          return;
         }
-      } catch { /* ignore */ }
-    }, 3000);
+      } catch { /* ignore poll errors */ }
+
+      // Auto-bot after timeout — silently match without disclosing bot
+      stopSearching();
+      const { subject: s, selectedTopics: t, classLevel: cl, targetExam: te } = searchParamsRef.current;
+      await supabase.functions.invoke("compete-matchmake", { body: { action: "cancel" } }).catch(() => {});
+      try {
+        const { data: bd, error: be } = await supabase.functions.invoke("compete-matchmake", {
+          body: { action: "bot", subject: s, topics: t, classLevel: cl, targetExam: te },
+        });
+        if (be) throw be;
+        if (bd?.match_id) setMatchId(bd.match_id);
+        else throw new Error("No match created");
+      } catch (e: any) {
+        toast.error(e?.message || "Failed to start match");
+        setPhase("lobby");
+      }
+    }, BOT_TIMEOUT_MS);
   };
-  const stopPolling = () => {
-    if (pollTimer.current) { clearInterval(pollTimer.current); pollTimer.current = null; }
-  };
-  useEffect(() => () => stopPolling(), []);
+
+  useEffect(() => () => stopSearching(), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!matchId || !roomCode) return;
     if (match?.status === "active") setRoomCode(null);
   }, [match?.status, matchId, roomCode]);
+
+  // ─── Handlers ────────────────────────────────────────────────────────────────
 
   const handleClassLevel = (c: string) => {
     setClassLevel(c);
@@ -157,10 +218,11 @@ const CompetePage = () => {
         setPhase("searching");
       } else {
         setPhase("searching");
-        startPolling();
+        startSearching();
       }
     } catch (e: any) {
       toast.error(e?.message || "Failed to start match");
+      setPhase("lobby");
     } finally { setBusy(false); }
   };
 
@@ -192,73 +254,13 @@ const CompetePage = () => {
     } finally { setBusy(false); }
   };
 
-  const handlePracticeBot = async () => {
-    if (!user) return toast.error("Please sign in");
-    setBusy(true);
-    try {
-      // Try to find a real opponent first
-      const { data, error } = await supabase.functions.invoke("compete-matchmake", {
-        body: { action: "find", subject, topics: selectedTopics, classLevel, targetExam },
-      });
-      if (error) throw error;
-
-      if (data.status === "matched") {
-        setMatchId(data.match_id);
-        setPhase("searching");
-        setBusy(false);
-        return;
-      }
-
-      // No immediate match — show searching, poll for 15s then silently fall back to bot
-      setPhase("searching");
-      let elapsed = 0;
-      stopPolling();
-      pollTimer.current = window.setInterval(async () => {
-        elapsed += 3000;
-        try {
-          const { data: pd } = await supabase.functions.invoke("compete-matchmake", { body: { action: "poll" } });
-          if (pd?.status === "matched" && pd.match_id) {
-            stopPolling();
-            setMatchId(pd.match_id);
-            return;
-          }
-        } catch { /* ignore poll errors */ }
-
-        if (elapsed >= 15000) {
-          stopPolling();
-          await supabase.functions.invoke("compete-matchmake", { body: { action: "cancel" } });
-          try {
-            const { data: bd, error: be } = await supabase.functions.invoke("compete-matchmake", {
-              body: { action: "bot", subject, topics: selectedTopics, classLevel, targetExam },
-            });
-            if (be) throw be;
-            setMatchId(bd.match_id);
-          } catch (e: any) {
-            toast.error(e?.message || "Failed to start match");
-            setPhase("lobby");
-          }
-        }
-      }, 3000);
-    } catch (e: any) {
-      toast.error(e?.message || "Failed to start match");
-      setPhase("lobby");
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const handleCancel = async () => {
-    stopPolling();
+    stopSearching();
     try { await supabase.functions.invoke("compete-matchmake", { body: { action: "cancel" } }); } catch {}
     setMatchId(null);
     setRoomCode(null);
     setJoinCode("");
     setPhase("lobby");
-  };
-
-  const handleBotFallback = async () => {
-    stopPolling();
-    await handlePracticeBot();
   };
 
   const handleQuit = async () => {
@@ -267,11 +269,7 @@ const CompetePage = () => {
       const opponentId = match?.player1_id === user.id ? match?.player2_id : match?.player1_id;
       await supabase
         .from("compete_matches")
-        .update({
-          status: "finished",
-          winner_id: opponentId ?? null,
-          finished_at: new Date().toISOString(),
-        })
+        .update({ status: "finished", winner_id: opponentId ?? null, finished_at: new Date().toISOString() })
         .eq("id", matchId);
     } catch {}
     localStorage.removeItem(STORAGE_KEY);
@@ -292,45 +290,43 @@ const CompetePage = () => {
     <div className="pb-20 lg:pb-0 min-h-[calc(100vh-57px)] grid-texture" style={{ background: "hsl(var(--navy))" }}>
       <div className="p-4 lg:p-6 min-h-[calc(100vh-57px)] flex items-start lg:items-center justify-center">
         <div className="w-full max-w-2xl">
-        {phase === "lobby" && (
-          <CompeteLobby
-            rating={rating}
-            classLevel={classLevel}
-            targetExam={targetExam}
-            subject={subject}
-            selectedTopics={selectedTopics}
-            availableTopics={availableTopics}
-            loadingTopics={loadingTopics}
-            onClassLevel={handleClassLevel}
-            onTargetExam={setTargetExam}
-            onSubject={setSubject}
-            onTopicsChange={setSelectedTopics}
-            onQuickMatch={handleQuickMatch}
-            onCreateRoom={handleCreateRoom}
-            onJoinRoom={handleJoinRoom}
-            onPracticeBot={handlePracticeBot}
-            joinCode={joinCode}
-            onJoinCodeChange={setJoinCode}
-            busy={busy}
-            exams={getExamsForClass(classLevel, exams)}
-          />
-        )}
-        {phase === "searching" && (
-          <CompeteSearching
-            roomCode={roomCode}
-            onCancel={handleCancel}
-            onBotFallback={handleBotFallback}
-          />
-        )}
-        {phase === "countdown" && match && (
-          <CompeteCountdown match={match} />
-        )}
-        {phase === "match" && match && (
-          <CompeteMatchView match={match} questions={questions} answers={answers} onQuit={handleQuit} />
-        )}
-        {phase === "result" && match && (
-          <CompeteResult match={match} questions={questions} answers={answers} onPlayAgain={handlePlayAgain} onLobby={handlePlayAgain} />
-        )}
+          {phase === "lobby" && (
+            <CompeteLobby
+              rating={rating}
+              classLevel={classLevel}
+              targetExam={targetExam}
+              subject={subject}
+              selectedTopics={selectedTopics}
+              availableTopics={availableTopics}
+              loadingTopics={loadingTopics}
+              onClassLevel={handleClassLevel}
+              onTargetExam={setTargetExam}
+              onSubject={setSubject}
+              onTopicsChange={setSelectedTopics}
+              onQuickMatch={handleQuickMatch}
+              onCreateRoom={handleCreateRoom}
+              onJoinRoom={handleJoinRoom}
+              joinCode={joinCode}
+              onJoinCodeChange={setJoinCode}
+              busy={busy}
+              exams={getExamsForClass(classLevel, exams)}
+            />
+          )}
+          {phase === "searching" && (
+            <CompeteSearching
+              roomCode={roomCode}
+              onCancel={handleCancel}
+            />
+          )}
+          {phase === "countdown" && match && (
+            <CompeteCountdown match={match} />
+          )}
+          {phase === "match" && match && (
+            <CompeteMatchView match={match} questions={questions} answers={answers} onQuit={handleQuit} />
+          )}
+          {phase === "result" && match && (
+            <CompeteResult match={match} questions={questions} answers={answers} onPlayAgain={handlePlayAgain} onLobby={handlePlayAgain} />
+          )}
         </div>
       </div>
     </div>

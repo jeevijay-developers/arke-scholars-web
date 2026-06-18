@@ -73,7 +73,7 @@ const MyCoursesPage = () => {
           <GraduationCap className="mx-auto mb-3 h-10 w-10 text-primary" />
           <h2 className="font-display text-xl font-black text-foreground">Sign in to see your courses</h2>
           <p className="mt-2 text-sm text-muted-foreground">Track your progress, pick up where you left off, and unlock your full learning dashboard.</p>
-          <Link to="/login" className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-[#F97415] px-5 py-2.5 text-sm font-bold text-primary-foreground hover:opacity-90">
+          <Link to="/login" className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground hover:opacity-90">
             Login <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
@@ -126,7 +126,7 @@ const MyCoursesPage = () => {
               <BookOpen className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
               <h3 className="font-display text-lg font-bold text-foreground">No courses yet</h3>
               <p className="mt-1 text-sm text-muted-foreground">Browse the catalog to find your perfect batch.</p>
-              <Link to="/courses" className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-[#F97415] px-5 py-2.5 text-sm font-bold text-primary-foreground hover:opacity-90">
+              <Link to="/courses" className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-accent to-primary px-5 py-2.5 text-sm font-bold text-primary-foreground hover:opacity-90">
                 Explore Courses <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </div>
@@ -204,7 +204,7 @@ function CourseCard({ enrollment: e, isFirst }: { enrollment: Enrollment; isFirs
           </span>
         </div>
         <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
-          <div className="h-full rounded-full bg-[#F97415] transition-all" style={{ width: `${e.progress_percent}%` }} />
+          <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${e.progress_percent}%` }} />
         </div>
       </div>
     </Link>

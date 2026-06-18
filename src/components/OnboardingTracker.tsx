@@ -118,7 +118,7 @@ const OnboardingTracker = () => {
 
       <div className="mb-4 h-2 rounded-full bg-muted overflow-hidden">
         <div
-          className="h-full bg-[#F97415] transition-all duration-500"
+          className="h-full bg-primary transition-all duration-500"
           style={{ width: `${pct}%` }}
         />
       </div>

@@ -305,7 +305,7 @@ const LeaderboardPage = () => {
         </div>
 
         {yourRow && (
-          <div className="sticky bottom-20 lg:bottom-4 bg-[#F97415] rounded-xl px-4 py-3 flex items-center justify-between shadow-lg">
+          <div className="sticky bottom-20 lg:bottom-4 bg-gradient-to-r from-accent to-primary rounded-xl px-4 py-3 flex items-center justify-between shadow-lg">
             <span className="text-xs font-bold text-primary-foreground flex items-center gap-1.5">
               {scopeFilter === "school" ? <SchoolIcon className="h-3.5 w-3.5" /> : <Globe2 className="h-3.5 w-3.5" />}
               Your Position {scopeFilter === "school" ? "(School)" : "(Global)"}

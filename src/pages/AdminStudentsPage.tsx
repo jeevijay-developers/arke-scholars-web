@@ -69,6 +69,8 @@ const AdminStudentsPage = () => {
   const [selected, setSelected] = useState<string[]>([]);
   const [schools, setSchools] = useState<SchoolLite[]>([]);
   const [schoolFilter, setSchoolFilter] = useState<string>("");
+  // Incomplete signups (no name — abandoned phone-OTP attempts) are hidden by default.
+  const [showIncomplete, setShowIncomplete] = useState(false);
 
   // Add Student modal
   const [addOpen, setAddOpen] = useState(false);
@@ -120,6 +122,7 @@ const AdminStudentsPage = () => {
       }
       if (schoolFilter === "none") query = query.is("school_id", null);
       else if (schoolFilter) query = query.eq("school_id", schoolFilter);
+      if (!showIncomplete) query = query.neq("full_name", "");
 
       const from = page * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
@@ -144,7 +147,7 @@ const AdminStudentsPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch, page, schoolFilter, schools]);
+  }, [debouncedSearch, page, schoolFilter, schools, showIncomplete]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -263,6 +266,15 @@ const AdminStudentsPage = () => {
           <option value="none">Not associated</option>
           {schools.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
+        <label className="flex items-center gap-2 rounded-lg border border-border bg-background py-2 px-3 text-sm text-muted-foreground cursor-pointer select-none">
+          <input
+            type="checkbox"
+            className="rounded"
+            checked={showIncomplete}
+            onChange={(e) => { setShowIncomplete(e.target.checked); setPage(0); }}
+          />
+          Show incomplete signups
+        </label>
       </div>
 
       {/* Bulk selection bar */}
@@ -373,6 +385,8 @@ const AdminStudentsPage = () => {
                     <td className="p-3">
                       {u.is_suspended ? (
                         <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-bold text-destructive uppercase">Suspended</span>
+                      ) : !u.full_name?.trim() ? (
+                        <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600 uppercase">Pending</span>
                       ) : (
                         <span className="rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-bold text-secondary uppercase">Active</span>
                       )}

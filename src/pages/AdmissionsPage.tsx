@@ -79,7 +79,7 @@ const AdmissionsPage = () => {
       <section className="relative overflow-hidden bg-gradient-to-br from-[hsl(var(--navy))] via-[hsl(var(--navy2))] to-[hsl(222,47%,15%)] py-20 md:py-28">
         <div
           className="absolute inset-0 opacity-30"
-          style={{ background: "radial-gradient(circle at 70% 40%, hsl(24 95% 53% / 0.25) 0%, transparent 60%)" }}
+          style={{ background: "radial-gradient(circle at 70% 40%, hsl(42 63% 48% / 0.25) 0%, transparent 60%)" }}
         />
         <div className="container relative z-10 mx-auto px-4 text-center">
           <span className="inline-flex items-center gap-2 rounded-pill border border-primary/30 bg-primary/10 px-4 py-1.5 text-sm font-semibold text-primary">
@@ -95,7 +95,7 @@ const AdmissionsPage = () => {
           <div className="mt-8 flex flex-row items-center justify-center gap-2 sm:gap-3">
             <Link
               to="/signup"
-              className="inline-flex items-center gap-1.5 rounded-pill bg-[#F97415] px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-blue hover:opacity-90 sm:px-7 sm:py-3 sm:text-sm sm:gap-2"
+              className="inline-flex items-center gap-1.5 rounded-pill bg-gradient-to-r from-accent to-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-blue hover:opacity-90 sm:px-7 sm:py-3 sm:text-sm sm:gap-2"
             >
               Apply Now <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </Link>
@@ -122,7 +122,7 @@ const AdmissionsPage = () => {
                 key={title}
                 className="relative w-[260px] shrink-0 snap-start scroll-ml-4 md:scroll-ml-0 rounded-2xl border border-border bg-card p-6 text-center shadow-sm md:w-auto"
               >
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#F97415] px-3 py-0.5 text-[10px] font-black text-primary-foreground z-10">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-0.5 text-[10px] font-black text-primary-foreground z-10">
                   STEP {i + 1}
                 </div>
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">

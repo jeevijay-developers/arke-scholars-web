@@ -80,7 +80,7 @@ const AuthCallbackPage = () => {
         {status === "error" && (
           <Link
             to="/signup"
-            className="mt-6 inline-flex items-center justify-center rounded-lg bg-[#F97415] px-5 py-2.5 text-sm font-bold text-primary-foreground hover:opacity-90"
+            className="mt-6 inline-flex items-center justify-center rounded-lg bg-primary text-primary-foreground hover:opacity-90 px-5 py-2.5 text-sm font-bold"
           >
             Try signing up again
           </Link>
