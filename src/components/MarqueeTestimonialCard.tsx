@@ -1,66 +1,71 @@
-// Marquee of student testimonials. Names/quotes are representative samples —
-// swap with real student photos when available. Avatars use a name-initial
-// generator so they look real and stay easy to replace.
-// Flat styling: solid borders, no gradients, no shadows.
-type Testimonial = {
-  image: string;
+// Marquee carousel of ARKE mentors — name, AIR rank, institute, photo.
+// Two rows scroll in opposite directions for a dynamic effect.
+
+import { Trophy } from "lucide-react";
+
+type MentorCard = {
   name: string;
-  result: string;
-  quote: string;
+  college: string;
+  img: string;
+  rank?: number;
 };
 
 const avatar = (name: string) =>
-  `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0F172A&color=F97316&bold=true&size=96`;
+  `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=07182E&color=C99A2E&bold=true&size=128`;
 
-const testimonials: Testimonial[] = [
-  {
-    name: "Aditya Sharma",
-    result: "JEE Advanced · AIR 412",
-    quote: "The live classes and instant doubt support kept me on track. I finally understood mechanics the way Sir explained it — that AIR is because of ARKE.",
-    image: avatar("Aditya Sharma"),
-  },
-  {
-    name: "Sneha Reddy",
-    result: "NEET · AIR 689",
-    quote: "Biology used to scare me. The chapter-wise tests and analytics showed exactly where I was losing marks. My score jumped 120 points in three months.",
-    image: avatar("Sneha Reddy"),
-  },
-  {
-    name: "Rohan Iyer",
-    result: "JEE Main · 99.2 %ile",
-    quote: "Recorded lectures were a lifesaver during board exams. I could revise a full chapter the night before a test. The mentors genuinely care about your progress.",
-    image: avatar("Rohan Iyer"),
-  },
-  {
-    name: "Ananya Gupta",
-    result: "NEET · AIR 1,204",
-    quote: "Coming from a small town, I never thought I'd get this quality of teaching online. The doubt sessions at 11 PM before exams were a blessing.",
-    image: avatar("Ananya Gupta"),
-  },
-  {
-    name: "Karthik Nair",
-    result: "Foundation · Class 10",
-    quote: "I joined in class 9 and my concepts in Physics and Maths are rock solid now. Olympiad prep here is far ahead of my school syllabus.",
-    image: avatar("Karthik Nair"),
-  },
-  {
-    name: "Priya Singh",
-    result: "JEE Advanced · AIR 957",
-    quote: "The weekly mock tests felt exactly like the real exam. By the time JEE came, I had zero exam-day nerves. Forever grateful to the ARKE team.",
-    image: avatar("Priya Singh"),
-  },
+// Featured mentors — those with AIR ranks first, then top institutes
+const FEATURED: MentorCard[] = [
+  { name: "Pawan Goyal", college: "MIT USA", img: "/arke/pawan-goyal.jpeg", rank: 4 },
+  { name: "Mayank Motwani", college: "IIT Bombay", img: "/arke/mayank motwani.jpeg", rank: 5 },
+  { name: "Vishwajeet Agarwal", college: "IIT Delhi", img: "/arke/vishwajet agarwal.jpeg", rank: 5 },
+  { name: "Aryan Gupta", college: "IIT Bombay", img: "/arke/aryan gupta.jpeg", rank: 29 },
+  { name: "Sankalp", college: "IIT Bombay", img: "/arke/sankalp.jpeg", rank: 29 },
+  { name: "Samarth Agarwal", college: "IIT Bombay", img: "/arke/samarth agarwal.jpeg", rank: 25 },
+  { name: "Yash Jain", college: "IIT Bombay", img: "/arke/yash jain.jpeg", rank: 27 },
+  { name: "Animesh Baranwal", college: "IIT Bombay", img: "/arke/animesh berenwal.jpeg", rank: 78 },
+  { name: "Prakhar Mangal", college: "IIT Delhi", img: "/arke/prakhar mangal.jpeg", rank: 95 },
+  { name: "Yash Sanjeev", college: "IIT Bombay · IIM Calls", img: "/arke/yash sanjeev.jpeg", rank: 102 },
+  { name: "Kushagra Gupta", college: "IIT Delhi", img: "/arke/kushagra gupta.jpeg", rank: 107 },
+  { name: "Purushottam Sharma", college: "IIT Delhi", img: "/arke/purushottam sharma.jpeg", rank: 114 },
+  { name: "Monil Lodha", college: "IIT Kanpur", img: "/arke/Monil lodha.jpeg", rank: 120 },
+  { name: "Aditya Gupta", college: "IIT Bombay", img: "/arke/aditya gupta.jpeg", rank: 180 },
+  // Top institute mentors without rank
+  { name: "Kartikey Mittal", college: "IIT Bombay", img: "/arke/kartikey mittal.jpeg" },
+  { name: "Abhishek Kumar Singh", college: "IIT Delhi", img: "/arke/abhishek kumar singh.jpeg" },
+  { name: "Aayush", college: "IIT Kanpur · IIM Ahmedabad", img: "/arke/Aayush.png" },
+  { name: "Rushi Patel", college: "IIT Delhi · IIM Ahmedabad", img: "/arke/rushi patel.jpeg" },
+  { name: "Ankan Sarkar", college: "IIT Bombay", img: "/arke/aankan sarkar.jpeg" },
+  { name: "Utkarsh Daga", college: "IIT Bombay", img: "/arke/utkarsh daga .jpeg" },
+  { name: "Navneet", college: "IIT Delhi", img: "/arke/navneet.jpeg" },
+  { name: "Heyramb Agrawal", college: "IIT Kharagpur", img: "/arke/heyarambh agarwal.jpeg" },
+  { name: "Naman", college: "IISC Bengaluru", img: "/arke/naman-iisc-bengaluru.jpeg" },
+  { name: "Shubham Bihani", college: "IIT Roorkee · IIM Bengaluru", img: "/arke/Shubham Bihani IIT rookee IIM Banglore.jpeg" },
 ];
 
-const TestimonialCard = ({ card }: { card: Testimonial }) => (
-  <div className="p-5 rounded-2xl mx-3 border border-border bg-card w-72 shrink-0">
+// Split into two rows
+const ROW1 = FEATURED.slice(0, Math.ceil(FEATURED.length / 2));
+const ROW2 = FEATURED.slice(Math.ceil(FEATURED.length / 2));
+
+const MentorCardItem = ({ m }: { m: MentorCard }) => (
+  <div className="mx-3 w-52 shrink-0 rounded-2xl border border-border bg-card p-4 shadow-sm">
     <div className="flex items-center gap-3">
-      <img className="size-11 rounded-full object-cover" src={card.image} alt={card.name} />
-      <div className="flex flex-col">
-        <p className="text-sm font-bold text-foreground">{card.name}</p>
-        <span className="text-xs font-semibold text-muted-foreground">{card.result}</span>
+      <img
+        src={m.img}
+        alt={m.name}
+        onError={(e) => { (e.currentTarget as HTMLImageElement).src = avatar(m.name); }}
+        className="h-14 w-14 rounded-full object-cover border-2 border-border"
+      />
+      <div className="min-w-0">
+        <p className="text-sm font-bold text-foreground leading-tight truncate">{m.name}</p>
+        <p className="mt-0.5 text-[11px] text-muted-foreground leading-tight line-clamp-2">{m.college}</p>
       </div>
     </div>
-    <p className="text-sm pt-4 text-muted-foreground leading-relaxed">{card.quote}</p>
+    {m.rank !== undefined && (
+      <div className="mt-3 flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 w-fit">
+        <Trophy className="h-3 w-3 text-primary shrink-0" />
+        <span className="text-[11px] font-bold text-primary">AIR {m.rank}</span>
+      </div>
+    )}
   </div>
 );
 
@@ -72,25 +77,28 @@ const MarqueeTestimonials = () => {
           0% { transform: translateX(0%); }
           100% { transform: translateX(-50%); }
         }
-        .marquee-inner { animation: marqueeScroll 25s linear infinite; }
+        .marquee-inner { animation: marqueeScroll 30s linear infinite; }
         .marquee-reverse { animation-direction: reverse; }
+        .marquee-row:hover .marquee-inner { animation-play-state: paused; }
         @media (prefers-reduced-motion: reduce) {
           .marquee-inner { animation: none; }
         }
       `}</style>
 
-      <div className="marquee-row w-full mx-auto max-w-5xl overflow-hidden relative">
-        <div className="marquee-inner flex transform-gpu min-w-[200%] py-5">
-          {[...testimonials, ...testimonials].map((card, index) => (
-            <TestimonialCard key={index} card={card} />
+      {/* Row 1 — left to right */}
+      <div className="marquee-row w-full overflow-hidden relative">
+        <div className="marquee-inner flex transform-gpu min-w-[200%] py-3">
+          {[...ROW1, ...ROW1].map((m, i) => (
+            <MentorCardItem key={i} m={m} />
           ))}
         </div>
       </div>
 
-      <div className="marquee-row w-full mx-auto max-w-5xl overflow-hidden relative">
-        <div className="marquee-inner marquee-reverse flex transform-gpu min-w-[200%] py-5">
-          {[...testimonials, ...testimonials].map((card, index) => (
-            <TestimonialCard key={index} card={card} />
+      {/* Row 2 — right to left */}
+      <div className="marquee-row w-full overflow-hidden relative">
+        <div className="marquee-inner marquee-reverse flex transform-gpu min-w-[200%] py-3">
+          {[...ROW2, ...ROW2].map((m, i) => (
+            <MentorCardItem key={i} m={m} />
           ))}
         </div>
       </div>

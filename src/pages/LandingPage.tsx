@@ -333,12 +333,12 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Student testimonials */}
+      {/* Mentor carousel */}
       <section className="bg-background py-12 md:py-20">
         <div className="container mx-auto px-4">
           <div className="text-center">
-            <h2 className="text-2xl md:text-3xl lg:text-4xl font-black font-display text-foreground">Student Success Stories</h2>
-            <p className="mt-2 text-sm md:text-base text-muted-foreground">Real results from real students</p>
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-black font-display text-foreground">Meet Your Mentors</h2>
+            <p className="mt-2 text-sm md:text-base text-muted-foreground">IITians, IIMians & MIT graduates — here to guide you</p>
           </div>
           <div className="mt-6">
             <MarqueeTestimonials />

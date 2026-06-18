@@ -76,6 +76,7 @@
 /* Admin panel primary color override */
 .admin-panel {
   --primary: 214 74% 10%;        /* arke-primary-navy #07182E */
+  --primary-foreground: 0 0% 100%; /* white text on navy buttons */
   --primary-dark: 214 74% 7%;
   --primary-light: 214 30% 95%;
 }
