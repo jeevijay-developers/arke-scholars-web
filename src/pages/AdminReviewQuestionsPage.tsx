@@ -556,6 +556,7 @@ const AdminReviewQuestionsPage = () => {
     questions: initialQuestions = [],
     paperCode = "",
     subject = "Physics",
+    subjects: subjectsFromState,
     classLevel = null,
     durationMinutes = 180,
     courseId = null,
@@ -564,10 +565,14 @@ const AdminReviewQuestionsPage = () => {
     paperId: string;
     paperCode: string;
     subject?: string;
+    subjects?: string[];
     classLevel?: string | null;
     durationMinutes?: number;
     courseId?: string | null;
   }) ?? {};
+
+  // Support both single subject (legacy) and multi-subjects (new)
+  const subjectsList: string[] = subjectsFromState ?? [subject];
 
   const [questions, setQuestions] = useState<ParsedQuestion[]>(initialQuestions);
   const [approvals, setApprovals] = useState<Record<number, ApprovalStatus>>(() =>
@@ -622,7 +627,7 @@ const AdminReviewQuestionsPage = () => {
         }
         return {
           created_by: user.id,
-          subject,
+          subject: subjectsList[0],
           topic: q.topic ?? null,
           question_type: q.type,
           question_text: q.stem_html,
@@ -657,8 +662,8 @@ const AdminReviewQuestionsPage = () => {
           slug,
           test_type: "mock",
           exam_pattern: "jee-main",
-          subjects: [subject],
-          class_level: classLevel ?? null,
+          subjects: subjectsList,
+          class_level: null,
           duration_minutes: durationMinutes,
           correct_marks: 4,
           wrong_marks: -1,
@@ -676,7 +681,7 @@ const AdminReviewQuestionsPage = () => {
 
       // ── Step 3: create test_questions referencing the bank IDs ────────────
       const rows = included.map((q, i) => ({
-        ...buildTestQuestionRow(q, i, subject, testRow.id),
+        ...buildTestQuestionRow(q, i, subjectsList[0], testRow.id),
         bank_question_id: (bankInserted as { id: string }[])[i]?.id ?? null,
       }));
       const { error: tqErr } = await (supabase as any).from("test_questions").insert(rows);

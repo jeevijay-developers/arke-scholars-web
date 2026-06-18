@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  FileText, Upload, Loader2, BookOpen, Tag, Clock, GraduationCap,
+  FileText, Upload, Loader2, BookOpen, Tag, Clock,
   AlertTriangle, CheckCircle2, ImageIcon, ChevronDown, ChevronUp, X, Download,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -83,8 +83,7 @@ const AdminUploadQuestionsPage = () => {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [paperName, setPaperName] = useState("");
-  const [subject, setSubject] = useState<string>(SUBJECTS[0]);
-  const [classLevel, setClassLevel] = useState<string>("");
+  const [subjects, setSubjects] = useState<string[]>([SUBJECTS[0]]);
   const [durationMinutes, setDurationMinutes] = useState<number>(180);
   const [courseId, setCourseId] = useState<string | null>(null);
   const [courses, setCourses] = useState<{ id: string; name: string }[]>([]);
@@ -135,6 +134,7 @@ const AdminUploadQuestionsPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!paperName.trim()) { toast.error("Test paper name is required"); return; }
+    if (subjects.length === 0) { toast.error("Please select at least one subject"); return; }
     if (!file) { toast.error("Please select a .docx file"); return; }
 
     let createdPaperId: string | null = null;
@@ -142,7 +142,7 @@ const AdminUploadQuestionsPage = () => {
       setStatus("creating");
       const { data: paper, error: paperErr } = await (supabase as any)
         .from("papers")
-        .insert({ code: paperName.trim(), subject })
+        .insert({ code: paperName.trim(), subject: subjects[0] })
         .select("id")
         .single();
       if (paperErr) {
@@ -200,7 +200,7 @@ const AdminUploadQuestionsPage = () => {
     // No DB write here — the review page is the single writer (creates the `tests` row
     // and `test_questions` rows on Save All). This avoids the prior duplicate-insert bug.
     navigate(`/admin/review-questions/${paperId}`, {
-      state: { questions: parseResult.questions, paperId, paperCode: paperName, subject, classLevel: classLevel || null, durationMinutes, courseId },
+      state: { questions: parseResult.questions, paperId, paperCode: paperName, subject: subjects[0], subjects, classLevel: null, durationMinutes, courseId },
     });
   };
 
@@ -213,6 +213,7 @@ const AdminUploadQuestionsPage = () => {
     setStatus("idle");
     setFile(null);
     setPaperName("");
+    setSubjects([SUBJECTS[0]]);
     if (fileRef.current) fileRef.current.value = "";
   };
 
@@ -444,41 +445,44 @@ const AdminUploadQuestionsPage = () => {
           />
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-foreground">
+            <label className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-foreground">
               <BookOpen className="h-3.5 w-3.5 text-muted-foreground" />
-              Subject
+              Subjects
+              <span className="ml-1 text-[10px] font-normal text-muted-foreground">(select all that apply)</span>
             </label>
-            <select
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              disabled={busy}
-              className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50"
-            >
-              {SUBJECTS.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-foreground">
-              <GraduationCap className="h-3.5 w-3.5 text-muted-foreground" />
-              Class Level
-            </label>
-            <select
-              value={classLevel}
-              onChange={(e) => setClassLevel(e.target.value)}
-              disabled={busy}
-              className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50"
-            >
-              <option value="">All classes</option>
-              <option value="Class 8">Class 8</option>
-              <option value="Class 9">Class 9</option>
-              <option value="Class 10">Class 10</option>
-              <option value="Class 11">Class 11</option>
-              <option value="Class 12">Class 12</option>
-              <option value="12 Pass">12 Pass</option>
-            </select>
+            <div className="flex flex-wrap gap-2">
+              {SUBJECTS.map((s) => {
+                const selected = subjects.includes(s);
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      if (selected) {
+                        if (subjects.length > 1) setSubjects(subjects.filter((x) => x !== s));
+                      } else {
+                        setSubjects([...subjects, s]);
+                      }
+                    }}
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
+                      selected
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-background text-foreground hover:border-primary/50"
+                    }`}
+                  >
+                    {s}
+                  </button>
+                );
+              })}
+            </div>
+            {subjects.length > 0 && (
+              <p className="mt-1.5 text-[10px] text-muted-foreground">
+                Selected: {subjects.join(", ")}
+              </p>
+            )}
           </div>
 
           <div>

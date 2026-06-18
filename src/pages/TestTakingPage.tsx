@@ -86,9 +86,7 @@ const TestTakingPage = () => {
   const answersRef = useRef<Record<string, AnswerState>>({});
   const statusesRef = useRef<Record<string, QStatus>>({});
 
-  // Keep refs in sync so stale closures (timer, tab-switch handler) always see latest answers
-  useEffect(() => { answersRef.current = answers; }, [answers]);
-  useEffect(() => { statusesRef.current = statuses; }, [statuses]);
+  // Refs are updated synchronously in each handler — no useEffect sync needed
 
   // Auto-focus integer input when switching to an integer-type question
   useEffect(() => {
@@ -156,8 +154,12 @@ const TestTakingPage = () => {
       if (existing) {
         setAttemptId(existing.id);
         setStartedAt(new Date(existing.started_at as string));
-        setAnswers((existing.answers as Record<string, { selected: number | null }>) ?? {});
-        setStatuses((existing.question_statuses as Record<string, QStatus>) ?? {});
+        const savedAnswers = (existing.answers as Record<string, AnswerState>) ?? {};
+        const savedStatuses = (existing.question_statuses as Record<string, QStatus>) ?? {};
+        answersRef.current = savedAnswers;
+        statusesRef.current = savedStatuses;
+        setAnswers(savedAnswers);
+        setStatuses(savedStatuses);
         setStarted(true);
       }
 
@@ -224,7 +226,7 @@ const TestTakingPage = () => {
 
   const autoSave = useCallback(async () => {
     if (!attemptId) return;
-    if (Date.now() - lastSavedRef.current < 3000) return;
+    if (Date.now() - lastSavedRef.current < 1500) return;
     lastSavedRef.current = Date.now();
     await supabase
       .from("test_attempts")
@@ -262,7 +264,11 @@ const TestTakingPage = () => {
   };
 
   const q = questions[currentQ];
-  const updateStatus = (id: string, status: QStatus) => setStatuses((prev) => ({ ...prev, [id]: status }));
+  const updateStatus = (id: string, status: QStatus) => {
+    const updated = { ...statusesRef.current, [id]: status };
+    statusesRef.current = updated;
+    setStatuses(updated);
+  };
 
   const isAnswered = (ans: AnswerState | undefined, qType: string) => {
     if (!ans) return false;
@@ -277,26 +283,37 @@ const TestTakingPage = () => {
     if (q.question_type === "mcq") {
       const prev = answers[q.id]?.multiSelected ?? [];
       const next = prev.includes(optId) ? prev.filter((x) => x !== optId) : [...prev, optId];
-      setAnswers((a) => ({ ...a, [q.id]: { multiSelected: next } }));
+      const updated = { ...answersRef.current, [q.id]: { multiSelected: next } };
+      answersRef.current = updated;
+      setAnswers(updated);
       updateStatus(q.id, next.length > 0 ? "answered" : "not-answered");
     } else {
-      setAnswers((a) => ({ ...a, [q.id]: { selected: optId } }));
+      const updated = { ...answersRef.current, [q.id]: { selected: optId } };
+      answersRef.current = updated;
+      setAnswers(updated);
       updateStatus(q.id, "answered");
     }
+    setTimeout(() => autoSave(), 200);
   };
 
   const handleIntegerInput = (val: string) => {
     if (!q) return;
-    setAnswers((a) => ({ ...a, [q.id]: { value: val } }));
+    const updated = { ...answersRef.current, [q.id]: { value: val } };
+    answersRef.current = updated;
+    setAnswers(updated);
     updateStatus(q.id, val.trim() ? "answered" : "not-answered");
+    setTimeout(() => autoSave(), 200);
   };
 
   const handleMatchSelect = (key: string, val: string) => {
     if (!q) return;
-    const prev = answers[q.id]?.mapping ?? {};
+    const prev = answersRef.current[q.id]?.mapping ?? {};
     const next = val ? { ...prev, [key]: val } : Object.fromEntries(Object.entries(prev).filter(([k]) => k !== key));
-    setAnswers((a) => ({ ...a, [q.id]: { mapping: next } }));
+    const updated = { ...answersRef.current, [q.id]: { mapping: next } };
+    answersRef.current = updated;
+    setAnswers(updated);
     updateStatus(q.id, Object.keys(next).length > 0 ? "answered" : "not-answered");
+    setTimeout(() => autoSave(), 200);
   };
 
   const handleNext = () => {
@@ -318,21 +335,28 @@ const TestTakingPage = () => {
   const handleSubmit = async (auto = false, skipNavigate = false) => {
     if (!attemptId) return;
     setSubmitting(true);
-    // Use refs so this works correctly even when called from stale closures (timer, tab-switch)
-    await supabase
+
+    // Step 1: Save answers first and wait for confirmation before scoring
+    const { error: saveErr } = await supabase
       .from("test_attempts")
       .update({
         answers: answersRef.current,
         question_statuses: statusesRef.current,
-        status: auto ? "auto_submitted" : "submitted",
         submitted_at: new Date().toISOString(),
         time_spent_seconds: startedAt ? Math.floor((Date.now() - startedAt.getTime()) / 1000) : 0,
         metadata: { tab_switches: tabSwitches },
       })
       .eq("id", attemptId);
 
-    const { error } = await supabase.rpc("submit_test_attempt", { _attempt_id: attemptId });
-    if (error) toast.error(error.message);
+    if (saveErr) {
+      toast.error("Failed to save answers. Please try again.");
+      setSubmitting(false);
+      return;
+    }
+
+    // Step 2: Now run scoring RPC — answers are confirmed in DB
+    const { error: rpcErr } = await supabase.rpc("submit_test_attempt", { _attempt_id: attemptId });
+    if (rpcErr) toast.error(rpcErr.message);
 
     if (!skipNavigate) {
       navigate(`/tests/${test?.slug ?? slug}/result/${attemptId}`);
@@ -617,11 +641,13 @@ const TestTakingPage = () => {
                     <span>Column II</span>
                   </div>
                   <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {col1.map((entry) => (
-                        <div key={entry.key} className="flex items-center gap-2">
-                          <span className="w-8 shrink-0 font-bold text-primary">({entry.key})</span>
-                          <span className="flex-1 text-xs text-foreground">{entry.value}</span>
+                        <div key={entry.key} className="flex items-start gap-2">
+                          <span className="w-8 shrink-0 font-bold text-primary mt-0.5">({entry.key})</span>
+                          <span className="flex-1 text-xs text-foreground leading-relaxed">
+                            <LatexRenderer html={entry.value} inline />
+                          </span>
                           <select
                             value={mapping[entry.key] ?? ""}
                             onChange={(e) => handleMatchSelect(entry.key, e.target.value)}
@@ -633,11 +659,13 @@ const TestTakingPage = () => {
                         </div>
                       ))}
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {col2.map((entry) => (
-                        <div key={entry.key} className="flex items-center gap-2">
-                          <span className="w-8 shrink-0 font-bold text-primary">({entry.key})</span>
-                          <span className="text-xs text-foreground">{entry.value}</span>
+                        <div key={entry.key} className="flex items-start gap-2">
+                          <span className="w-8 shrink-0 font-bold text-primary mt-0.5">({entry.key})</span>
+                          <span className="text-xs text-foreground leading-relaxed">
+                            <LatexRenderer html={entry.value} inline />
+                          </span>
                         </div>
                       ))}
                     </div>

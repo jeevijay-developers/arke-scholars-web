@@ -5,6 +5,40 @@ type Segment =
   | { type: "inline"; content: string }
   | { type: "block"; content: string };
 
+// Decode HTML entities — runs twice to handle double-encoded strings like &amp;lt; → &lt; → <
+function decodeEntities(s: string): string {
+  const map: Record<string, string> = {
+    "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&#39;": "'",
+    "&nbsp;": " ", "&le;": "≤", "&ge;": "≥", "&ne;": "≠",
+    "&alpha;": "α", "&beta;": "β", "&gamma;": "γ", "&delta;": "δ",
+    "&lambda;": "λ", "&mu;": "μ", "&pi;": "π", "&sigma;": "σ",
+    "&omega;": "ω", "&theta;": "θ", "&phi;": "φ", "&psi;": "ψ",
+    "&epsilon;": "ε", "&zeta;": "ζ", "&eta;": "η", "&kappa;": "κ",
+    "&nu;": "ν", "&xi;": "ξ", "&rho;": "ρ", "&tau;": "τ",
+    "&upsilon;": "υ", "&chi;": "χ",
+    "&rarr;": "→", "&larr;": "←", "&harr;": "↔", "&uarr;": "↑", "&darr;": "↓",
+    "&plusmn;": "±", "&times;": "×", "&divide;": "÷", "&deg;": "°",
+    "&sup2;": "²", "&sup3;": "³", "&frac12;": "½", "&frac14;": "¼",
+    "&infin;": "∞", "&sum;": "∑", "&int;": "∫", "&part;": "∂",
+  };
+  const pattern = Object.keys(map).join("|");
+  const re = new RegExp(pattern, "g");
+  // Run twice to handle double-encoded entities (&amp;lt; → &lt; → <)
+  let out = s.replace(re, (m) => map[m] ?? m);
+  out = out.replace(re, (m) => map[m] ?? m);
+  return out;
+}
+
+// Pre-process: decode double-encoded entities in text nodes only (not inside tag attributes)
+function preDecodeHtml(input: string): string {
+  // Replace entities that appear outside of HTML tags
+  // Strategy: split on tags, decode text nodes only
+  return input.replace(/(<[^>]*>)|([^<]+)/g, (_, tag, text) => {
+    if (tag) return tag; // preserve HTML tags unchanged
+    return decodeEntities(text);
+  });
+}
+
 // Split a mixed HTML+LaTeX string into renderable segments.
 // HTML tags are collected verbatim so we never split inside an attribute value.
 // $$…$$ is block math; $…$ is inline math; everything else is HTML.
@@ -63,7 +97,7 @@ interface Props {
 }
 
 const LatexRenderer = ({ html, className = "", inline = false }: Props) => {
-  const segments = segmentize(html);
+  const segments = segmentize(preDecodeHtml(html ?? ""));
   const Tag = inline ? "span" : "div";
   const baseClass = inline
     ? `latex-content [&_img]:max-h-20 [&_img]:w-auto [&_img]:inline-block [&_img]:align-middle ${className}`
