@@ -1,15 +1,12 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
-import { Flame, Heart, Globe, Phone } from "lucide-react";
+import { Heart, Globe, Phone } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { useEffect } from "react";
-import arkeLogo from "@/assets/arke-logo.png";
 import arkeLogoLight from "@/assets/arke-logo-light.png";
-import { useFavourites } from "@/hooks/useFavourites";
 
 const PublicLayout = () => {
   const location = useLocation();
   const { user } = useAppStore();
-  const { count: favCount } = useFavourites();
   const initials = user?.full_name
     ? user.full_name.split(" ").filter(Boolean).slice(0, 2).map((n) => n[0]?.toUpperCase()).join("")
     : "U";
@@ -79,20 +76,6 @@ const PublicLayout = () => {
             <Link to="/contact" className="flex h-8 w-8 items-center justify-center rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors" aria-label="Contact us">
               <Phone className="h-4 w-4" />
             </Link>
-            {user && (
-              <Link
-                to="/favourite-courses"
-                className="relative flex h-8 w-8 items-center justify-center rounded-lg text-white/75 hover:text-rose-400 hover:bg-white/10 transition-colors"
-                aria-label="Favourite courses"
-              >
-                <Heart className="h-4 w-4" />
-                {favCount > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white">
-                    {favCount}
-                  </span>
-                )}
-              </Link>
-            )}
             {user ? (
               <Link
                 to="/my-courses"

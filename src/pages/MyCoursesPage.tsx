@@ -60,7 +60,7 @@ const MyCoursesPage = () => {
         .order("last_accessed_at", { ascending: false, nullsFirst: false });
 
       if (error) { toast.error("Could not load your courses"); setLoading(false); return; }
-      setEnrollments((data ?? []) as unknown as Enrollment[]);
+      setEnrollments(((data ?? []) as unknown as Enrollment[]).filter((e) => e.course != null));
       setLoading(false);
     };
     load();

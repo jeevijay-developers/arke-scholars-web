@@ -3,7 +3,6 @@ import SEO from "@/components/SEO";
 import {
   Play,
   CheckCircle2,
-  Clock,
   ChevronDown,
   Loader2,
   Lock,
@@ -111,10 +110,13 @@ const CourseDetailPage = () => {
 
   if (!course) {
     return (
-      <div className="container mx-auto px-4 py-20 text-center">
-        <h1 className="font-display text-2xl font-black text-foreground">Course not found</h1>
-        <Link to="/courses" className="mt-4 inline-block text-sm text-primary hover:underline">
-          Back to courses
+      <div className="container mx-auto px-4 py-20 text-center space-y-4">
+        <h1 className="font-display text-2xl font-black text-foreground">This course is currently unavailable</h1>
+        <p className="text-sm text-muted-foreground max-w-md mx-auto">
+          This course may have been temporarily deactivated. Stay tuned for its reactivation, or explore other courses in the meantime.
+        </p>
+        <Link to="/courses" className="inline-block mt-2 text-sm font-semibold text-primary hover:underline">
+          Explore courses →
         </Link>
       </div>
     );
@@ -273,10 +275,6 @@ const CourseDetailPage = () => {
                   <p className="mt-2 text-sm text-muted-foreground line-clamp-3">{course.description}</p>
                 )}
                 <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3.5 w-3.5 text-primary" />
-                    {totalHours} hrs
-                  </span>
                   {course.badge && (
                     <span className="rounded-full border border-border bg-card px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-foreground">
                       {course.badge}
@@ -299,8 +297,8 @@ const CourseDetailPage = () => {
                     key={tab}
                     onClick={() => setActiveTab(i)}
                     className={`pb-3 text-sm font-semibold whitespace-nowrap transition-colors ${i === activeTab
-                        ? "text-primary border-b-2 border-primary"
-                        : "text-muted-foreground hover:text-foreground"
+                      ? "text-primary border-b-2 border-primary"
+                      : "text-muted-foreground hover:text-foreground"
                       }`}
                   >
                     {tab}
@@ -328,17 +326,15 @@ const CourseDetailPage = () => {
                 </div>
                 */}
 
-                {/* Short description */}
-                {course.description && (
-                  <p className="text-sm text-muted-foreground leading-relaxed">{course.description}</p>
-                )}
-
                 {/* Detailed description (rich HTML) */}
                 {(course as any).detailed_description && (
-                  <div
-                    className="rich-text-output"
-                    dangerouslySetInnerHTML={{ __html: (course as any).detailed_description }}
-                  />
+                  <>
+                    <h2 className="text-2xl font-bold text-foreground">About this course</h2>
+                    <div
+                      className="rich-text-output"
+                      dangerouslySetInnerHTML={{ __html: (course as any).detailed_description }}
+                    />
+                  </>
                 )}
               </div>
             )}

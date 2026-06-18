@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { useConfirm } from "@/components/ConfirmDialog";
 import RichTextEditor from "@/components/RichTextEditor";
 
 const slugify = (s: string) =>
@@ -29,6 +30,7 @@ const DEFAULT_CLASS: Record<string, string> = {
 
 const CreateCoursePage = () => {
   const { user } = useAuth();
+  const { confirm, ConfirmDialog } = useConfirm();
   const navigate = useNavigate();
   const { courseId } = useParams<{ courseId?: string }>();
   const isEditMode = Boolean(courseId);
@@ -57,7 +59,7 @@ const CreateCoursePage = () => {
   // ── Publishing ──────────────────────────────────────────────────────────────
   const [isActive, setIsActive] = useState(false);
   const [priority, setPriority] = useState<number>(0);
-  const [isFeatured, setIsFeatured] = useState(false);
+
   const [badge, setBadge] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
@@ -110,7 +112,7 @@ const CreateCoursePage = () => {
       setMaxUsageDays((course as any).max_usage_days ?? "");
       setIsActive((course as any).is_active ?? false);
       setPriority(Number((course as any).priority ?? 0));
-      setIsFeatured(course.is_featured ?? false);
+
       setBadge(course.badge ?? "");
       setTags((course.tags ?? []) as string[]);
       setLoading(false);
@@ -152,7 +154,7 @@ const CreateCoursePage = () => {
       max_usage_days: isCourseFree && maxUsageDays !== "" ? Number(maxUsageDays) : null,
       is_active: publish ? true : isActive,
       priority,
-      is_featured: isFeatured,
+
       badge: badge.trim() || null,
       tags,
     };
@@ -200,6 +202,7 @@ const CreateCoursePage = () => {
 
   return (
     <div className="p-4 lg:p-6 pb-24 lg:pb-6 max-w-3xl mx-auto space-y-6">
+      {ConfirmDialog}
       <h1 className="text-xl font-bold text-foreground">{isEditMode ? "Edit Course" : "Create New Course"}</h1>
 
       {/* ── Basic Info ────────────────────────────────────────────────────── */}
@@ -352,21 +355,33 @@ const CreateCoursePage = () => {
 
       {/* ── Publishing ───────────────────────────────────────────────────── */}
       <Section title="Publishing">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setIsActive((v) => !v)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isActive ? "bg-primary" : "bg-muted"}`}
-            >
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${isActive ? "translate-x-6" : "translate-x-1"}`} />
-            </button>
-            <span className="text-sm font-medium text-foreground">Active (visible in store)</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <input id="featured" type="checkbox" checked={isFeatured} onChange={(e) => setIsFeatured(e.target.checked)} className="accent-primary h-4 w-4" />
-            <label htmlFor="featured" className="text-sm font-medium text-foreground cursor-pointer">Featured</label>
-          </div>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={async () => {
+              const next = !isActive;
+              if (!next && isEditMode && courseId) {
+                const ok = await confirm({
+                  title: `Deactivate this course?`,
+                  description: "Students will no longer see this course in the catalog. Existing enrolled students keep their access. You can reactivate at any time.",
+                  confirmLabel: "Deactivate course",
+                });
+                if (!ok) return;
+                const { error } = await supabase.from("courses").update({ is_active: false }).eq("id", courseId);
+                if (error) return toast.error(error.message);
+                toast.success("Course deactivated");
+              } else if (next && isEditMode && courseId) {
+                const { error } = await supabase.from("courses").update({ is_active: true }).eq("id", courseId);
+                if (error) return toast.error(error.message);
+                toast.success("Course activated");
+              }
+              setIsActive(next);
+            }}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isActive ? "bg-primary" : "bg-muted"}`}
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${isActive ? "translate-x-6" : "translate-x-1"}`} />
+          </button>
+          <span className="text-sm font-medium text-foreground">Active (visible in store)</span>
         </div>
         <Field label="Priority (lower = shown first, decimals allowed)">
           <input
