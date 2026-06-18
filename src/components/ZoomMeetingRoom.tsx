@@ -40,17 +40,25 @@ const injectZoomFillStyles = () => {
   const style = document.createElement("style");
   style.id = "zoom-fill-override";
   style.textContent = `
-    /* zoomRoot (first child) must be a positioned ancestor for the absolute panel */
+    /* Container must be a positioned ancestor */
+    #meetingSDKElement {
+      display: flex !important;
+      flex-direction: column !important;
+    }
     #meetingSDKElement > div {
       position: relative !important;
+      flex: 1 1 0 !important;
+      min-height: 0 !important;
       width: 100% !important;
       height: 100% !important;
     }
-    /* Main meeting panel only — NOT the chat/participants draggables (.zoom-MuiBox-root) */
+    /* Main meeting panel — stretch to fill, ignore Zoom's hardcoded translate */
     #meetingSDKElement > div > .react-draggable:not(.zoom-MuiBox-root) {
       position: absolute !important;
       top: 0 !important; right: 0 !important;
       bottom: 0 !important; left: 0 !important;
+      width: auto !important;
+      height: auto !important;
       transform: none !important;
     }
     #meetingSDKElement > div > .react-draggable:not(.zoom-MuiBox-root) > .zoom-MuiBox-root:first-child {
@@ -64,35 +72,34 @@ const injectZoomFillStyles = () => {
       max-width: 100% !important;
       max-height: 100% !important;
     }
-    /* Zoom v6 renders nested MuiPaper blocks with hardcoded pixel heights.
-       The first child of .react-resizable is the outer "meeting window" paper.
-       Make it fill its parent and act as a flex column so deeper content stretches. */
+    /* outerPaper — flex column so toolbar stays at bottom */
     #meetingSDKElement > div > .react-draggable:not(.zoom-MuiBox-root) .react-resizable > div:first-child {
+      width: 100% !important;
       height: 100% !important;
       display: flex !important;
       flex-direction: column !important;
       overflow: hidden !important;
     }
-    /* innerPaper (video area) — flex-grows above the fixed bottom toolbar */
+    /* innerPaper (video area) — grows above toolbar */
     #meetingSDKElement > div > .react-draggable:not(.zoom-MuiBox-root) .react-resizable > div:first-child > div:first-child {
       flex: 1 1 0 !important;
       min-height: 0 !important;
+      height: 0 !important;
       display: flex !important;
       flex-direction: column !important;
       overflow: hidden !important;
     }
-    /* videoBox — 3rd child of innerPaper, flex-grows below the Zoom top toolbar */
+    /* videoBox — 3rd child of innerPaper */
     #meetingSDKElement > div > .react-draggable:not(.zoom-MuiBox-root) .react-resizable > div:first-child > div:first-child > div:nth-child(3) {
       flex: 1 1 0 !important;
       min-height: 0 !important;
+      height: 0 !important;
       overflow: hidden !important;
     }
+    /* Kill the resize handle */
     #meetingSDKElement .react-resizable-handle { display: none !important; }
 
-    /* Zoom renders chat/participants as body-level poppers (Floating UI anchored to
-       toolbar buttons). Their transform uses the original 254px panel width as the
-       reference, so they land off-screen when we expand to full-width.
-       Re-anchor them as a fixed side panel on the right, between header and toolbar. */
+    /* Re-anchor poppers (chat/participants) as a right-side panel */
     .zoom-MuiPopper-root {
       position: fixed !important;
       transform: none !important;
@@ -346,15 +353,20 @@ const ZoomMeetingRoom = ({ classId, classSlug, displayName, onLeave }: ZoomMeeti
   }
 
   return (
-    <div className="absolute inset-0 bg-[#0a0a0a]">
+    <div className="absolute inset-0 bg-[#0a0a0a] flex flex-col">
       {status === "loading" && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10 bg-[#0a0a0a]">
           <Loader2 className="h-8 w-8 animate-spin text-white/50" />
           <p className="text-xs text-white/40">Connecting to meeting…</p>
         </div>
       )}
-      {/* Zoom Component View mounts here */}
-      <div ref={containerRef} id="meetingSDKElement" className="h-full w-full" />
+      {/* Zoom Component View mounts here — explicit flex-1 + min-h-0 so the SDK
+          receives a real pixel height rather than 0 or "100%" which Zoom ignores */}
+      <div
+        ref={containerRef}
+        id="meetingSDKElement"
+        style={{ flex: "1 1 0", minHeight: 0, width: "100%", overflow: "hidden" }}
+      />
     </div>
   );
 };

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Users, Loader2, Play, Square, Video } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, Users, Loader2, Play, Square, Video, MessageSquare, Send, X } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -31,6 +31,15 @@ type Attendee = {
   display_name?: string;
 };
 
+type ChatMsg = {
+  id: string;
+  user_id: string;
+  display_name: string;
+  is_teacher: boolean;
+  message: string;
+  created_at: string;
+};
+
 const TeacherLiveClassRoomPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const { user } = useAuth();
@@ -42,6 +51,11 @@ const TeacherLiveClassRoomPage = () => {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [messages, setMessages] = useState<ChatMsg[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const chatBottomRef = useRef<HTMLDivElement>(null);
 
   const teacherDisplay = useMemo(
     () => storeUser?.full_name || (user?.user_metadata?.full_name as string | undefined) || user?.email?.split("@")[0] || "Teacher",
@@ -95,6 +109,15 @@ const TeacherLiveClassRoomPage = () => {
       await refreshAttendees();
       if (!cancelled) setLoading(false);
 
+      // Load initial messages
+      const { data: msgs } = await supabase
+        .from("live_class_messages")
+        .select("*")
+        .eq("class_id", id)
+        .order("created_at")
+        .limit(100);
+      if (!cancelled) setMessages((msgs ?? []) as ChatMsg[]);
+
       channel = supabase
         .channel(`teacher-class-${id}`)
         .on(
@@ -107,6 +130,13 @@ const TeacherLiveClassRoomPage = () => {
           { event: "UPDATE", schema: "public", table: "live_classes", filter: `id=eq.${id}` },
           (payload) => { setCls((prev) => (prev ? { ...prev, ...(payload.new as ClassRow) } : prev)); },
         )
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "live_class_messages", filter: `class_id=eq.${id}` },
+          (payload) => {
+            setMessages((prev) => [...prev, payload.new as ChatMsg]);
+          },
+        )
         .subscribe();
     })();
 
@@ -115,6 +145,26 @@ const TeacherLiveClassRoomPage = () => {
       if (channel) supabase.removeChannel(channel);
     };
   }, [slug, user, navigate]);
+
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, chatOpen]);
+
+  const sendMessage = async () => {
+    if (!chatInput.trim() || !cls || !user) return;
+    setSending(true);
+    const text = chatInput.trim();
+    setChatInput("");
+    const { error } = await supabase.from("live_class_messages").insert({
+      class_id: cls.id,
+      user_id: user.id,
+      display_name: teacherDisplay,
+      is_teacher: true,
+      message: text,
+    });
+    setSending(false);
+    if (error) toast.error("Failed to send message");
+  };
 
   const startClass = async () => {
     if (!cls) return;
@@ -171,6 +221,17 @@ const TeacherLiveClassRoomPage = () => {
           >
             <Users className="h-3 w-3" /> {attendees.length}
           </button>
+          <button
+            onClick={() => setChatOpen((v) => !v)}
+            className="relative flex items-center gap-1 text-xs text-primary-foreground/80 hover:text-primary-foreground"
+          >
+            <MessageSquare className="h-4 w-4" />
+            {messages.length > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary text-[8px] font-bold text-primary-foreground">
+                {messages.length > 99 ? "99+" : messages.length}
+              </span>
+            )}
+          </button>
           {!isLive && !isCompleted && (
             <button
               onClick={startClass}
@@ -220,7 +281,10 @@ const TeacherLiveClassRoomPage = () => {
         </div>
       )}
 
-      {/* Main — full-width Zoom meeting (no custom chat sidebar) */}
+      {/* Main area + optional chat sidebar */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+
+      {/* Zoom / video area */}
       <div className="flex-1 min-h-0 relative bg-[#0a0a0a]">
         {isLive ? (
           cls.zoom_meeting_id ? (
@@ -251,6 +315,51 @@ const TeacherLiveClassRoomPage = () => {
             <p className="text-xs mt-1 opacity-60">Students connect automatically when you go live.</p>
           </div>
         )}
+      </div>
+
+      {/* Chat sidebar */}
+      {chatOpen && (
+        <div className="w-80 shrink-0 flex flex-col border-l border-border bg-[hsl(var(--navy))] text-white">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+            <span className="text-sm font-bold">Student Messages</span>
+            <button onClick={() => setChatOpen(false)} className="text-white/60 hover:text-white">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2">
+            {messages.length === 0 ? (
+              <p className="text-center text-xs text-white/40 mt-8">No messages yet.</p>
+            ) : (
+              messages.map((m) => (
+                <div key={m.id} className={`flex flex-col gap-0.5 ${m.is_teacher ? "items-end" : "items-start"}`}>
+                  <span className="text-[10px] text-white/40">{m.display_name}{m.is_teacher ? " (you)" : ""}</span>
+                  <div className={`max-w-[90%] rounded-xl px-3 py-1.5 text-sm ${m.is_teacher ? "bg-indigo-600 text-white" : "bg-white/10 text-white"}`}>
+                    {m.message}
+                  </div>
+                </div>
+              ))
+            )}
+            <div ref={chatBottomRef} />
+          </div>
+          <div className="px-3 py-3 border-t border-white/10 flex gap-2">
+            <input
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
+              placeholder="Reply to students…"
+              className="flex-1 rounded-full bg-white/10 px-3 py-1.5 text-sm text-white placeholder:text-white/30 outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+            <button
+              onClick={sendMessage}
+              disabled={sending || !chatInput.trim()}
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40"
+            >
+              <Send className="h-3.5 w-3.5 text-white" />
+            </button>
+          </div>
+        </div>
+      )}
+
       </div>
     </div>
   );

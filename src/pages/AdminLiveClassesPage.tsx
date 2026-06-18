@@ -75,7 +75,7 @@ type FormState = {
   title: string;
   subject: string;
   teacherId: string;
-  courseId: string;
+  courseIds: string[];
   starts_at: string;
   duration_minutes: number;
   description: string;
@@ -87,7 +87,7 @@ const emptyForm: FormState = {
   title: "",
   subject: "",
   teacherId: "",
-  courseId: "",
+  courseIds: [],
   starts_at: "",
   duration_minutes: 60,
   description: "",
@@ -318,43 +318,51 @@ const AdminLiveClassesPage = () => {
     setShowForm(true);
   };
 
-  const openEdit = (cls: AdminLive) => {
+  const loadCourseIds = async (liveClassId: string): Promise<string[]> => {
+    const { data } = await supabase
+      .from("live_class_courses")
+      .select("course_id")
+      .eq("live_class_id", liveClassId);
+    return (data ?? []).map((r: { course_id: string }) => r.course_id);
+  };
+
+  const openEdit = async (cls: AdminLive) => {
     const start = new Date(cls.starts_at).getTime();
     const end = cls.ends_at ? new Date(cls.ends_at).getTime() : start + 60 * 60 * 1000;
     const duration = Math.max(15, Math.round((end - start) / 60000));
     setEditingId(cls.id);
-    const course = cls.course_id ? courses.find((c) => c.id === cls.course_id) : null;
+    const courseIds = await loadCourseIds(cls.id);
     setForm({
       title: cls.title,
       subject: cls.subject,
       teacherId: cls.created_by ?? "",
-      courseId: cls.course_id ?? "",
+      courseIds,
       starts_at: toLocalInput(cls.starts_at),
       duration_minutes: duration,
       description: cls.description ?? "",
-      target_exam: course?.target || cls.target_exam || "",
-      class: course?.class || "",
+      target_exam: cls.target_exam || "",
+      class: "",
     });
     setShowForm(true);
   };
 
   // Duplicate an existing class — pre-fill form, blank start time
-  const duplicateClass = (cls: AdminLive) => {
+  const duplicateClass = async (cls: AdminLive) => {
     const start = new Date(cls.starts_at).getTime();
     const end = cls.ends_at ? new Date(cls.ends_at).getTime() : start + 60 * 60 * 1000;
     const duration = Math.max(15, Math.round((end - start) / 60000));
     setEditingId(null);
-    const course = cls.course_id ? courses.find((c) => c.id === cls.course_id) : null;
+    const courseIds = await loadCourseIds(cls.id);
     setForm({
       title: cls.title,
       subject: cls.subject,
       teacherId: cls.created_by ?? "",
-      courseId: cls.course_id ?? "",
+      courseIds,
       starts_at: "",
       duration_minutes: duration,
       description: cls.description ?? "",
-      target_exam: course?.target || cls.target_exam || "",
-      class: course?.class || "",
+      target_exam: cls.target_exam || "",
+      class: "",
     });
     setShowForm(true);
     toast.success("Class duplicated — pick a new start time");
@@ -389,13 +397,22 @@ const AdminLiveClassesPage = () => {
         ends_at: endsAt.toISOString(),
         description: form.description || null,
         created_by: form.teacherId,
-        course_id: form.courseId || null,
         scheduled_by: adminId,
+      };
+
+      const saveCourseLinks = async (liveClassId: string) => {
+        await supabase.from("live_class_courses").delete().eq("live_class_id", liveClassId);
+        if (form.courseIds.length > 0) {
+          await supabase.from("live_class_courses").insert(
+            form.courseIds.map((cid) => ({ live_class_id: liveClassId, course_id: cid }))
+          );
+        }
       };
 
       if (editingId) {
         const { error } = await supabase.from("live_classes").update(payload).eq("id", editingId);
         if (error) throw error;
+        await saveCourseLinks(editingId);
         toast.success("Live class updated");
       } else {
         const { data: inserted, error } = await supabase
@@ -404,6 +421,8 @@ const AdminLiveClassesPage = () => {
           .select("id, slug")
           .single();
         if (error) throw error;
+
+        await saveCourseLinks(inserted.id);
 
         // Create Zoom meeting and persist credentials
         try {
@@ -543,7 +562,7 @@ const AdminLiveClassesPage = () => {
       title: t.title,
       subject: t.subject,
       teacherId: t.teacher_id ?? "",
-      courseId: "",
+      courseIds: [],
       starts_at: "",
       duration_minutes: t.duration_minutes,
       description: t.description ?? "",
@@ -941,7 +960,7 @@ const AdminLiveClassesPage = () => {
                         ...prev,
                         target_exam: val,
                         class: "",
-                        courseId: ""
+                        courseIds: [],
                       }));
                     }}
                     className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
@@ -963,7 +982,7 @@ const AdminLiveClassesPage = () => {
                       setForm(prev => ({
                         ...prev,
                         class: val,
-                        courseId: ""
+                        courseIds: [],
                       }));
                     }}
                     disabled={!form.target_exam}
@@ -980,28 +999,51 @@ const AdminLiveClassesPage = () => {
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Course (optional)</label>
-                <select
-                  value={form.courseId}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    const selectedCourse = courses.find((c) => c.id === val);
-                    setForm((prev) => ({
-                      ...prev,
-                      courseId: val,
-                      target_exam: selectedCourse?.target || prev.target_exam,
-                      class: selectedCourse?.class || prev.class,
-                    }));
-                  }}
-                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-                >
-                  <option value="">No course — standalone class</option>
-                  {filteredCoursesForForm.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Courses (optional — select multiple)
+                </label>
+                <div className="mt-1 rounded-lg border border-border bg-background max-h-44 overflow-y-auto divide-y divide-border">
+                  {filteredCoursesForForm.length === 0 ? (
+                    <p className="px-3 py-2 text-xs text-muted-foreground">
+                      {form.target_exam ? "No courses match the selected exam/class." : "Select an exam above to filter courses."}
+                    </p>
+                  ) : (
+                    filteredCoursesForForm.map((c) => {
+                      const checked = form.courseIds.includes(c.id);
+                      return (
+                        <label
+                          key={c.id}
+                          className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => {
+                              setForm((prev) => ({
+                                ...prev,
+                                courseIds: checked
+                                  ? prev.courseIds.filter((id) => id !== c.id)
+                                  : [...prev.courseIds, c.id],
+                              }));
+                            }}
+                            className="h-4 w-4 rounded accent-primary"
+                          />
+                          <span className="text-sm text-foreground">{c.name}</span>
+                          {c.target && (
+                            <span className="ml-auto text-[10px] text-muted-foreground shrink-0">
+                              {c.target}{c.class ? ` · Cl.${c.class}` : ""}
+                            </span>
+                          )}
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+                {form.courseIds.length > 0 && (
+                  <p className="mt-1 text-[11px] text-primary font-medium">
+                    {form.courseIds.length} course{form.courseIds.length > 1 ? "s" : ""} selected
+                  </p>
+                )}
               </div>
 
               <div>
